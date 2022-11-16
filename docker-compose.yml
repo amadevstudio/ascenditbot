@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+      # target: dev
+    env_file:
+      - env/.env
+      - env/.env.dev
+      - env/.env.local
+    volumes:
+      - ./bot:/usr/src/bot
