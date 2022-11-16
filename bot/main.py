@@ -16,9 +16,7 @@ dp = Dispatcher(bot)
 async def start(message: types.Message):
     await message.reply('👋')
     await bot.send_message(message.chat.id,
-                           "/show_white_list\n"
-                           "/add_user <code>nickname</code>\n"
-                           "/delete_user <code>nickname</code>",
+                           "Hello!",
                            parse_mode="HTML")
 
 
