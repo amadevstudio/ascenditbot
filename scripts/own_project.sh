@@ -1,2 +1,2 @@
-sudo chown -R "$USER" ./*
-sudo chgrp -R "$USER" ./*
+sudo chown -R "$USER" ./migrator/*
+sudo chgrp -R "$USER" ./migrator/*

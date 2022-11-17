@@ -1,1 +1,1 @@
-sudo chmod u+x own_project.sh && ./own_project.sh
+sudo chmod u+x scripts/own_project.sh && ./scripts/own_project.sh
