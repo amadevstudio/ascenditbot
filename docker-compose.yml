@@ -5,14 +5,15 @@ services:
       context: ./bot
       dockerfile: Dockerfile
       # target: dev
+    volumes:
+      - ./bot:/usr/src/bot
     networks:
       - data-db-network
     env_file:
       - env/.env
       - env/.env.dev
+      - env/.env.prod
       - env/.env.local
-    volumes:
-      - ./bot:/usr/src/bot
     depends_on:
       - db
 
@@ -22,6 +23,11 @@ services:
       - ./database/postgresql/data:/var/lib/postgresql/data
     networks:
       - data-db-network
+    env_file:
+      - env/.env
+      - env/.env.dev
+      - env/.env.prod
+      - env/.env.local
     environment:
       ALLOW_IP_RANGE: 0.0.0.0/0
     env_file:
