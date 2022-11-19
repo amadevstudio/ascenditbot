@@ -4,4 +4,4 @@
 env/.env.local
 database/postgresql
 
-bot/__pycache__
+**/__pycache__
