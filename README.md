@@ -12,9 +12,10 @@ Telegram whitelist bot for a group
 
 ### Fast developing
 Run compose and stop the bot container  
-`docker-compose up && docker-compose stop bot`  
+`docker-compose up`  
 Then in new terminal run  
-`docker-compose run bot` works like a ⚡️
+`docker-compose stop bot && docker-compose run bot`  
+works like a ⚡️
 
 ### After generate files using Docker
 Because Docker runs as root, you must take ownership of the project files after generating them from containers.  
