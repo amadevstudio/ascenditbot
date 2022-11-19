@@ -1,19 +1,17 @@
-from aiogram import Bot, Dispatcher, executor, types
-
 import os
-os.chdir('/')
 
-import config
+# import config
 
-from pkg.controller.routes import init_routes
+from pkg.config.routes import init_routes
 
 # from db.adapter import database
-
 # from utils import get_username_from_command
 
-bot = Bot(token=os.environ['TELEGRAM_BOT_TOKEN'])
-dp = Dispatcher(bot)
+environment = {
+    "TELEGRAM_BOT_TOKEN": os.environ['TELEGRAM_BOT_TOKEN']
+}
 
+executor, dp = init_routes(environment)
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=False)

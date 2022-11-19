@@ -1,12 +1,19 @@
-def init_routes(bot, dispatcher, service_types):
+import sys
 
-    @dispatcher.message_handler(chat_type=service_types.ChatType.PRIVATE, commands=['start'])
-    async def start(message: service_types.Message):
-        await message.reply('👋')
-        await bot.send_message(message.chat.id,
-                               "Hello!",
-                               parse_mode="HTML")
+from aiogram import Bot, Dispatcher, executor, types
 
+from pkg.controller import welcome_controller
+
+
+def init_routes(environment):
+    bot = Bot(token=environment["TELEGRAM_BOT_TOKEN"])
+    dispatcher = Dispatcher(bot)
+
+    @dispatcher.message_handler(chat_type=types.ChatType.PRIVATE, commands=['start'])
+    async def start(message: types.Message):
+        await welcome_controller.start(message)
+
+    return executor, dispatcher
 
     # @dp.message_handler(chat_type=types.ChatType.PRIVATE, commands=['add_user'])
     # @validator
