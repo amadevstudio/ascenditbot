@@ -10,6 +10,11 @@ routed_messages = {
               "множеству полезных вещей.\n\n"
               "Экономьте время с помощью @{bot_name}!"
               .format(bot_name=constants.bot_name.lower())
+      },
+      "let's begin": {
+          "en": "",
+          "ru":
+              "Начнём!"
       }
   }
 }
