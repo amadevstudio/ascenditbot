@@ -9,6 +9,7 @@ services:
       - ./bot:/usr/src/bot
     networks:
       - data-db-network
+      - storage-network
     env_file:
       - env/.env
       - env/.env.dev
@@ -16,6 +17,7 @@ services:
       - env/.env.local
     depends_on:
       - db
+      - storage
 
   db:
     image: postgres:15.1-alpine
@@ -48,6 +50,26 @@ services:
     depends_on:
       - db
 
+  storage:
+    build:
+      context: ./redis
+      dockerfile: Dockerfile
+      target: base
+    volumes:
+      - ./redis/redis-data:/var/lib/redis
+#      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - storage-network
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    env_file:
+      - env/.env
+      - env/.env.dev
+      - env/.env.prod
+      - env/.env.local
+
 networks:
-    data-db-network:
-        driver: bridge
+  data-db-network:
+    driver: bridge
+  storage-network:
+    driver: bridge

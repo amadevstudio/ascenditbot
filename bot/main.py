@@ -1,15 +1,20 @@
-import os
+from pkg.config.config import environment
 
-# import config
+from pkg.controller.router import init_routes
 
-from pkg.config.routes import init_routes
+from pkg.repository.storage_connection import Storage
 
 # from db.adapter import database
 # from utils import get_username_from_command
 
-environment = {
-    "TELEGRAM_BOT_TOKEN": os.environ['TELEGRAM_BOT_TOKEN']
+storage_configuration = {
+    "host": "storage",
+    "port": 6379,
+    "password": environment["REDIS_PASSWORD"]
 }
+storage_connection = Storage().connect(storage_configuration)
+
+# database_connection
 
 executor, dp = init_routes(environment)
 
