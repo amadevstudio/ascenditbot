@@ -3,7 +3,7 @@ def convert_bytes_to_strings(func):
         result = func(*args, **kwargs)
 
         if isinstance(result, list):
-            unbyted = [v.decode("UTF-8") for v in result]
+            unbyted = [(v.decode("UTF-8") if isinstance(v, bytes) else v) for v in result]
         elif isinstance(result, bytes):
             unbyted = result.decode("UTF-8")
         else:
