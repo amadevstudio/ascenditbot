@@ -1,122 +1,164 @@
+import enum
+import logging
+import re
+from typing import *
 from urllib.parse import unquote
 
+from aiogram import types
 
-def message_master(
-		bot, chat_id, text, markup=None, message_id=None,
-		imgMode=False, photoUrl=None, resending=False, postloading=False,
-		pmode="Markdown", disable_web_page_preview=False):
-	# resending: позволяет принудительно отправить сообщение повторно
-	# message_id: id сообщения, которое необходимо заменить, но если
-	# 	сейчас картинка, то id картинки для удаления
-	# postloading: хоть сейчас и изображение, но оно уже было изменено на
-	# 	"загрузка...", поэтому необходима обработка как у текстового
-	try:
-		# https%3A%2F%2F -> https://
-		if photoUrl is not None and isinstance(photoUrl, str):
-			photoUrl = unquote(photoUrl)
+from lib.python.dict_interface import validate_structure
+from pkg.config.config import empty_photo_link
 
-		if resending or storage.get_user_resend_flag(chat_id):
-			if imgMode is False:
-				answer = bot.send_message(
-					chat_id, text, parse_mode=pmode, reply_markup=markup,
-					disable_web_page_preview=disable_web_page_preview)
-			else:
-				answer = bot.send_message(
-					chat_id, text, parse_mode=pmode,
-					disable_web_page_preview=disable_web_page_preview)
-				try:
-					bot.send_photo(chat_id=chat_id, photo=photoUrl, reply_markup=markup)
-				except Exception as e:
-					print("mainf/message_master_resendin_photo: ", e, flush=True)
-					bot.send_photo(chat_id=chat_id, photo=noPhoto, reply_markup=markup)
 
-			storage.del_user_resend_flag(chat_id)
-			storage.set_user_last_text(chat_id, answer.message_id)
-			return answer
+def get_timeout_from_error_bot(error):
+    result = re.search(r'Too Many Requests: retry after ([0-9]+)', str(error))
+    if result is not None:
+        try:
+            return int(result[1]) + 1
+        except Exception:
+            pass
+    return False
 
-		else:
-			if imgMode is False:
-				try:
-					# если то, что вызвало, есть текстовое сообщение
-					if storage.get_user_curr_state(chat_id) in textMessages or postloading:
-						bot.edit_message_text(
-							chat_id=chat_id, message_id=message_id, text=text,
-							parse_mode=pmode, reply_markup=markup,
-							disable_web_page_preview=disable_web_page_preview)
 
-					# если сейчас картинка, то правим последнее текстовое и удаляем картинку
-					elif storage.get_user_curr_state(chat_id) in imgMessages:
-						bot.edit_message_text(
-							chat_id=chat_id, message_id=storage.get_user_last_text(chat_id),
-							text=text, parse_mode=pmode, reply_markup=markup,
-							disable_web_page_preview=disable_web_page_preview)
-						bot.delete_message(chat_id=chat_id, message_id=message_id)
+class MasterMessages(enum.Enum):
+    text = 'text'
+    image = 'image'
 
-					# иначе просто отправляем новое сообщение
-					else:
-						answer = bot.send_message(
-							chat_id, text, parse_mode=pmode, reply_markup=markup,
-							disable_web_page_preview=disable_web_page_preview)
-						storage.del_user_resend_flag(chat_id)
-						storage.set_user_last_text(chat_id, answer.message_id)
-				except Exception:
-					answer = bot.send_message(
-						chat_id, text, parse_mode=pmode, reply_markup=markup,
-						disable_web_page_preview=disable_web_page_preview)
-					storage.del_user_resend_flag(chat_id)
-					storage.set_user_last_text(chat_id, answer.message_id)
-			else:
-				try:
-					# если то, что вызвало, есть текстовое сообщение
-					if storage.get_user_curr_state(chat_id) in textMessages or postloading:
-						bot.edit_message_text(
-							chat_id=chat_id, message_id=message_id,
-							text=text, parse_mode=pmode,
-							disable_web_page_preview=disable_web_page_preview)
-						try:
-							bot.send_photo(chat_id=chat_id, photo=photoUrl, reply_markup=markup)
-						except Exception:
-							bot.send_photo(chat_id=chat_id, photo=noPhoto, reply_markup=markup)
+    @staticmethod
+    def all_types():
+        return [x.value for x in list(MasterMessages)]
 
-					# если сейчас картинка
-					elif storage.get_user_curr_state(chat_id) in imgMessages:
-						bot.edit_message_text(
-							chat_id=chat_id, message_id=storage.get_user_last_text(chat_id),
-							text=text, parse_mode=pmode,
-							disable_web_page_preview=disable_web_page_preview)
-						photo = types.InputMedia(type="photo", media=photoUrl)
-						bot.edit_message_media(
-							chat_id=chat_id, message_id=message_id,
-							media=photo, reply_markup=markup)
 
-					# иначе просто отправляем новое сообщение
-					else:
-						answer = bot.send_message(
-							chat_id, text, parse_mode=pmode,
-							disable_web_page_preview=disable_web_page_preview)
-						try:
-							bot.send_photo(chat_id=chat_id, photo=photoUrl, reply_markup=markup)
-						except Exception:
-							bot.send_photo(chat_id=chat_id, photo=noPhoto, reply_markup=markup)
-						storage.del_user_resend_flag(chat_id)
-						storage.set_user_last_text(chat_id, answer.message_id)
-				except Exception:
-					answer = bot.send_message(chat_id, text, parse_mode=pmode)
-					try:
-						bot.send_photo(chat_id=chat_id, photo=photoUrl, reply_markup=markup)
-					except Exception:
-						bot.send_photo(chat_id=chat_id, photo=noPhoto, reply_markup=markup)
-					storage.del_user_resend_flag(chat_id)
-					storage.set_user_last_text(chat_id, answer.message_id)
-	except Exception as e:
-		timeout = get_timeout_from_error_bot(e)
-		if timeout:
-			time.sleep(timeout)
-			message_master(
-				bot, chat_id, text, markup, message_id,
-				imgMode, photoUrl, resending, postloading,
-				pmode, disable_web_page_preview)
-			return
+LOADING_TYPE = MasterMessages.text.value
+message_structures_interface = {
+    'type': tuple(MasterMessages.all_types()),
 
-		print(f"\n\nError! Can't send message! {e}\n\n")
-		bot_blocked_reaction(e, chat_id)
+    'text': str,
+    'reply_markup': types.InlineKeyboardMarkup,
+    'parse_mode': ('Markdown', 'HTML', None),
+    'disable_web_page_preview': bool,
+    'image_url': str,
+}
+previous_message_structures_interface = {
+    'id': str,
+    'type': tuple(MasterMessages.all_types()),
+}
+
+
+def build_new_prev_message_structure(message_id: str, message_type: str):
+    result = {
+        'id': message_id,
+        'type': message_type
+    }
+    if not validate_structure(result, previous_message_structures_interface):
+        raise TypeError("Message structure don't match schema")
+
+    return result
+
+
+# resending: позволяет принудительно отправить сообщение повторно
+# postloading: обработка случаев, когда до это отправляется сообщение "загрузка"
+async def message_master(
+        aiogram_message: types.Message, resending=False,
+        message_structures: List[Dict] = [], previous_message_structures: List[Dict] = []
+) -> List[Dict]:
+    for previous_message_structure in previous_message_structures:
+        # Validate schema
+        if not validate_structure(previous_message_structure, previous_message_structures_interface):
+            raise TypeError("Message structure don't match schema")
+
+    for message_structure in message_structures:
+        # Validate schema
+        if not validate_structure(message_structure, message_structures_interface):
+            raise TypeError("Message structure don't match schema")
+
+        # Unquote url
+        if 'image_url' in message_structure:
+            message_structure['image_url'] = unquote(message_structure['image_url'])
+
+    def message_structure_filter(message_structure):
+        return message_structure['type'] in MasterMessages.all_types()
+
+    message_structures = list(filter(message_structure_filter, message_structures))
+
+    # Mark old messages as delete, new as send and old-to-new as edit
+    messages_to_delete = []  # old messages
+    messages_to_edit = {}  # old message id => new message structure
+    messages_to_send = []  # new messages
+
+    if resending:
+        previous_message_structures = []
+
+    # Constructing
+    i = 0
+    message_structures_len = len(message_structures)
+    for previous_message_structure in previous_message_structures:
+        if i >= message_structures_len:
+            messages_to_delete.append(previous_message_structure)
+            continue
+
+        message_structure = message_structures[i]
+        if previous_message_structure['type'] != message_structure['type']:
+            messages_to_delete.append(previous_message_structures)
+        else:
+            messages_to_edit[previous_message_structure['id']] = message_structure
+            i += 1
+
+    for j in range(i, message_structures_len):
+        messages_to_send.append(message_structures[j])
+
+    # Array to return
+    new_message_structures = []
+
+    for message_to_delete in messages_to_delete:
+        await aiogram_message.bot.delete_message(aiogram_message.chat.id, message_to_delete['id'])
+
+    result: types.Message
+    for message_to_edit_id in messages_to_edit:
+        message_structure = messages_to_edit[message_to_edit_id]
+
+        if message_structure['type'] == MasterMessages.text.value:
+            result = await aiogram_message.bot.edit_message_text(
+                text=message_structure.get('text', None),
+                chat_id=aiogram_message.chat.id,
+                message_id=message_to_edit_id,
+                parse_mode=message_structure.get('parse_mode', None),
+                reply_markup=message_structure.get('reply_markup', None),
+                disable_web_page_preview=message_structure.get('disable_web_page_preview', None))
+
+        elif message_structure['type'] == MasterMessages.image.value:
+            result = await aiogram_message.bot.edit_message_media(
+                media=message_structure.get('image_url', None),
+                chat_id=aiogram_message.chat.id,
+                message_id=message_to_edit_id)
+            await aiogram_message.bot.edit_message_caption(
+                chat_id=aiogram_message.chat.id,
+                message_id=message_to_edit_id,
+                caption=message_structure.get('text', None),
+                parse_mode=message_structure.get('parse_mode', None),
+                reply_markup=message_structure.get('reply_markup', None))
+
+        new_message_structures.append(
+            build_new_prev_message_structure(str(result.message_id), message_structure['type']))
+
+    for message_to_send in messages_to_send:
+        message_structure = message_to_send
+
+        if message_structure['type'] == MasterMessages.text.value:
+            result = await aiogram_message.answer(
+                text=message_structure.get('text', None),
+                parse_mode=message_structure.get('parse_mode', None),
+                reply_markup=message_structure.get('reply_markup', None),
+                disable_web_page_preview=message_structure.get('disable_web_page_preview', None))
+
+        elif message_structure['type'] == MasterMessages.image.value:
+            result = await aiogram_message.answer_photo(
+                photo=message_structure.get('image_url', None),
+                caption=message_structure.get('text', None),
+                parse_mode=message_structure.get('parse_mode', None),
+                reply_markup=message_structure.get('reply_markup', None))
+
+        new_message_structures.append(
+            build_new_prev_message_structure(str(result.message_id), message_structure['type']))
+
+    return new_message_structures
