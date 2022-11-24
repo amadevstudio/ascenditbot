@@ -2,6 +2,7 @@ import json
 
 from aiogram import Bot, Dispatcher, executor, types
 
+from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg.controller import welcome_controller, state_navigator
 
 
@@ -15,16 +16,18 @@ def init_routes(environment):
 
     @dispatcher.message_handler(commands=["start"], chat_type=types.ChatType.PRIVATE)
     async def start(entity: types.Message):
-        await welcome_controller.start(entity)
+        call, message = call_and_message_accessed_processor(entity)
+        await welcome_controller.start(call, message)
 
     @dispatcher.message_handler(commands=['menu'], chat_type=types.ChatType.PRIVATE)
     @dispatcher.callback_query_handler(lambda call: get_type(call) == "menu", chat_type=types.ChatType.PRIVATE)
     async def start(entity: types.Message | types.CallbackQuery):
-        await welcome_controller.menu(entity)
+        call, message = call_and_message_accessed_processor(entity)
+        await welcome_controller.menu(call, message)
 
     @dispatcher.callback_query_handler(lambda call: get_type(call) == 'bck')
-    async def go_back(entity: types.Message | types.CallbackQuery):
-        await state_navigator.go_back(entity)
+    async def go_back(call: types.Message | types.CallbackQuery):
+        await state_navigator.go_back(call)
 
     return executor, dispatcher
 
