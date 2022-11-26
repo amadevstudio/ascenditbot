@@ -1,20 +1,21 @@
+import enum
+
 from pkg.controller import welcome_controller
 
 
 class RouteMap:
+
     ROUTES = {
         "start": {
             "method": welcome_controller.start,
             "routes": [
                 "menu"
             ],
-            "with_image": True
         },
         "menu": {
             "method": welcome_controller.menu,
             "routes": [
             ],
-            "with_image": False
         }
     }
 
@@ -30,9 +31,12 @@ class RouteMap:
         return None
 
     @staticmethod
-    def get_method(route: str):
-        route = RouteMap.find_route(route)
+    def get_route(route_name: str, key: str = None):
+        route = RouteMap.find_route(route_name)
         if route is None:
             return None
 
-        return route["method"]
+        if key is not None:
+            return route.get(key, None)
+
+        return None
