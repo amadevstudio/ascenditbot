@@ -1,3 +1,6 @@
+import json
+from typing import Dict
+
 from pkg.repository import user_storage_repository
 
 
@@ -16,5 +19,29 @@ def go_back(user_id: int):
     user_storage_repository.del_user_curr_state(user_id)
 
 
+def curr_state(user_id: int):
+    return user_storage_repository.get_user_curr_state(user_id)
+
+
 def prev_curr_states(user_id: int):
-    return user_storage_repository.get_user_prev_curr_states(user_id)
+    states = user_storage_repository.get_user_prev_curr_states(user_id)
+    if isinstance(states, list):
+        return states
+    else:
+        return None, states
+
+
+def all_states(user_id: int):
+    return user_storage_repository.get_user_states(user_id)
+
+
+def should_resend(user_id: int):
+    return user_storage_repository.get_user_resend_flag(user_id)
+
+
+def get_message_structures(user_id: int):
+    return user_storage_repository.get_user_message_structures(user_id)
+
+
+def set_message_structures(user_id: int, message_structures: Dict):
+    user_storage_repository.set_user_message_structures(user_id, message_structures)

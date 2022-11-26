@@ -14,7 +14,9 @@ STORAGE_KEYS = {
         "tg": {
             "@id": {
                 "states": "users:@{user_id}:states",
-                "state_data": "users:@{user_id}:state_data"
+                "state_data": "users:@{user_id}:state_data",
+                "resend_flag": "users:@{user_id}:resend_flag",
+                "message_structures": "users:@{user_id}:message_structures"
             }
         }
     }
@@ -25,7 +27,7 @@ def clear_user_storage(user_id):
     storage_key_values = get_all_level_values(STORAGE_KEYS)
 
     for key in storage_key_values:
-        Storage().connection.delete(key.format)
+        Storage().connection.delete(key.format(user_id=user_id))
 
 
 # User states
@@ -66,8 +68,32 @@ def add_user_state_data(user_id, state, data):
 
 
 def del_user_curr_state(user_id):
-    return Storage().connection.lpop(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(user_id=user_id))
+    return Storage().connection.rpop(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(user_id=user_id))
 
 
 def del_user_states(user_id):
     return Storage().connection.delete(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(user_id=user_id))
+
+
+# Resend flag
+
+@convert_bytes_to_strings
+def get_user_resend_flag(user_id):
+    print(Storage().connection.get(STORAGE_KEYS["users"]["tg"]["@id"]["resend_flag"].format(user_id=user_id)))
+    print(Storage().connection.get(STORAGE_KEYS["users"]["tg"]["@id"]["resend_flag"].format(user_id=user_id)) == "1")
+    return Storage().connection.get(STORAGE_KEYS["users"]["tg"]["@id"]["resend_flag"].format(user_id=user_id)) == "1"
+
+
+# Last message text id
+
+@convert_bytes_to_strings
+def get_user_message_structures(user_id):
+    message_structures = Storage().connection.get(
+        STORAGE_KEYS["users"]["tg"]["@id"]["message_structures"].format(user_id=user_id))
+    return json.loads(message_structures) if message_structures is not None else []
+
+
+def set_user_message_structures(user_id, message_structures):
+    return Storage().connection.set(
+        STORAGE_KEYS["users"]["tg"]["@id"]["message_structures"].format(user_id=user_id),
+        json.dumps(message_structures))
