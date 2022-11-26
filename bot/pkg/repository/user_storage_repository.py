@@ -79,8 +79,6 @@ def del_user_states(user_id):
 
 @convert_bytes_to_strings
 def get_user_resend_flag(user_id):
-    print(Storage().connection.get(STORAGE_KEYS["users"]["tg"]["@id"]["resend_flag"].format(user_id=user_id)))
-    print(Storage().connection.get(STORAGE_KEYS["users"]["tg"]["@id"]["resend_flag"].format(user_id=user_id)) == "1")
     return Storage().connection.get(STORAGE_KEYS["users"]["tg"]["@id"]["resend_flag"].format(user_id=user_id)) == "1"
 
 
