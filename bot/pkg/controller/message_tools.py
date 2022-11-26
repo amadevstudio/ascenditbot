@@ -1,7 +1,9 @@
+import json
 import time
 
 from aiogram import types, utils
 
+from lib.language import localization
 from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot
 import pkg.config as pkg_config
 from pkg.service import user_storage
@@ -10,7 +12,7 @@ from pkg.system.logger import logger
 
 def go_back_inline_markup(language_code):
     button = types.InlineKeyboardButton(localization.get_message(
-        ["buttons", "go_back"], language_code), callback_data=json.dumps({'tp': 'back'}))
+        ["buttons", "back"], language_code), callback_data=json.dumps({'tp': 'back'}))
     return types.InlineKeyboardMarkup().add(button)
 
 

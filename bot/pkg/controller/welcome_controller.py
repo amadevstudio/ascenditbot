@@ -3,8 +3,7 @@ import json
 from aiogram import types
 
 from lib.language import localization
-from pkg.config.config import empty_photo_link
-from pkg.controller.message_sender import message_sender
+from pkg.controller.message_tools import message_sender
 
 from pkg.service import user_storage
 
@@ -29,20 +28,20 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
 
 
 async def menu(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    button = types.InlineKeyboardButton(
-        localization.get_message(["buttons", "back"], message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'bck'}))
-    markup = types.InlineKeyboardMarkup().add(button)
+    buttons = []
+    for button_type in ["add_group", "my_groups", "help", "payment"]:
+        buttons.append(types.InlineKeyboardButton(
+            localization.get_message(["buttons", button_type], message.from_user.language_code),
+            callback_data=json.dumps({'tp': button_type})))
+    markup = types.InlineKeyboardMarkup().row(buttons[0], buttons[1])
+    markup.row(buttons[2], buttons[3])
 
     message_structures = [{
         'type': 'text',
         'text': localization.get_message(["menu", "menu"], message.from_user.language_code),
         'reply_markup': markup,
-    }, {
-        'type': 'image',
-        'image_url': empty_photo_link
     }]
     await message_sender(message, resending=call is None, message_structures=message_structures)
 
     if change_user_state:
-        user_storage.change_page(call.message.chat.id, 'menu')
+        user_storage.change_page(message.chat.id, 'menu')
