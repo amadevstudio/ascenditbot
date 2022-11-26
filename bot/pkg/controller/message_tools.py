@@ -8,6 +8,12 @@ from pkg.service import user_storage
 from pkg.system.logger import logger
 
 
+def go_back_inline_markup(language_code):
+    button = types.InlineKeyboardButton(localization.get_message(
+        ["buttons", "go_back"], language_code), callback_data=json.dumps({'tp': 'back'}))
+    return types.InlineKeyboardMarkup().add(button)
+
+
 async def message_sender(
         message: types.Message, resending=False, message_structures=[]):
     resending |= user_storage.should_resend(message.chat.id)
@@ -33,7 +39,5 @@ async def message_sender(
 
         # bot_blocked_reaction(e, chat_id)
 
-    print("NEW MESSAGE STR")
-    print(new_message_structures)
     if new_message_structures is not None:
         user_storage.set_message_structures(message.chat.id, new_message_structures)

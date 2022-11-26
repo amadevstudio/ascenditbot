@@ -1,8 +1,8 @@
 import sys
 import os
 import datetime
-import queue
-import threading
+# import queue
+# import threading
 import logging
 
 
@@ -31,7 +31,7 @@ class Logger:
     def __reinit_logger(self):
         self.__set_dated_filename()
         if os.environ['ENVIRONMENT'] == "development":
-            logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
+            logging.basicConfig(encoding='utf-8')  # , level=logging.DEBUG)
         else:
             logging.basicConfig(filename=self.dated_file, encoding='utf-8')
         self.logger = logging.getLogger(self.file)
