@@ -1,0 +1,39 @@
+import time
+
+from aiogram import types, utils
+
+from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot
+import pkg.config as pkg_config
+from pkg.service import user_storage
+from pkg.system.logger import logger
+
+
+async def message_sender(
+        message: types.Message, resending=False, message_structures=[]):
+    resending |= user_storage.should_resend(message.chat.id)
+
+    previous_message_structures = user_storage.get_message_structures(message.chat.id) if resending is False else []
+
+    new_message_structures = None
+    try:
+        new_message_structures = await message_master(
+            message, resending=resending, message_structures=message_structures,
+            previous_message_structures=previous_message_structures)
+    except utils.exceptions.MessageNotModified:
+        pass
+    except Exception as e:
+        timeout = get_timeout_from_error_bot(e)
+        if timeout:
+            time.sleep(timeout)
+            new_message_structures = await message_master(
+                message, resending=resending, message_structures=message_structures,
+                previous_message_structures=previous_message_structures)
+        else:
+            raise e
+
+        # bot_blocked_reaction(e, chat_id)
+
+    print("NEW MESSAGE STR")
+    print(new_message_structures)
+    if new_message_structures is not None:
+        user_storage.set_message_structures(message.chat.id, new_message_structures)
