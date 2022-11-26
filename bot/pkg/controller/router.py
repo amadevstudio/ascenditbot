@@ -2,30 +2,75 @@ import json
 
 from aiogram import Bot, Dispatcher, executor, types
 
+from lib.language import localization
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
-from pkg.controller import welcome_controller, state_navigator
+from pkg.config.routes import RouteMap
+from pkg.controller import state_navigator
 
 
 def get_type(call):
     return json.loads(call.data).get("tp", "")
 
 
+def get_curr_state():
+    pass
+
+
+async def event_wrapper(type: str, entity: types.Message | types.CallbackQuery):
+    call, message = call_and_message_accessed_processor(entity)
+    await RouteMap.get_route(type, 'method')(call, message)
+
+
 def init_routes(environment):
     bot = Bot(token=environment["TELEGRAM_BOT_TOKEN"])
     dispatcher = Dispatcher(bot)
 
+    # for route in RouteMap.ROUTES:
+    #     route_params = RouteMap.ROUTES[route]
+    #     if {'command', 'call', 'message'} == set(route_params["available_from"]):
+    #         @dispatcher.message_handler(commands=[route], chat_type=route_params.get('chat_type', True))
+    #         @dispatcher.message_handler(
+    #             lambda message: get_curr_state() == route, chat_type=route_params.get('chat_type', True))
+    #         @dispatcher.callback_query_handler(
+    #             lambda call: get_type(call) == route, chat_type=route_params.get('chat_type', True))
+    #         async def function(entity: types.Message | types.CallbackQuery):
+    #             call, message = call_and_message_accessed_processor(entity)
+    #             await RouteMap.get_route(route, 'method')(call, message)
+    #     elif "command" in route_params["available_from"] and "call" in route_params["available_from"]:
+    #         @dispatcher.message_handler(commands=[route], chat_type=route_params.get('chat_type', True))
+    #         @dispatcher.callback_query_handler(
+    #             lambda call: get_type(call) == route, chat_type=route_params.get('chat_type', True))
+    #         async def function(entity: types.Message | types.CallbackQuery):
+    #             call, message = call_and_message_accessed_processor(entity)
+    #             await RouteMap.get_route(route, 'method')(call, message)
+    #     elif "command" in route_params["available_from"]:
+    #         @dispatcher.message_handler(commands=[route], chat_type=route_params.get('chat_type', True))
+    #         async def function(entity: types.Message | types.CallbackQuery):
+    #             call, message = call_and_message_accessed_processor(entity)
+    #             await RouteMap.get_route(route, 'method')(call, message)
+    #     elif "call" in route_params["available_from"]:
+    #         @dispatcher.callback_query_handler(
+    #             lambda call: get_type(call) == route, chat_type=route_params.get('chat_type', True))
+    #         async def function(entity: types.Message | types.CallbackQuery):
+    #             call, message = call_and_message_accessed_processor(entity)
+    #             await RouteMap.get_route(route, 'method')(call, message)
+
     @dispatcher.message_handler(commands=["start"], chat_type=types.ChatType.PRIVATE)
     async def start(entity: types.Message):
-        call, message = call_and_message_accessed_processor(entity)
-        await welcome_controller.start(call, message)
+        await event_wrapper("start", entity)
 
-    @dispatcher.message_handler(commands=['menu'], chat_type=types.ChatType.PRIVATE)
+    @dispatcher.message_handler(commands=["menu"], chat_type=types.ChatType.PRIVATE)
     @dispatcher.callback_query_handler(lambda call: get_type(call) == "menu", chat_type=types.ChatType.PRIVATE)
-    async def start(entity: types.Message | types.CallbackQuery):
-        call, message = call_and_message_accessed_processor(entity)
-        await welcome_controller.menu(call, message)
+    async def menu(entity: types.Message | types.CallbackQuery):
+        await event_wrapper("menu", entity)
 
-    @dispatcher.callback_query_handler(lambda call: get_type(call) == 'bck')
+    @dispatcher.message_handler(commands=['add_group'], chat_type=types.ChatType.PRIVATE)
+    @dispatcher.callback_query_handler(lambda call: get_type(call) == "add_group", chat_type=types.ChatType.PRIVATE)
+    async def add_group(entity: types.Message | types.CallbackQuery):
+        await event_wrapper("add_group", entity)
+
+
+    @dispatcher.callback_query_handler(lambda call: get_type(call) == 'back')
     async def go_back(call: types.Message | types.CallbackQuery):
         await state_navigator.go_back(call)
 

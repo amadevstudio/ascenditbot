@@ -1,6 +1,8 @@
 import enum
 
-from pkg.controller import welcome_controller
+from aiogram import types
+
+from pkg.controller import welcome_controller, groups_controller
 
 
 class RouteMap:
@@ -15,7 +17,13 @@ class RouteMap:
         "menu": {
             "method": welcome_controller.menu,
             "routes": [
+                "add_group"
             ],
+        },
+        "add_group": {
+            "method": groups_controller.add_group,
+            # "available_from": ["call", "command", "message"],
+            # "chat_type": types.ChatType.PRIVATE
         }
     }
 
