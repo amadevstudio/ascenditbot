@@ -11,9 +11,9 @@ from pkg.service import user_storage
 from pkg.system.logger import logger
 
 
-def go_back_inline_markup(language_code: str):
+def go_back_inline_markup(language_code: str, button_text: str = "back"):
     button = types.InlineKeyboardButton(localization.get_message(
-        ["buttons", "back"], language_code), callback_data=json.dumps({'tp': 'back'}))
+        ["buttons", button_text], language_code), callback_data=json.dumps({'tp': 'back'}))
     return types.InlineKeyboardMarkup().add(button)
 
 
@@ -53,7 +53,8 @@ async def message_sender(
         user_storage.set_message_structures(message.chat.id, new_message_structures)
 
 
-def notify(call: types.CallbackQuery, message: types.Message, text: str, alert: bool = False):
+async def notify(
+        call: types.CallbackQuery, message: types.Message, text: str, alert: bool = False, button_text: str = "back"):
     if call is not None:
         call.bot.answer_callback_query(
             callback_query_id=call.id, show_alert=alert, text=text)
@@ -62,9 +63,9 @@ def notify(call: types.CallbackQuery, message: types.Message, text: str, alert: 
     message_structures = [{
         'type': 'text',
         'text': text,
-        'reply_markup': go_back_inline_markup(message.from_user.language_code)
+        'reply_markup': go_back_inline_markup(message.from_user.language_code, button_text=button_text)
     }]
-    message_sender(message, resending=True, message_structures=message_structures)
+    await message_sender(message, resending=True, message_structures=message_structures)
 
 
 def call_or_command(call: types.CallbackQuery = None, message: types.Message = None,
