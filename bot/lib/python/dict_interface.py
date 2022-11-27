@@ -9,7 +9,7 @@ def validate_structure(struct, conf):
         # struct is the type of conf
         return isinstance(struct, conf)
     elif isinstance(conf, tuple):
-        return struct in conf
+        return struct in conf or type(struct) in conf
     else:
         # struct is neither a dict, nor list, not type
         return False
