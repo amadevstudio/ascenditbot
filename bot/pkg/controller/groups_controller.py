@@ -2,8 +2,8 @@ from aiogram import types
 
 from lib.language import localization
 from framework.controller.message_tools import message_sender, go_back_inline_markup, call_or_command, \
-    image_link_or_object
-from pkg.service import user_storage
+    image_link_or_object, notify
+from pkg.service import user_storage, chat
 
 
 async def add_group(call: types.CallbackQuery, message: types.Message, change_user_state=True):
@@ -24,10 +24,24 @@ async def add_group(call: types.CallbackQuery, message: types.Message, change_us
 
     # Group adding
 
-    print("!")
-    print(message.forward_from)
-    print(message.forward_from_chat)
-    print(message.forward_from_chat.id)
+    if message.forward_from_chat is not None:
+        chat_id = message.forward_from_chat.id
+    else:
+        chat_id = message.text
+
+    result = await chat.add(message, chat_id, message.from_user.id)  # Use user to check admin rights if called in chat
+
+    if "error" in result:
+        await notify(call, message, localization.get_message(
+                ["add_group", "errors", result["error"]], message.from_user.language_code),
+            alert=True, button_text="cancel")
+        return
+
+    # print("!")
+    # print(message)
+    # print(message.forward_from)
+    # print(message.forward_from_chat)
+    # print(message.forward_from_chat.id)
     # {"id": -1001810942288, "title": "message_manager_bot_test", "type": "supergroup"}
     # -1001810942288
 
