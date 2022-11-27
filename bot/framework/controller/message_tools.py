@@ -11,10 +11,17 @@ from pkg.service import user_storage
 from pkg.system.logger import logger
 
 
-def go_back_inline_markup(language_code):
+def go_back_inline_markup(language_code: str):
     button = types.InlineKeyboardButton(localization.get_message(
         ["buttons", "back"], language_code), callback_data=json.dumps({'tp': 'back'}))
     return types.InlineKeyboardMarkup().add(button)
+
+
+def image_link_or_object(path: str):
+    if path[0:2] == "./":
+        return types.InputFile(path)
+
+    return path
 
 
 async def message_sender(

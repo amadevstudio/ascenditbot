@@ -1,4 +1,5 @@
-from project.i18n import routed_messages
+from pkg.config.config import empty_photo_link
+from project.i18n import routed_messages, links
 
 # panic_language = "en"
 panic_language = "ru"
@@ -44,3 +45,28 @@ def get_message(message_route: [str], lang_code: str):
         msg = ""
 
     return msg
+
+
+def get_link(link_route: [str], lang_code: str):
+    lang_code = get_language(lang_code)
+    curr_route = None
+    link = None
+    if len(link_route) > 0:
+        try:
+            for r in link_route:
+                if curr_route is None:
+                    curr_route = links.get(r.lower())
+                else:
+                    curr_route = curr_route.get(r.lower())
+
+            try:
+                link = curr_route.get("template").format(language_code=lang_code)
+            except AttributeError:
+                link = curr_route.get("default")
+        except AttributeError:
+            link = empty_photo_link
+
+    if link is None:
+        link = empty_photo_link
+
+    return link
