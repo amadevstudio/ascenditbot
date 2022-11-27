@@ -1,7 +1,8 @@
 from aiogram import types
 
 from lib.language import localization
-from framework.controller.message_tools import message_sender, go_back_inline_markup, call_or_command
+from framework.controller.message_tools import message_sender, go_back_inline_markup, call_or_command, \
+    image_link_or_object
 from pkg.service import user_storage
 
 
@@ -9,7 +10,8 @@ async def add_group(call: types.CallbackQuery, message: types.Message, change_us
     if call_or_command(call, message):
         message_structures = [{
             'type': 'image',
-            'image': types.InputFile(f"./public/anonim_admin_example_ru.jpg"),
+            'image': image_link_or_object(
+                localization.get_link(["add_group", "anon_admin_example"], message.from_user.language_code)),
             'text': localization.get_message(["add_group", "instruction"], message.from_user.language_code),
             'reply_markup': go_back_inline_markup(message.from_user.language_code)
         }]

@@ -53,6 +53,20 @@ async def message_sender(
         user_storage.set_message_structures(message.chat.id, new_message_structures)
 
 
+def notify(call: types.CallbackQuery, message: types.Message, text: str, alert: bool = False):
+    if call is not None:
+        call.bot.answer_callback_query(
+            callback_query_id=call.id, show_alert=alert, text=text)
+        return
+
+    message_structures = [{
+        'type': 'text',
+        'text': text,
+        'reply_markup': go_back_inline_markup(message.from_user.language_code)
+    }]
+    message_sender(message, resending=True, message_structures=message_structures)
+
+
 def call_or_command(call: types.CallbackQuery = None, message: types.Message = None,
                     entity: types.Message | types.CallbackQuery = None) -> bool:
     """

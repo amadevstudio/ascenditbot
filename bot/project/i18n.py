@@ -9,6 +9,16 @@ emoji_codes = {
     'down_arrow': '⬇️'
 }
 
+links = {
+    "add_group": {
+        "anon_admin_example": {
+            "template": "./public/anonim_admin_example_{language_code}.jpg",
+            "default": "./public/anonim_admin_example_ru.jpg"
+        }
+    }
+}
+
+
 routed_messages = {
     "buttons": {
         "back": {
