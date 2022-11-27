@@ -13,10 +13,10 @@ STORAGE_KEYS = {
     "users": {
         "tg": {
             "@id": {
-                "states": "users:@{user_id}:states",
-                "state_data": "users:@{user_id}:state_data",
-                "resend_flag": "users:@{user_id}:resend_flag",
-                "message_structures": "users:@{user_id}:message_structures"
+                "states": "users:{user_id}:states",
+                "state_data": "users:{user_id}:state_data",
+                "resend_flag": "users:{user_id}:resend_flag",
+                "message_structures": "users:{user_id}:message_structures"
             }
         }
     }
@@ -88,7 +88,14 @@ def get_user_resend_flag(user_id):
 def get_user_message_structures(user_id):
     message_structures = Storage().connection.get(
         STORAGE_KEYS["users"]["tg"]["@id"]["message_structures"].format(user_id=user_id))
-    return json.loads(message_structures) if message_structures is not None else []
+    if message_structures is None:
+        return []
+
+    message_structures_decoded = json.loads(message_structures)
+    for message_structure in message_structures_decoded:
+        message_structure['id'] = int(message_structure['id'])
+
+    return message_structures_decoded
 
 
 def set_user_message_structures(user_id, message_structures):
