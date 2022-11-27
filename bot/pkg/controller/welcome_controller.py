@@ -5,12 +5,13 @@ from aiogram import types
 from lib.language import localization
 from framework.controller.message_tools import message_sender
 
-from pkg.service import user_storage
+from pkg.service import user_storage, user
 
 
 async def start(call: types.CallbackQuery, message: types.Message, change_user_state=True):
     if call is None:
         await message.reply('👋')
+        user.register(message.chat.id, message.from_user.language_code)
 
     button = types.InlineKeyboardButton(localization.get_message(
         ["welcome", "let's begin"], message.from_user.language_code), callback_data=json.dumps({'tp': 'menu'}))

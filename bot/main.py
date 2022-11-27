@@ -2,6 +2,7 @@ from pkg.config.config import environment
 
 from pkg.controller.router import init_routes
 
+from pkg.repository.database_connection import Database
 from pkg.repository.storage_connection import Storage
 
 # from db.adapter import database
@@ -13,6 +14,14 @@ storage_configuration = {
     "password": environment["REDIS_PASSWORD"]
 }
 storage_connection = Storage().connect(storage_configuration)
+
+database_configuration = {
+    "host": "db",
+    "database": environment["POSTGRES_DB"],
+    "user": environment["POSTGRES_USER"],
+    "password": environment["POSTGRES_PASSWORD"]
+}
+database_connection = Database().connect(database_configuration)
 
 # database_connection
 
