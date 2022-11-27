@@ -37,15 +37,15 @@ message_structures_interface = {
     'reply_markup': types.InlineKeyboardMarkup,
     'parse_mode': ('Markdown', 'HTML', None),
     'disable_web_page_preview': bool,
-    'image_url': str,
+    'image': (str, types.InputFile),
 }
 previous_message_structures_interface = {
-    'id': str,
+    'id': int,
     'type': tuple(MasterMessages.all_types()),
 }
 
 
-def build_new_prev_message_structure(message_id: str, message_type: str):
+def build_new_prev_message_structure(message_id: int, message_type: str):
     result = {
         'id': message_id,
         'type': message_type
@@ -73,8 +73,8 @@ async def message_master(
             raise TypeError("Message structure don't match schema")
 
         # Unquote url
-        if 'image_url' in message_structure:
-            message_structure['image_url'] = unquote(message_structure['image_url'])
+        if 'image' in message_structure and isinstance(message_structure['image'], str):
+            message_structure['image'] = unquote(message_structure['image'])
 
     def message_structure_filter(message_structure):
         return message_structure['type'] in MasterMessages.all_types()
@@ -99,7 +99,7 @@ async def message_master(
 
         message_structure = message_structures[i]
         if previous_message_structure['type'] != message_structure['type']:
-            messages_to_delete.append(previous_message_structures)
+            messages_to_delete.append(previous_message_structure)
         else:
             messages_to_edit[previous_message_structure['id']] = message_structure
             i += 1
@@ -128,7 +128,7 @@ async def message_master(
 
         elif message_structure['type'] == MasterMessages.image.value:
             result = await aiogram_message.bot.edit_message_media(
-                media=message_structure.get('image_url', None),
+                media=message_structure.get('image', None),
                 chat_id=aiogram_message.chat.id,
                 message_id=message_to_edit_id)
             await aiogram_message.bot.edit_message_caption(
@@ -139,7 +139,7 @@ async def message_master(
                 reply_markup=message_structure.get('reply_markup', None))
 
         new_message_structures.append(
-            build_new_prev_message_structure(str(result.message_id), message_structure['type']))
+            build_new_prev_message_structure(result.message_id, message_structure['type']))
 
     for message_to_send in messages_to_send:
         message_structure = message_to_send
@@ -153,12 +153,12 @@ async def message_master(
 
         elif message_structure['type'] == MasterMessages.image.value:
             result = await aiogram_message.answer_photo(
-                photo=message_structure.get('image_url', None),
+                photo=message_structure.get('image', None),
                 caption=message_structure.get('text', None),
                 parse_mode=message_structure.get('parse_mode', None),
                 reply_markup=message_structure.get('reply_markup', None))
 
         new_message_structures.append(
-            build_new_prev_message_structure(str(result.message_id), message_structure['type']))
+            build_new_prev_message_structure(result.message_id, message_structure['type']))
 
     return new_message_structures
