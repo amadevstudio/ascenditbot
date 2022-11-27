@@ -1,24 +1,7 @@
-import json
-
 from aiogram import Bot, Dispatcher, executor, types
 
-from lib.language import localization
-from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
-from pkg.config.routes import RouteMap
-from pkg.controller import state_navigator
-
-
-def get_type(call):
-    return json.loads(call.data).get("tp", "")
-
-
-def get_curr_state():
-    pass
-
-
-async def event_wrapper(type: str, entity: types.Message | types.CallbackQuery):
-    call, message = call_and_message_accessed_processor(entity)
-    await RouteMap.get_route(type, 'method')(call, message)
+from framework.controller.router_tools import get_type, user_state, event_wrapper
+from framework.controller import state_navigator
 
 
 def init_routes(environment):
@@ -65,6 +48,9 @@ def init_routes(environment):
         await event_wrapper("menu", entity)
 
     @dispatcher.message_handler(commands=['add_group'], chat_type=types.ChatType.PRIVATE)
+    @dispatcher.message_handler(
+        lambda message: user_state(message) == "add_group", content_types=types.ContentType.ANY,
+        chat_type=types.ChatType.PRIVATE)
     @dispatcher.callback_query_handler(lambda call: get_type(call) == "add_group", chat_type=types.ChatType.PRIVATE)
     async def add_group(entity: types.Message | types.CallbackQuery):
         await event_wrapper("add_group", entity)

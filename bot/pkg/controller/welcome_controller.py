@@ -3,7 +3,7 @@ import json
 from aiogram import types
 
 from lib.language import localization
-from pkg.controller.message_tools import message_sender
+from framework.controller.message_tools import message_sender
 
 from pkg.service import user_storage
 

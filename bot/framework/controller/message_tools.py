@@ -6,6 +6,7 @@ from aiogram import types, utils
 from lib.language import localization
 from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot
 import pkg.config as pkg_config
+from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg.service import user_storage
 from pkg.system.logger import logger
 
@@ -43,3 +44,14 @@ async def message_sender(
 
     if new_message_structures is not None:
         user_storage.set_message_structures(message.chat.id, new_message_structures)
+
+
+def call_or_command(call: types.CallbackQuery = None, message: types.Message = None,
+                    entity: types.Message | types.CallbackQuery = None) -> bool:
+    """
+    If entity passed call and message are ignored
+    """
+    if entity is not None:
+        call, message = call_and_message_accessed_processor(entity)
+
+    return call is not None or message.text[0] == '/'
