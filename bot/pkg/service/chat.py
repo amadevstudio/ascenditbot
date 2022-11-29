@@ -1,10 +1,27 @@
+import datetime
+
+import aiogram.bot.bot
 from aiogram import types
 from aiogram.utils import exceptions
 
+from pkg.repository import chat_repository
+from pkg.system.logger import logger
 
-async def validate_bot_rights(message: types.Message, chat_id: int):
+chat_interface = {
+    'id': int,
+    'service_id': str,
+    'active': bool,
+    'disabled': bool,
+    'allow_administrators': bool,
+    'allowed_keywords': str,
+    'created_at': datetime.datetime,
+    'updated_at': datetime.datetime
+}
+
+
+async def _validate_bot_rights(bot: aiogram.bot.bot.Bot, chat_service_id: int):
     try:
-        chat_member = await message.bot.get_chat_member(chat_id, message.bot.id)
+        chat_member = await bot.get_chat_member(chat_service_id, bot.id)
     except exceptions.Unauthorized:
         return {"error": "not_member"}
 
@@ -17,12 +34,12 @@ async def validate_bot_rights(message: types.Message, chat_id: int):
     return {}
 
 
-async def validate_admin_rights(message: types.Message, chat_id: int, user_id: int):
-    chat_administrators = await message.bot.get_chat_administrators(chat_id)
+async def _validate_admin_rights(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int):
+    chat_administrators = await bot.get_chat_administrators(chat_service_id)
     administrator: types.ChatMemberAdministrator | types.ChatMemberOwner | None = None
 
     for chat_administrator in chat_administrators:
-        if chat_administrator.user.id == user_id:
+        if chat_administrator.user.id == user_service_id:
             administrator = chat_administrator
 
     if administrator is None:
@@ -34,14 +51,14 @@ async def validate_admin_rights(message: types.Message, chat_id: int, user_id: i
     return {"administrator": administrator}
 
 
-async def add(message: types.Message, chat_id: int, user_id: int):
+async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int):
     # Validate we are admin with deletion rights
-    result = await validate_bot_rights(message, chat_id)
+    result = await _validate_bot_rights(bot, chat_service_id)
     if "error" in result:
         return {"error": result["error"]}
 
     # Validate client is an admin with edit rights too
-    result = await validate_admin_rights(message, chat_id, user_id)
+    result = await _validate_admin_rights(bot, chat_service_id, user_service_id)
     if "error" in result:
         return {"error": result["error"]}
 
@@ -49,6 +66,20 @@ async def add(message: types.Message, chat_id: int, user_id: int):
 
     # TODO: validate administrator.status == 'creator' without premium subscription
 
-    print(administrator)
+    try:
+        result_connection = chat_repository.create(str(chat_service_id), str(user_service_id))
+        if "error" in result_connection:
+            return result_connection
+    except Exception as e:
+        logger.err(e)
+        return {"error": "unexpected"}
 
-    return {}
+    return result_connection
+
+
+async def get_info(bot: aiogram.bot.bot.Bot, chat_service_id: str):
+    chat_info = await bot.get_chat(chat_service_id)
+    return {
+        'service_id': chat_info['id'],
+        'title': chat_info['title']
+    }

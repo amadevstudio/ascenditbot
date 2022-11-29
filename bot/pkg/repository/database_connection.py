@@ -36,8 +36,23 @@ class Database(metaclass=Singleton):
         model['created_at'] = model['updated_at']
         return model
 
-    def commit(self, query: str, params: tuple):
-        cursor = self._build_cursor()
+    def execute(self, query: str, params: tuple, cursor: psycopg2.extensions.cursor = None):
+        if cursor is None:
+            cursor = self._build_cursor()
+        try:
+            cursor.execute(query + " RETURNING id", params)
+            row_id = cursor.fetchone()['id']
+            self.connection.commit()
+            return row_id, cursor
+        except psycopg2.DatabaseError as e:
+            self.connection.rollback()
+            logger.err(f"Can't register user: {e}")
+            return None, None
+
+    def commit(self, query: str, params: tuple, cursor: psycopg2.extensions.cursor = None):
+        if cursor is None:
+            cursor = self._build_cursor()
+
         try:
             cursor.execute(query + " RETURNING id", params)
             row_id = cursor.fetchone()['id']
@@ -72,7 +87,8 @@ class Database(metaclass=Singleton):
         cursor.execute(query, params)
         return cursor.fetchone()
 
-    def insert_model(self, model_name: str, model_data: dict):
+    def insert_model(
+            self, model_name: str, model_data: dict, commit: bool = True, cursor: psycopg2.extensions.cursor = None):
         model_data = self.__class__.inject_timestamps(model_data)
 
         query = """
@@ -80,11 +96,14 @@ class Database(metaclass=Singleton):
         """.format(
             model_name=model_name, columns=(', '.join(model_data.keys())),
             sss=(', '.join(["%s" for _ in range(0, len(model_data))])))
-        print(query)
 
-        model_id = self.commit(query, tuple(model_data.values()))
+        if commit:
+            model_id = self.commit(query, tuple(model_data.values()), cursor=cursor)
+            return self.fetchone(f"SELECT * FROM {model_name} WHERE id = %s", (model_id,))
 
-        return self.fetchone(f"SELECT * FROM {model_name} WHERE id = %s", (model_id,))
+        else:
+            model_id, cursor = self.execute(query, tuple(model_data.values()), cursor=cursor)
+            return self.fetchone(f"SELECT * FROM {model_name} WHERE id = %s", (model_id,)), cursor
 
     def update_model(self, model_name: str, model_data: dict):
         model_data = self.__class__.inject_updated_at(model_data)

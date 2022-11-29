@@ -12,9 +12,13 @@ from pkg.system.logger import logger
 
 
 def go_back_inline_markup(language_code: str, button_text: str = "back"):
-    button = types.InlineKeyboardButton(localization.get_message(
-        ["buttons", button_text], language_code), callback_data=json.dumps({'tp': 'back'}))
+    button = go_back_inline_button(language_code, button_text)
     return types.InlineKeyboardMarkup().add(button)
+
+
+def go_back_inline_button(language_code: str, button_text: str = "back"):
+    return types.InlineKeyboardButton(localization.get_message(
+        ["buttons", button_text], language_code), callback_data=json.dumps({'tp': 'back'}))
 
 
 def image_link_or_object(path: str):
