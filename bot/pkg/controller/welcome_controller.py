@@ -30,7 +30,7 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
 
 async def menu(call: types.CallbackQuery, message: types.Message, change_user_state=True):
     buttons = []
-    for button_type in ["add_group", "my_groups", "help", "payment"]:
+    for button_type in ["add_chat", "my_chats", "help", "payment"]:
         buttons.append(types.InlineKeyboardButton(
             localization.get_message(["buttons", button_type], message.from_user.language_code),
             callback_data=json.dumps({'tp': button_type})))

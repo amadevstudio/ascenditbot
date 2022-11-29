@@ -1,5 +1,5 @@
 # ascenditbot
-Telegram whitelist bot for a group
+Telegram whitelist bot for a chats
 
 ## Setup
 

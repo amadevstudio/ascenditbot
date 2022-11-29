@@ -47,13 +47,13 @@ def init_routes(environment):
     async def menu(entity: types.Message | types.CallbackQuery):
         await event_wrapper("menu", entity)
 
-    @dispatcher.message_handler(commands=['add_group'], chat_type=types.ChatType.PRIVATE)
+    @dispatcher.message_handler(commands=['add_chat'], chat_type=types.ChatType.PRIVATE)
     @dispatcher.message_handler(
-        lambda message: user_state(message) == "add_group", content_types=types.ContentType.ANY,
+        lambda message: user_state(message) == "add_chat", content_types=types.ContentType.ANY,
         chat_type=types.ChatType.PRIVATE)
-    @dispatcher.callback_query_handler(lambda call: get_type(call) == "add_group", chat_type=types.ChatType.PRIVATE)
+    @dispatcher.callback_query_handler(lambda call: get_type(call) == "add_chat", chat_type=types.ChatType.PRIVATE)
     async def add_group(entity: types.Message | types.CallbackQuery):
-        await event_wrapper("add_group", entity)
+        await event_wrapper("add_chat", entity)
 
 
     @dispatcher.callback_query_handler(lambda call: get_type(call) == 'back')

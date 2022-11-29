@@ -3,14 +3,14 @@ from project import constants
 
 emoji_codes = {
     'new': '🆕',  # \U0001F195
-    'group': '👥',
+    'chat': '👥',
     'sos': '🆘',
     'credit_card': '💳',
     'down_arrow': '⬇️'
 }
 
 links = {
-    "add_group": {
+    "add_chat": {
         "anon_admin_example": {
             "template": "./public/anonim_admin_example_{language_code}.jpg",
             "default": "./public/anonim_admin_example_ru.jpg"
@@ -33,11 +33,11 @@ routed_messages = {
             "en": "",
             "ru": "Перейти к настройкам"
         },
-        "my_groups": {
+        "my_chats": {
             "en": "",
-            "ru": f"{emoji_codes.get('group', '')} Мои группы"
+            "ru": f"{emoji_codes.get('chat', '')} Мои группы"
         },
-        "add_group": {
+        "add_chat": {
             "en": "",
             "ru": f"{emoji_codes.get('new', '')} Добавить группу"
         },
@@ -71,7 +71,7 @@ routed_messages = {
             "ru": "Меню"
         }
     },
-    "add_group": {
+    "add_chat": {
         "instruction": {
             "en": "",
             "ru":

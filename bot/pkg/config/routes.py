@@ -17,11 +17,11 @@ class RouteMap:
         "menu": {
             "method": welcome_controller.menu,
             "routes": [
-                "add_group"
+                "add_chat"
             ],
         },
-        "add_group": {
-            "method": chats_controller.add_group,
+        "add_chat": {
+            "method": chats_controller.add_chat,
             # "available_from": ["call", "command", "message"],
             # "chat_type": types.ChatType.PRIVATE
         }

@@ -8,23 +8,23 @@ from framework.controller.message_tools import message_sender, go_back_inline_ma
 from pkg.service import user_storage, chat
 
 
-async def add_group(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def add_chat(call: types.CallbackQuery, message: types.Message, change_user_state=True):
     if call_or_command(call, message):
         message_structures = [{
             'type': 'image',
             'image': image_link_or_object(
-                localization.get_link(["add_group", "anon_admin_example"], message.from_user.language_code)),
-            'text': localization.get_message(["add_group", "instruction"], message.from_user.language_code),
+                localization.get_link(["add_chat", "anon_admin_example"], message.from_user.language_code)),
+            'text': localization.get_message(["add_chat", "instruction"], message.from_user.language_code),
             'reply_markup': go_back_inline_markup(message.from_user.language_code)
         }]
         await message_sender(message, resending=call is None, message_structures=message_structures)
 
         if change_user_state:
-            user_storage.change_page(message.chat.id, 'add_group')
+            user_storage.change_page(message.chat.id, 'add_chat')
 
         return
 
-    # Group adding
+    # Chat adding
 
     if message.forward_from_chat is not None:
         chat_service_id = message.forward_from_chat.id
@@ -39,7 +39,7 @@ async def add_group(call: types.CallbackQuery, message: types.Message, change_us
 
         else:
             await notify(call, message, localization.get_message(
-                    ["add_group", "errors", result_connection["error"]], message.from_user.language_code),
+                    ["add_chat", "errors", result_connection["error"]], message.from_user.language_code),
                 alert=True, button_text="cancel")
             return
 
@@ -54,7 +54,7 @@ async def add_group(call: types.CallbackQuery, message: types.Message, change_us
     message_structures = [{
         'type': 'text',
         'text': localization.get_message(
-            ["add_group", "success"], message.from_user.language_code).format(chat_name=chat_info['title']),
+            ["add_chat", "success"], message.from_user.language_code).format(chat_name=chat_info['title']),
         'reply_markup': reply_markup
     }]
 
