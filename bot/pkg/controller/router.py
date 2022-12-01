@@ -2,6 +2,7 @@ from aiogram import Bot, Dispatcher, executor, types
 
 from framework.controller.router_tools import get_type, user_state, event_wrapper
 from framework.controller import state_navigator
+from pkg.config.routes import RouteMap
 
 
 def init_routes(environment):
@@ -38,22 +39,32 @@ def init_routes(environment):
     #             call, message = call_and_message_accessed_processor(entity)
     #             await RouteMap.get_route(route, 'method')(call, message)
 
-    @dispatcher.message_handler(commands=["start"], chat_type=types.ChatType.PRIVATE)
+    @dispatcher.message_handler(commands=RouteMap.get_route_commands("start"), chat_type=types.ChatType.PRIVATE)
     async def start(entity: types.Message):
-        await event_wrapper("start", entity)
+        await event_wrapper(RouteMap.type("start"), entity)
 
-    @dispatcher.message_handler(commands=["menu"], chat_type=types.ChatType.PRIVATE)
-    @dispatcher.callback_query_handler(lambda call: get_type(call) == "menu", chat_type=types.ChatType.PRIVATE)
+    @dispatcher.message_handler(commands=RouteMap.get_route_commands("menu"), chat_type=types.ChatType.PRIVATE)
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.type("menu"), chat_type=types.ChatType.PRIVATE)
     async def menu(entity: types.Message | types.CallbackQuery):
-        await event_wrapper("menu", entity)
+        await event_wrapper(RouteMap.type("menu"), entity)
 
-    @dispatcher.message_handler(commands=['add_chat'], chat_type=types.ChatType.PRIVATE)
+    @dispatcher.message_handler(commands=RouteMap.get_route_commands("add_chat"), chat_type=types.ChatType.PRIVATE)
     @dispatcher.message_handler(
-        lambda message: user_state(message) == "add_chat", content_types=types.ContentType.ANY,
+        lambda message: user_state(message) == RouteMap.state("add_chat"), content_types=types.ContentType.ANY,
         chat_type=types.ChatType.PRIVATE)
-    @dispatcher.callback_query_handler(lambda call: get_type(call) == "add_chat", chat_type=types.ChatType.PRIVATE)
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.type("add_chat"), chat_type=types.ChatType.PRIVATE)
     async def add_group(entity: types.Message | types.CallbackQuery):
-        await event_wrapper("add_chat", entity)
+        await event_wrapper(RouteMap.type("add_chat"), entity)
+
+    @dispatcher.message_handler(commands=RouteMap.get_route_commands("my_chats"), chat_type=types.ChatType.PRIVATE)
+    @dispatcher.message_handler(
+        lambda message: user_state(message) == RouteMap.state("my_chats"), chat_type=types.ChatType.PRIVATE)
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.type("my_chats"), chat_type=types.ChatType.PRIVATE)
+    async def my_chats(entity: types.Message | types.CallbackQuery):
+        await event_wrapper(RouteMap.type("my_chats"), entity)
 
 
     @dispatcher.callback_query_handler(lambda call: get_type(call) == 'back')
