@@ -60,7 +60,7 @@ async def message_sender(
 async def notify(
         call: types.CallbackQuery, message: types.Message, text: str, alert: bool = False, button_text: str = "back"):
     if call is not None:
-        call.bot.answer_callback_query(
+        await call.bot.answer_callback_query(
             callback_query_id=call.id, show_alert=alert, text=text)
         return
 
@@ -70,6 +70,8 @@ async def notify(
         'reply_markup': go_back_inline_markup(message.from_user.language_code, button_text=button_text)
     }]
     await message_sender(message, resending=True, message_structures=message_structures)
+    user_storage.set_message_structures(message.chat.id, message_structures)
+    user_storage.change_page(message.chat.id, 'nowhere')
 
 
 def call_or_command(call: types.CallbackQuery = None, message: types.Message = None,
