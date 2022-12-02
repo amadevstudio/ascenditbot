@@ -83,3 +83,19 @@ async def get_info(bot: aiogram.bot.bot.Bot, chat_service_id: str):
         'service_id': chat_info['id'],
         'title': chat_info['title']
     }
+
+
+def data_count_provider(user_id: int):
+    return chat_repository.user_chats_count(str(user_id))
+
+
+def data_count_provider_by_service_id(chat_id: int):
+    return chat_repository.user_chats_count_by_service_id(str(chat_id))
+
+
+def data_provider(user_id: int, order_by: str, limit: int, offset: int):
+    return chat_repository.user_chats(str(user_id), order_by, limit, offset)
+
+
+def data_provider_by_service_id(chat_id: int, order_by: str, limit: int, offset: int):
+    return chat_repository.user_chats_by_service_id(str(chat_id), order_by, limit, offset)

@@ -5,7 +5,11 @@ from aiogram import types
 from lib.language import localization
 from framework.controller.message_tools import message_sender, go_back_inline_markup, call_or_command, \
     image_link_or_object, notify, go_back_inline_button
+from lib.telegram.aiogram.navigation_builder import NavigationBuilder
+from pkg.config import routes
 from pkg.service import user_storage, chat
+
+_PER_PAGE = 5
 
 
 async def add_chat(call: types.CallbackQuery, message: types.Message, change_user_state=True):
@@ -39,8 +43,8 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
 
         else:
             await notify(call, message, localization.get_message(
-                    ["add_chat", "errors", result_connection["error"]], message.from_user.language_code),
-                alert=True, button_text="cancel")
+                ["add_chat", "errors", result_connection["error"]], message.from_user.language_code),
+                         alert=True, button_text="cancel")
             return
 
     chat_info = await chat.get_info(message.bot, chat_service_id=str(chat_service_id))
@@ -59,3 +63,68 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
     }]
 
     await message_sender(message, resending=call is None, message_structures=message_structures)
+
+
+async def my_chats(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+    current_type = routes.RouteMap.type("my_chats")
+
+    # Getting data and full navigation setup
+    state_data = user_storage.get_user_state_data(message.chat.id, current_type)
+    current_page, user_chat_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
+        call, message, state_data, current_type, message.from_user.language_code,
+
+        chat.data_provider_by_service_id, [message.chat.id],
+        chat.data_count_provider_by_service_id, [message.chat.id],
+        _PER_PAGE, "created_at"
+    )
+
+    # Error processing
+    if "error" in user_chat_page_data:
+        if user_chat_page_data["error"] in ["empty"]:
+            error_message = localization.get_message(
+                ["my_chats", "errors", user_chat_page_data["error"]],
+                message.from_user.language_code,
+                command=routes.RouteMap.get_route_main_command("add_chat"))
+        else:
+            error_message = localization.get_message(
+                ["navigation_builder", "errors", user_chat_page_data["error"]],
+                message.from_user.language_code)
+        await notify(
+            call, message, error_message, alert=True)
+        return
+
+    # Building message
+    message_text = localization.get_message(["my_chats", "list", "main"], message.from_user.language_code)
+    message_text += "\n" + routing_helper_message
+
+    # Chat buttons
+    reply_markup = types.InlineKeyboardMarkup()
+    for chat_data in user_chat_page_data["data"]:
+
+        chat_info = await chat.get_info(message.bot, chat_service_id=str(chat_data['service_id']))
+
+        button_text = localization.get_message(
+            ["my_chats", "list", "chat_name", "active" if chat_data['active'] else 'inactive'],
+            message.from_user.language_code
+        ).format(chat_name=chat_info["title"])
+
+        button_data = {"tp": "my_channel", "id": chat_data['id']}
+
+        b = types.InlineKeyboardButton(
+            text=button_text,
+            callback_data=json.dumps(button_data))
+        reply_markup.add(b)
+
+    # Navigation markup
+    reply_markup.add(*nav_layout)
+
+    # Sending
+    message_structures = [{
+        'type': 'text',
+        'text': message_text,
+        'reply_markup': reply_markup
+    }]
+    await message_sender(message, resending=call is None, message_structures=message_structures)
+
+    if change_user_state:
+        user_storage.change_page(message.chat.id, current_type)

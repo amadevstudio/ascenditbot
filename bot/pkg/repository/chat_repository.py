@@ -31,3 +31,44 @@ def create(chat_service_id: str, user_service_id: str):
     user_chat = db.insert_model('user_moderated_chat_connections', user_chat_data, cursor=cursor)
 
     return user_chat
+
+
+def user_chats_count(user_id: str):
+    return db.fetchone("""
+        SELECT COUNT(*) FROM user_moderated_chat_connections
+        WHERE user_id = %s
+    """, (user_id,))['count']
+
+
+def user_chats_count_by_service_id(chat_id: str):
+    return db.fetchone("""
+        SELECT COUNT(*) FROM user_moderated_chat_connections AS umcc
+        INNER JOIN users AS u ON (u.id = umcc.user_id)
+        
+        WHERE u.service_id = %s
+    """, (chat_id,))['count']
+
+
+def user_chats(user_id: str, order_by: str, limit: int, offset: int):
+    if order_by == "created_at":
+        order_by = "mc.created_at"
+
+    return db.fetchall("""
+        SELECT mc.* FROM moderated_chats AS mc
+        INNER JOIN user_moderated_chat_connections AS umcc ON (umcc.moderated_chat_id = mc.id)
+        WHERE umcc.user_id = %s
+        ORDER BY {order_field} LIMIT %s OFFSET %s
+    """.format(order_field=order_by), (user_id, limit, offset,))
+
+
+def user_chats_by_service_id(chat_id: str, order_by: str, limit: int, offset: int):
+    if order_by == "created_at":
+        order_by = "mc.created_at"
+
+    return db.fetchall("""
+        SELECT mc.* FROM moderated_chats AS mc
+        INNER JOIN user_moderated_chat_connections AS umcc ON (umcc.moderated_chat_id = mc.id)
+        INNER JOIN users AS u ON (u.id = umcc.user_id)
+        WHERE u.service_id = %s
+        ORDER BY {order_field} LIMIT %s OFFSET %s
+    """.format(order_field=order_by), (chat_id, limit, offset,))

@@ -23,7 +23,7 @@ def get_language(lang_code: str):
         return panic_language
 
 
-def get_message(message_route: [str], lang_code: str):
+def get_message(message_route: [str], lang_code: str, **kwargs) -> str:
     lang_code = get_language(lang_code)
     curr_route = None
     msg = None
@@ -38,6 +38,12 @@ def get_message(message_route: [str], lang_code: str):
                 msg = curr_route.get(lang_code)
             except AttributeError:
                 msg = curr_route.get(panic_language)
+
+            try:
+                msg = msg.format(**kwargs)
+            except AttributeError:
+                pass
+
         except AttributeError:
             msg = str(' '.join(message_route))
 
