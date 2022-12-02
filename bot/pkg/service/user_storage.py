@@ -45,3 +45,11 @@ def get_message_structures(chat_id: int):
 
 def set_message_structures(chat_id: int, message_structures: Dict):
     user_storage_repository.set_user_message_structures(chat_id, message_structures)
+
+
+def get_user_state_data(chat_id: int, state: str):
+    return user_storage_repository.get_user_state_data(chat_id, state)
+
+
+def add_user_state_data(chat_id: int, state: str, state_data: dict):
+    user_storage_repository.add_user_state_data(chat_id, state, state_data)

@@ -1,3 +1,5 @@
+from lib.language import localization
+from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config.config import environment
 
 from pkg.controller.router import init_routes
@@ -23,7 +25,8 @@ database_configuration = {
 }
 database_connection = Database().connect(database_configuration)
 
-# database_connection
+
+NavigationBuilder(localization.get_message, ["navigation_builder"])
 
 executor, dp = init_routes(environment)
 
