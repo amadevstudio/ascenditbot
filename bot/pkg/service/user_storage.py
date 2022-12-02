@@ -43,7 +43,7 @@ def get_message_structures(chat_id: int):
     return user_storage_repository.get_user_message_structures(chat_id)
 
 
-def set_message_structures(chat_id: int, message_structures: Dict):
+def set_message_structures(chat_id: int, message_structures: list[dict]):
     user_storage_repository.set_user_message_structures(chat_id, message_structures)
 
 

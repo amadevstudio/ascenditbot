@@ -70,7 +70,6 @@ async def notify(
         'reply_markup': go_back_inline_markup(message.from_user.language_code, button_text=button_text)
     }]
     await message_sender(message, resending=True, message_structures=message_structures)
-    user_storage.set_message_structures(message.chat.id, message_structures)
     user_storage.change_page(message.chat.id, 'nowhere')
 
 

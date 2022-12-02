@@ -102,7 +102,7 @@ def get_user_message_structures(chat_id):
     return message_structures_decoded
 
 
-def set_user_message_structures(chat_id, message_structures):
+def set_user_message_structures(chat_id: int, message_structures: list[dict]):
     return Storage().connection.set(
         STORAGE_KEYS["users"]["tg"]["@id"]["message_structures"].format(chat_id=chat_id),
         json.dumps(message_structures))
