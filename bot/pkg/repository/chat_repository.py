@@ -3,6 +3,10 @@ from pkg.repository.database_connection import Database
 db = Database()
 
 
+def find(chat_id: int):
+    return db.find('moderated_chats', chat_id)
+
+
 def create(chat_service_id: str, user_service_id: str):
     user = db.fetchone("""
         SELECT id FROM users WHERE service_id = %s

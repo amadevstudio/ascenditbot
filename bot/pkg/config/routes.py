@@ -29,6 +29,9 @@ class RouteMap:
             "commands": ["my_chats"],
             "wait_for_input": True
         },
+        "chat": {
+            "method": chats_controller.show
+        },
 
         "nowhere": {}
     }

@@ -79,4 +79,9 @@ def init_routes(environment):
     async def my_chats(entity: types.Message | types.CallbackQuery):
         await event_wrapper(RouteMap.type("my_chats"), entity)
 
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.type("chat"), chat_type=types.ChatType.PRIVATE)
+    async def chat(call: types.CallbackQuery):
+        await event_wrapper(RouteMap.type("chat"), call)
+
     return executor, dispatcher

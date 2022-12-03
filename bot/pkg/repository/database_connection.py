@@ -24,6 +24,10 @@ class Database(metaclass=Singleton):
     def _build_cursor(self):
         return self.connection.cursor(cursor_factory=RealDictCursor)
 
+    def find(self, model: str, id: int):
+        query = "SELECT * FROM {model} WHERE id = %s".format(model=model)
+        return self.fetchone(query, (id,))
+
     @staticmethod
     def inject_updated_at(model):
         utc_dt = datetime.now(timezone.utc)  # UTC time

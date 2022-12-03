@@ -107,7 +107,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
             ["my_chats", "list", "chat_button", "active" if chat_data['active'] else "inactive"],
             message.from_user.language_code, chat_name=chat_info["title"])
 
-        button_data = {"tp": "my_channel", "id": chat_data['id']}
+        button_data = {"tp": "chat", "id": chat_data['id']}
 
         b = types.InlineKeyboardButton(
             text=button_text,
@@ -127,3 +127,41 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
 
     if change_user_state:
         user_storage.change_page(message.chat.id, current_type)
+
+
+async def show(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+    chat_button_data = json.loads(call.data)
+    chat_data = Chat.find(chat_button_data['id'])
+    if chat_data is None:
+        await notify(
+            call, message, localization.get_message(['chat', 'errors', 'not_found'], message.from_user.language_code))
+        return
+
+    chat_info = await Chat.get_info(call.bot, str(chat_data['service_id']))
+
+    message_text = localization.get_message(
+        ['chat', 'show', 'text'], message.from_user.language_code, chat_name=chat_info['title'])
+
+    reply_markup = types.InlineKeyboardMarkup()
+    whitelist_button = types.InlineKeyboardButton(
+        localization.get_message(['chat', 'show', 'whitelist_button'], message.from_user.language_code),
+        callback_data=json.dumps({'type': 'chat_whitelist'})
+    )
+    reply_markup.add(whitelist_button)
+    state_button = types.InlineKeyboardButton(
+        localization.get_message(
+            ['chat', 'show', 'active_button', 'active' if chat_data['active'] else 'inactive'],
+            message.from_user.language_code,
+        ), callback_data=json.dumps({'type': 'chat_state'}))
+    reply_markup.add(state_button)
+    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+
+    message_structures = [{
+        'type': 'text',
+        'text': message_text,
+        'reply_markup': reply_markup
+    }]
+    await message_sender(message, message_structures=message_structures)
+
+    if change_user_state:
+        user_storage.change_page(message.chat.id, "my_chat")

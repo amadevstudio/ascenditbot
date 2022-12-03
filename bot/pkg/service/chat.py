@@ -20,6 +20,9 @@ chat_interface = {
 
 
 class Chat:
+    @staticmethod
+    def find(id: int):
+        return chat_repository.find(id)
 
     @staticmethod
     async def _validate_bot_rights(bot: aiogram.bot.bot.Bot, chat_service_id: int):
