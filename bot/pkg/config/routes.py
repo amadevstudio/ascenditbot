@@ -1,3 +1,5 @@
+from typing import Any
+
 from pkg.controller import welcome_controller, chats_controller
 
 
@@ -29,12 +31,21 @@ class RouteMap:
             "commands": ["my_chats"],
             "wait_for_input": True
         },
-        "chat": {
-            "method": chats_controller.show
+        'chat': {
+            'method': chats_controller.show,
+            'actions': {
+                'switch_active': {
+                    'method': chats_controller.switch_active
+                }
+            }
         },
 
         "nowhere": {}
     }
+
+    @staticmethod
+    def main_route():
+        return list(RouteMap.ROUTES.keys())[0]
 
     @staticmethod
     def find_route(route: str, routes=None):
@@ -48,15 +59,26 @@ class RouteMap:
         return None
 
     @staticmethod
-    def get_route(route_name: str, key: str = None):
+    def get_route_prop(route_name: str, key: str = None) -> Any:
         route = RouteMap.find_route(route_name)
         if route is None:
             return None
 
-        if key is not None:
-            return route.get(key, None)
+        if key is None:
+            return None
 
-        return None
+        return route.get(key, None)
+
+    @staticmethod
+    def get_route_action_prop(route_name: str, action_name: str, key: str = None):
+        actions: dict = RouteMap.get_route_prop(route_name, 'actions')
+        if actions is None:
+            return None
+
+        if key is None or action_name not in list(actions.keys()) or key not in actions[action_name]:
+            return None
+
+        return actions[action_name][key]
 
     @staticmethod
     def get_route_commands(route_name: str):
@@ -80,3 +102,14 @@ class RouteMap:
     @staticmethod
     def state(route_state: str):
         return RouteMap.type(route_state)
+
+    @staticmethod
+    def action_type(route_state: str, action: str):
+        actions = RouteMap.get_route_prop(route_state, 'actions')
+        if actions is None:
+            return None
+
+        if action not in list(actions.keys()):
+            return None
+
+        return action

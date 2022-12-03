@@ -2,6 +2,7 @@ import json
 
 from aiogram import types
 
+from framework.controller.state_data import get_current_state_data
 from lib.language import localization
 from framework.controller.message_tools import message_sender, go_back_inline_markup, call_or_command, \
     image_link_or_object, notify, go_back_inline_button
@@ -127,11 +128,18 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
 
     if change_user_state:
         UserStorage.change_page(message.chat.id, current_type)
+        UserStorage.add_user_state_data(message.chat.id, current_type, {"p": current_page})
 
 
 async def show(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    chat_button_data = json.loads(call.data)
-    chat_data = Chat.find(chat_button_data['id'])
+    chat_income_data = get_current_state_data(call, message, 'chat')
+
+    if chat_income_data is None:
+        await notify(
+            None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
+        return
+
+    chat_data = Chat.find(chat_income_data['id'])
     if chat_data is None:
         await notify(
             call, message, localization.get_message(['chat', 'errors', 'not_found'], message.from_user.language_code))
@@ -145,14 +153,14 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
     reply_markup = types.InlineKeyboardMarkup()
     whitelist_button = types.InlineKeyboardButton(
         localization.get_message(['chat', 'show', 'whitelist_button'], message.from_user.language_code),
-        callback_data=json.dumps({'type': 'chat_whitelist'})
+        callback_data=json.dumps({'tp': 'chat_whitelist'})
     )
     reply_markup.add(whitelist_button)
     state_button = types.InlineKeyboardButton(
         localization.get_message(
             ['chat', 'show', 'active_button', 'active' if chat_data['active'] else 'inactive'],
             message.from_user.language_code,
-        ), callback_data=json.dumps({'type': 'chat_state'}))
+        ), callback_data=json.dumps({'tp': 'switch_active'}))
     reply_markup.add(state_button)
     reply_markup.add(go_back_inline_button(message.from_user.language_code))
 
@@ -164,4 +172,30 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
     await message_sender(message, message_structures=message_structures)
 
     if change_user_state:
-        UserStorage.change_page(message.chat.id, "my_chat")
+        UserStorage.change_page(message.chat.id, 'chat')
+        UserStorage.add_user_state_data(
+            message.chat.id, 'chat',
+            {'id': chat_data['id'], 'active': chat_data['active']}
+        )
+
+
+async def switch_active(call: types.CallbackQuery, message: types.Message):
+    chat_state_data = UserStorage.get_user_state_data(message.chat.id, 'chat')
+    if chat_state_data is None:
+        await notify(
+            None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
+        return
+
+    chat = Chat({'id': chat_state_data['id']})
+
+    new_active_values = chat.switch_active()
+
+    if new_active_values is None or new_active_values == chat_state_data['active']:
+        return
+
+    chat_state_data['active'] = new_active_values
+    UserStorage.add_user_state_data(message.chat.id, 'chat', chat_state_data)
+
+    # Tell show method to take date from state
+    call.data = {}
+    await show(call, message, change_user_state=False)

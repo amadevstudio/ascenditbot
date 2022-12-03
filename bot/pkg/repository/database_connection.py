@@ -53,15 +53,15 @@ class Database(metaclass=Singleton):
             logger.err(f"Can't register user: {e}")
             return None, None
 
-    def commit(self, query: str, params: tuple, cursor: psycopg2.extensions.cursor = None):
+    def commit(self, query: str, params: tuple, cursor: psycopg2.extensions.cursor = None, returning='id'):
         if cursor is None:
             cursor = self._build_cursor()
 
         try:
-            cursor.execute(query + " RETURNING id", params)
-            row_id = cursor.fetchone()['id']
+            cursor.execute(query + f" RETURNING {returning}", params)
+            row_returning = cursor.fetchone()[returning]
             self.connection.commit()
-            return row_id
+            return row_returning
         except psycopg2.DatabaseError as e:
             self.connection.rollback()
             logger.err(f"Can't register user: {e}")

@@ -4,6 +4,7 @@ import aiogram.bot.bot
 from aiogram import types
 from aiogram.utils import exceptions
 
+from lib.python.dict_interface import validate_structure
 from pkg.repository import chat_repository
 from pkg.system.logger import logger
 
@@ -20,6 +21,20 @@ chat_interface = {
 
 
 class Chat:
+
+    def __init__(self, chat):
+        if validate_structure(chat, chat_interface):
+            self.chat = chat
+        else:
+            self.chat = None
+
+    def switch_active(self):
+        if self.chat is None or 'id' not in self.chat:
+            return None
+
+        return chat_repository.switch_active(self.chat['id'])
+
+
     @staticmethod
     def find(id: int):
         return chat_repository.find(id)

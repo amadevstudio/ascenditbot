@@ -59,7 +59,7 @@ def get_user_state_data(chat_id, state):
     if state_data is None:
         return {}
 
-    return json.loads()
+    return json.loads(state_data)
 
 
 def add_user_state(chat_id, state):
@@ -77,6 +77,10 @@ def del_user_curr_state(chat_id):
 
 def del_user_states(chat_id):
     return Storage().connection.delete(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(chat_id=chat_id))
+
+
+def del_user_state_data(chat_id, state):
+    return Storage().connection.hdel(STORAGE_KEYS["users"]["tg"]["@id"]["state_data"].format(chat_id=chat_id), state)
 
 
 # Resend flag

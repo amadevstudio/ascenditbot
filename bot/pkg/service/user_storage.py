@@ -1,6 +1,7 @@
 import json
 from typing import Dict
 
+from pkg.config import routes
 from pkg.repository import user_storage_repository
 
 
@@ -17,8 +18,10 @@ class UserStorage:
             user_storage_repository.add_user_state_data(chat, state, data)
 
     @staticmethod
-    def go_back(chat_id: int):
+    def go_back(chat_id: int, state: str = None):
         user_storage_repository.del_user_curr_state(chat_id)
+        if state is not None:
+            user_storage_repository.del_user_state_data(chat_id, state)
 
     @staticmethod
     def curr_state(chat_id: int):
@@ -32,7 +35,12 @@ class UserStorage:
     def prev_curr_states(chat_id: int):
         states = user_storage_repository.get_user_prev_curr_states(chat_id)
         if isinstance(states, list):
-            return states
+            if len(states) == 2:
+                return states
+            elif len(states) == 1:
+                return None, states[0]
+            else:
+                return None, routes.RouteMap.main_route()
         else:
             return None, states
 

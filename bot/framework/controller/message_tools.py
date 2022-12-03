@@ -58,7 +58,9 @@ async def message_sender(
 
 
 async def notify(
-        call: types.CallbackQuery, message: types.Message, text: str, alert: bool = False, button_text: str = "back"):
+        call: types.CallbackQuery | None, message: types.Message, text: str,
+        alert: bool = False, button_text: str = "back"
+):
     if call is not None:
         await call.bot.answer_callback_query(
             callback_query_id=call.id, show_alert=alert, text=text)

@@ -1,7 +1,7 @@
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import Update
 
-from framework.controller.router_tools import get_type, user_state, event_wrapper
+from framework.controller.router_tools import get_type, user_state, event_wrapper, event_action_wrapper
 from framework.controller import state_navigator
 from pkg.config.routes import RouteMap
 from pkg.controller.middlewares import NoWhereInputProcessorMiddleware
@@ -68,7 +68,7 @@ def init_routes(environment):
         chat_type=types.ChatType.PRIVATE)
     @dispatcher.callback_query_handler(
         lambda call: get_type(call) == RouteMap.type("add_chat"), chat_type=types.ChatType.PRIVATE)
-    async def add_group(entity: types.Message | types.CallbackQuery):
+    async def add_group(entity: types.Message | types.CallbackQuery, *args, **kwargs):
         await event_wrapper(RouteMap.type("add_chat"), entity)
 
     @dispatcher.message_handler(commands=RouteMap.get_route_commands("my_chats"), chat_type=types.ChatType.PRIVATE)
@@ -76,12 +76,19 @@ def init_routes(environment):
         lambda message: user_state(message) == RouteMap.state("my_chats"), chat_type=types.ChatType.PRIVATE)
     @dispatcher.callback_query_handler(
         lambda call: get_type(call) == RouteMap.type("my_chats"), chat_type=types.ChatType.PRIVATE)
-    async def my_chats(entity: types.Message | types.CallbackQuery):
+    async def my_chats(entity: types.Message | types.CallbackQuery, *args, **kwargs):
         await event_wrapper(RouteMap.type("my_chats"), entity)
 
     @dispatcher.callback_query_handler(
         lambda call: get_type(call) == RouteMap.type("chat"), chat_type=types.ChatType.PRIVATE)
     async def chat(call: types.CallbackQuery):
         await event_wrapper(RouteMap.type("chat"), call)
+
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.action_type('chat', 'switch_active'),
+        chat_type=types.ChatType.PRIVATE
+    )
+    async def chat_switch_active(call: types.CallbackQuery):
+        await event_action_wrapper(RouteMap.type("chat"), RouteMap.action_type('chat', 'switch_active'), call)
 
     return executor, dispatcher

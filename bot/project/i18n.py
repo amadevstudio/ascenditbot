@@ -51,6 +51,14 @@ routed_messages = {
             "ru": f"{emoji_codes.get('credit_card', '')} Оплата"
         }
     },
+    "errors": {
+        "state_data_none": {
+            "en": "",
+            "ru":
+                "Ваше состояние сброшено, пожалуйста, начните сначала с помощью команды /menu"
+        }
+    },
+
     "welcome": {
         "introduction": {
             "en": "",

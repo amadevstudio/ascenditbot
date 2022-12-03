@@ -46,4 +46,4 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
     await message_sender(message, resending=call is None, message_structures=message_structures)
 
     if change_user_state:
-        UserStorage.change_page(message.chat.id, 'menu')
+        UserStorage.new_navigation_journey(message.chat.id, 'menu')
