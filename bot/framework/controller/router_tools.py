@@ -5,7 +5,7 @@ from aiogram import types
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg.config.routes import RouteMap
 
-from pkg.service import user_storage
+from pkg.service.user_storage import UserStorage
 
 
 def get_type(call: types.CallbackQuery):
@@ -13,7 +13,7 @@ def get_type(call: types.CallbackQuery):
 
 
 def user_state(message: types.Message):
-    return user_storage.curr_state(message.chat.id)
+    return UserStorage.curr_state(message.chat.id)
 
 
 async def event_wrapper(route_type: str, entity: types.Message | types.CallbackQuery):

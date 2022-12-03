@@ -7,7 +7,7 @@ from framework.controller.message_tools import message_sender, go_back_inline_ma
     image_link_or_object, notify, go_back_inline_button
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
-from pkg.service import user_storage
+from pkg.service.user_storage import UserStorage
 from pkg.service.chat import Chat
 
 _PER_PAGE = 5
@@ -25,7 +25,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
         await message_sender(message, resending=call is None, message_structures=message_structures)
 
         if change_user_state:
-            user_storage.change_page(message.chat.id, 'add_chat')
+            UserStorage.change_page(message.chat.id, 'add_chat')
 
         return
 
@@ -70,7 +70,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     current_type = routes.RouteMap.type("my_chats")
 
     # Getting data and full navigation setup
-    state_data = user_storage.get_user_state_data(message.chat.id, current_type)
+    state_data = UserStorage.get_user_state_data(message.chat.id, current_type)
     current_page, user_chat_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
         call, message, state_data, current_type, message.from_user.language_code,
 
@@ -126,7 +126,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     await message_sender(message, resending=call is None, message_structures=message_structures)
 
     if change_user_state:
-        user_storage.change_page(message.chat.id, current_type)
+        UserStorage.change_page(message.chat.id, current_type)
 
 
 async def show(call: types.CallbackQuery, message: types.Message, change_user_state=True):
@@ -164,4 +164,4 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
     await message_sender(message, message_structures=message_structures)
 
     if change_user_state:
-        user_storage.change_page(message.chat.id, "my_chat")
+        UserStorage.change_page(message.chat.id, "my_chat")
