@@ -19,13 +19,15 @@ class RouteMap:
         },
         "add_chat": {
             "method": chats_controller.add_chat,
-            "commands": ["add_chat"]
+            "commands": ["add_chat"],
+            "wait_for_input": True,
             # "available_from": ["call", "command", "message"],
             # "chat_type": types.ChatType.PRIVATE
         },
         "my_chats": {
             "method": chats_controller.my_chats,
-            "commands": ["my_chats"]
+            "commands": ["my_chats"],
+            "wait_for_input": True
         },
 
         "nowhere": {}
@@ -67,8 +69,11 @@ class RouteMap:
 
     @staticmethod
     def type(route_type: str):
-        return RouteMap.get_route_main_command(route_type)
+        if route_type not in RouteMap.ROUTES:
+            return "menu"
+
+        return route_type
 
     @staticmethod
     def state(route_state: str):
-        return RouteMap.get_route_main_command(route_state)
+        return RouteMap.type(route_state)

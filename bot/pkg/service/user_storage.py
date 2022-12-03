@@ -23,6 +23,10 @@ def curr_state(chat_id: int):
     return user_storage_repository.get_user_curr_state(chat_id)
 
 
+def get_user_prev_state(chat_id: int):
+    return user_storage_repository.get_user_curr_state(chat_id)
+
+
 def prev_curr_states(chat_id: int):
     states = user_storage_repository.get_user_prev_curr_states(chat_id)
     if isinstance(states, list):
