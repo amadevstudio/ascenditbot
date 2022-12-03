@@ -104,9 +104,8 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
         chat_info = await chat.get_info(message.bot, chat_service_id=str(chat_data['service_id']))
 
         button_text = localization.get_message(
-            ["my_chats", "list", "chat_name", "active" if chat_data['active'] else 'inactive'],
-            message.from_user.language_code
-        ).format(chat_name=chat_info["title"])
+            ["my_chats", "list", "chat_button", "active" if chat_data['active'] else "inactive"],
+            message.from_user.language_code, chat_name=chat_info["title"])
 
         button_data = {"tp": "my_channel", "id": chat_data['id']}
 

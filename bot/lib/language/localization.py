@@ -39,10 +39,11 @@ def get_message(message_route: [str], lang_code: str, **kwargs) -> str:
             except AttributeError:
                 msg = curr_route.get(panic_language)
 
-            try:
-                msg = msg.format(**kwargs)
-            except AttributeError:
-                pass
+            if len(kwargs) > 0:
+                try:
+                    msg = msg.format(**kwargs)
+                except AttributeError:
+                    pass
 
         except AttributeError:
             msg = str(' '.join(message_route))
