@@ -7,7 +7,8 @@ from framework.controller.message_tools import message_sender, go_back_inline_ma
     image_link_or_object, notify, go_back_inline_button
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
-from pkg.service import user_storage, chat
+from pkg.service import user_storage
+from pkg.service.chat import Chat
 
 _PER_PAGE = 5
 
@@ -35,7 +36,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
     else:
         chat_service_id = message.text
 
-    result_connection = await chat.add(message.bot, chat_service_id, message.from_user.id)
+    result_connection = await Chat.add(message.bot, chat_service_id, message.from_user.id)
 
     if "error" in result_connection:
         if result_connection["error"] == "connection_exists":
@@ -47,7 +48,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
                          alert=True, button_text="cancel")
             return
 
-    chat_info = await chat.get_info(message.bot, chat_service_id=str(chat_service_id))
+    chat_info = await Chat.get_info(message.bot, chat_service_id=str(chat_service_id))
 
     button = types.InlineKeyboardButton(
         localization.get_message(["buttons", "go_to_settings"], message.from_user.language_code),
@@ -73,8 +74,8 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     current_page, user_chat_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
         call, message, state_data, current_type, message.from_user.language_code,
 
-        chat.data_provider_by_service_id, [message.chat.id],
-        chat.data_count_provider_by_service_id, [message.chat.id],
+        Chat.data_provider_by_service_id, [message.chat.id],
+        Chat.data_count_provider_by_service_id, [message.chat.id],
         _PER_PAGE, "created_at"
     )
 
@@ -100,8 +101,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     # Chat buttons
     reply_markup = types.InlineKeyboardMarkup()
     for chat_data in user_chat_page_data["data"]:
-
-        chat_info = await chat.get_info(message.bot, chat_service_id=str(chat_data['service_id']))
+        chat_info = await Chat.get_info(message.bot, chat_service_id=str(chat_data['service_id']))
 
         button_text = localization.get_message(
             ["my_chats", "list", "chat_button", "active" if chat_data['active'] else "inactive"],
