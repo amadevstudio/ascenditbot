@@ -21,20 +21,6 @@ chat_interface = {
 
 
 class Chat:
-
-    def __init__(self, chat):
-        if validate_structure(chat, chat_interface):
-            self.chat = chat
-        else:
-            self.chat = None
-
-    def switch_active(self):
-        if self.chat is None or 'id' not in self.chat:
-            return None
-
-        return chat_repository.switch_active(self.chat['id'])
-
-
     @staticmethod
     def find(id: int):
         return chat_repository.find(id)
@@ -120,3 +106,7 @@ class Chat:
     @staticmethod
     def data_provider_by_service_id(chat_id: int, order_by: str, limit: int, offset: int):
         return chat_repository.user_chats_by_service_id(str(chat_id), order_by, limit, offset)
+
+    @staticmethod
+    def switch_active(chat_id: int):
+        return chat_repository.switch_active(chat_id)

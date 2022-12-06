@@ -186,9 +186,7 @@ async def switch_active(call: types.CallbackQuery, message: types.Message):
             None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
         return
 
-    chat = Chat({'id': chat_state_data['id']})
-
-    new_active_values = chat.switch_active()
+    new_active_values = Chat.switch_active(chat_state_data['id'])
 
     if new_active_values is None or new_active_values == chat_state_data['active']:
         return
