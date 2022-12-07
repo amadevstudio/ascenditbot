@@ -4,7 +4,6 @@ import aiogram.bot.bot
 from aiogram import types
 from aiogram.utils import exceptions
 
-from lib.python.dict_interface import validate_structure
 from pkg.repository import chat_repository
 from pkg.system.logger import logger
 
@@ -22,8 +21,8 @@ chat_interface = {
 
 class Chat:
     @staticmethod
-    def find(id: int):
-        return chat_repository.find(id)
+    def find(chat_id: int):
+        return chat_repository.find(chat_id)
 
     @staticmethod
     async def _validate_bot_rights(bot: aiogram.bot.bot.Bot, chat_service_id: int):
@@ -35,7 +34,10 @@ class Chat:
         if chat_member.status == "user":
             return {"error": "not_admin"}
 
-        if chat_member.can_delete_messages is False:
+        # Unresolved attribute reference 'can_delete_messages' for class 'ChatMember'
+        # It works, but using hash interface don't warn
+        # if chat_member.can_delete_messages is False:
+        if chat_member['can_delete_messages'] is False:
             return {"error": "cant_edit_messages"}
 
         return {}
@@ -69,8 +71,7 @@ class Chat:
         if "error" in result:
             return {"error": result["error"]}
 
-        administrator = result["administrator"]
-
+        # administrator = result["administrator"]
         # TODO: validate administrator.status == 'creator' without premium subscription
 
         try:
