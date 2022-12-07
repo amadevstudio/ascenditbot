@@ -11,79 +11,79 @@ emoji_codes = {
 }
 
 links = {
-    "add_chat": {
-        "anon_admin_example": {
-            "template": "./public/anonim_admin_example_{language_code}.jpg",
-            "default": "./public/anonim_admin_example_ru.jpg"
+    'add_chat': {
+        'anon_admin_example': {
+            'template': "./public/anonim_admin_example_{language_code}.jpg",
+            'default': "./public/anonim_admin_example_ru.jpg"
         }
     }
 }
 
 
 routed_messages = {
-    "buttons": {
-        "back": {
-            "en": "",
-            "ru": "Назад"
+    'buttons': {
+        'back': {
+            'en': "",
+            'ru': "Назад"
         },
-        "cancel": {
-            "en": "",
-            "ru": "Отмена"
+        'cancel': {
+            'en': "",
+            'ru': "Отмена"
         },
-        "go_to_settings": {
-            "en": "",
-            "ru": "Перейти к настройкам"
+        'go_to_settings': {
+            'en': "",
+            'ru': "Перейти к настройкам"
         },
-        "my_chats": {
-            "en": "",
-            "ru": f"{emoji_codes.get('chat', '')} Мои группы"
+        'my_chats': {
+            'en': "",
+            'ru': f"{emoji_codes.get('chat', '')} Мои группы"
         },
-        "add_chat": {
-            "en": "",
-            "ru": f"{emoji_codes.get('new', '')} Добавить группу"
+        'add_chat': {
+            'en': "",
+            'ru': f"{emoji_codes.get('new', '')} Добавить группу"
         },
-        "help": {
-            "en": "",
-            "ru": f"{emoji_codes.get('sos', '')} Помощь"
+        'help': {
+            'en': "",
+            'ru': f"{emoji_codes.get('sos', '')} Помощь"
         },
-        "payment": {
-            "en": "",
-            "ru": f"{emoji_codes.get('credit_card', '')} Оплата"
+        'payment': {
+            'en': "",
+            'ru': f"{emoji_codes.get('credit_card', '')} Оплата"
         }
     },
-    "errors": {
-        "state_data_none": {
-            "en": "",
-            "ru":
+    'errors': {
+        'state_data_none': {
+            'en': "",
+            'ru':
                 "Ваше состояние сброшено, пожалуйста, начните сначала с помощью команды /menu"
         }
     },
 
-    "welcome": {
-        "introduction": {
-            "en": "",
-            "ru":
+    'welcome': {
+        'introduction': {
+            'en': "",
+            'ru':
                 "Добро пожаловать! Этот бот позволяет создавать белые списки для групп, а в будущем научится ещё "
                 "множеству полезных вещей.\n\n"
                 "Экономьте время с помощью @{bot_name}!"
                 .format(bot_name=constants.bot_name.lower())
         },
-        "let's begin": {
-            "en": "",
-            "ru":
+        'let\'s begin': {
+            'en': "",
+            'ru':
                 "Начнём!"
         }
     },
-    "menu": {
-        "text": {
-            "en": "",
-            "ru": "Меню"
+    'menu': {
+        'text': {
+            'en': "",
+            'ru': "Меню"
         }
     },
-    "add_chat": {
-        "instruction": {
-            "en": "",
-            "ru":
+    'add_chat': {
+        'instruction': {
+            'en': "",
+            'ru':
                 "Чтобы добавить группу в бота, следуйте простым шагам:\n\n"
                 "1. Сделайте бота администратором вашей группы "
                 "с возможностью редактирования сообщений и просмотром других администраторов;\n"
@@ -93,84 +93,85 @@ routed_messages = {
                 "Идентификатор можно получить, с помощью бота @myidbot. "
                 "Группа добавится, если вы есть в списках администраторов с возможностью редактирования сообщений."
         },
-        "success": {
-            "en": "",
-            "ru":
+        'success': {
+            'en': "",
+            'ru':
                 "Группа {chat_name} была успешно добавлена!\n\nДобавьте ещё одну или перейдите к настройкам."
         },
-        "errors": {
-            "not_member": {
-                "en": "",
-                "ru":
+        'errors': {
+            'not_member': {
+                'en': "",
+                'ru':
                     "Бот не является членом группы. "
                     "Добавьте его в качестве администратора с возможностью удаления сообщений и попробуйте ещё раз!"
             },
+
             "not_admin": {
-                "en": "",
-                "ru":
+                'en': "",
+                'ru':
                     "Бот не является администратором группы. "
                     "Сделайте его администратором с возможностью удаления сообщений и попробуйте ещё раз!"
             },
-            "cant_edit_messages": {
-                "en": "",
-                "ru":
+            'cant_edit_messages': {
+                'en': "",
+                'ru':
                     "Бот администратор, но не может удалять сообщения. "
                     "Добавьте ему возможность удаления сообщений и попробуйте ещё раз!"
             },
-            "user_not_admin": {
-                "en": "",
-                "ru":
+            'user_not_admin': {
+                'en': "",
+                'ru':
                     "Мы не можем найти вас в списке администраторов. Убедитесь, что пересылаете сообщение из чата, "
                     "в котором вы администратор с правами удаления сообщений."
             },
-            "user_cant_edit_messages": {
-                "en": "",
-                "ru":
+            'user_cant_edit_messages': {
+                'en': "",
+                'ru':
                     "У вас нет прав на удаление сообщений. Убедитесь, что пересылаете сообщение из чата, "
                     "в котором у вас есть такие права."
             },
-            "user_none": {
-                "en": "",
-                "ru":
+            'user_none': {
+                'en': "",
+                'ru':
                     "Запись о вас отсутствует в базе данных.\nЕсли вы используете бота в чате или группе, "
                     "то перейдите в личный диалог с ботом: группа не может быть администратором, функционал управления "
                     "из групп в разработке.\nЕсли вы уже в чате, введите команду /start и попробуйте ещё раз!"
             },
-            "connection_exists": {
-                "en": "",
-                "ru":
+            'connection_exists': {
+                'en': "",
+                'ru':
                     "Группа уже добавлена. Добавьте другую или перейдите к настройкам."
             },
-            "unexpected": {
-                "en": "",
-                "ru":
+            'unexpected': {
+                'en': "",
+                'ru':
                     "Необрабатываемая ошибка, пожалуйста, свяжитесь с администрацией бота и расскажите об ошибке "
                     "и времени, когда она возникла."
             }
         }
     },
-    "my_chats": {
-        "list": {
-            "main": {
-                "en": "",
-                "ru":
+    'my_chats': {
+        'list': {
+            'main': {
+                'en': "",
+                'ru':
                     f"{emoji_codes.get('chat', '')} Мои группы"
             },
-            "chat_button": {
-                "active": {
-                    "en": "",
-                    "ru": emoji_codes.get('heavy_check_mark', '') + " {chat_name}"
+            'chat_button': {
+                'active': {
+                    'en': "",
+                    'ru': emoji_codes.get('heavy_check_mark', '') + " {chat_name}"
                 },
-                "inactive": {
-                    "en": "",
-                    "ru": "{chat_name}"
+                'inactive': {
+                    'en': "",
+                    'ru': "{chat_name}"
                 }
             }
         },
-        "errors": {
-            "empty": {
-                "en": "",
-                "ru":
+        'errors': {
+            'empty': {
+                'en': "",
+                'ru':
                     "У вас нет групп, добавьте первую с помощью пункта меню 'Добавить группу'"
             }
         }
@@ -185,6 +186,10 @@ routed_messages = {
                 'en': '',
                 'ru':
                     'Белый список пользователей'
+            },
+            'add_to_whitelist_button': {
+                'en': '',
+                'ru': 'Добавить в белый список'
             },
             'active_button': {
                 'active': {
@@ -206,44 +211,44 @@ routed_messages = {
         }
     },
 
-    "navigation_builder": {
-        "actions": {
-            "page": {
-                "en": "",
-                "ru":
+    'navigation_builder': {
+        'actions': {
+            'page': {
+                'en': "",
+                'ru':
                     "Страница"
             },
-            "of": {
-                "en": "",
-                "ru":
+            'of': {
+                'en': "",
+                'ru':
                     "из"
             },
-            "back": {
-                "en": "",
-                "ru": "Назад"
+            'back': {
+                'en': "",
+                'ru': "Назад"
             }
         },
-        "tips": {
-            "tip_send_page_num_to_go": {
-                "en": "",
-                "ru":
+        'tips': {
+            'tip_send_page_num_to_go': {
+                'en': "",
+                'ru':
                     "Совет: отправьте номер страницы, чтобы перейти на неё"
             }
         },
-        "errors": {
-            "empty": {
-                "en": "",
-                "ru":
+        'errors': {
+            'empty': {
+                'en': "",
+                'ru':
                     "Данных нет"
             },
-            "already_on_this_page": {
-                "en": "",
-                "ru":
+            'already_on_this_page': {
+                'en': "",
+                'ru':
                     "Эта страница уже открыта"
             },
-            "page_does_not_exist": {
-                "en": "",
-                "ru":
+            'page_does_not_exist': {
+                'en': "",
+                'ru':
                     "Страница не существует, попробуйте перейти на первую"
             }
         }
