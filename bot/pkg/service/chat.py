@@ -29,16 +29,21 @@ class Chat:
         try:
             chat_member = await bot.get_chat_member(chat_service_id, bot.id)
         except exceptions.Unauthorized:
-            return {"error": "not_member"}
+            return {'error': 'not_member'}
+        except exceptions.ChatNotFound:
+            return {'error': 'not_found'}
+        except Exception as e:
+            logger.err(e)
+            return {'error': 'unknown'}
 
         if chat_member.status == "user":
-            return {"error": "not_admin"}
+            return {'error': 'not_admin'}
 
         # Unresolved attribute reference 'can_delete_messages' for class 'ChatMember'
         # It works, but using hash interface don't warn
         # if chat_member.can_delete_messages is False:
         if chat_member['can_delete_messages'] is False:
-            return {"error": "cant_edit_messages"}
+            return {'error': 'cant_edit_messages'}
 
         return {}
 
