@@ -151,6 +151,11 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
         ['chat', 'show', 'text'], message.from_user.language_code, chat_name=chat_info['title'])
 
     reply_markup = types.InlineKeyboardMarkup()
+    add_to_whitelist_button = types.InlineKeyboardButton(
+        localization.get_message(['chat', 'show', 'add_to_whitelist_button'], message.from_user.language_code),
+        callback_data=json.dumps({'tp': 'add_to_chat_whitelist'})
+    )
+    reply_markup.add(add_to_whitelist_button)
     whitelist_button = types.InlineKeyboardButton(
         localization.get_message(['chat', 'show', 'whitelist_button'], message.from_user.language_code),
         callback_data=json.dumps({'tp': 'chat_whitelist'})
@@ -197,3 +202,26 @@ async def switch_active(call: types.CallbackQuery, message: types.Message):
     # Tell show method to take date from state
     call.data = {}
     await show(call, message, change_user_state=False)
+
+
+async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+    if call_or_command(call, message):
+        message_structures = [{
+            'type': 'text',
+            'text': localization.get_message(['chat', 'add_to_whitelist', 'text'], message.from_user.language_code),
+            'reply_markup': go_back_inline_markup(message.from_user.language_code),
+            'parse_mode': 'Markdown'
+        }]
+        await message_sender(message, resending=call is None, message_structures=message_structures)
+
+        if change_user_state:
+            UserStorage.change_page(message.chat.id, 'add_chat')
+
+        return
+
+    # # Chat adding
+    #
+    # if message.forward_from_chat is not None:
+    #     chat_service_id = message.forward_from_chat.id
+    # else:
+    #     chat_service_id = message.text

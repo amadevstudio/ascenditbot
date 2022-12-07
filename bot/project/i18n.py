@@ -188,34 +188,40 @@ routed_messages = {
     'chat': {
         'show': {
             'text': {
-                'en': '',
+                'en': "",
                 'ru': emoji_codes.get('chat', '') + " {chat_name}"
             },
             'whitelist_button': {
-                'en': '',
+                'en': "",
                 'ru':
                     'Белый список пользователей'
             },
             'add_to_whitelist_button': {
-                'en': '',
+                'en': "",
                 'ru': 'Добавить в белый список'
             },
             'active_button': {
                 'active': {
-                    'en': '',
+                    'en': "",
                     'ru': emoji_codes.get('heavy_check_mark', '') + " Бот работает"
                 },
                 'inactive': {
-                    'en': '',
+                    'en': "",
                     'ru': emoji_codes.get('cross_mark', '') + " Чат отключён"
                 }
             }
         },
+        'add_to_whitelist': {
+          'text': {
+              'en': "",
+              'ru': emoji_codes.get('chat', '') + " Чтобы добавить пользователя, пришлите его никнейм, например `mike`"
+          }
+        },
         'errors': {
             'not_found': {
-                'en': '',
+                'en': "",
                 'ru':
-                    'Чат не найден, попробуйте добавить его ещё раз!'
+                    "Чат не найден, попробуйте добавить его ещё раз!"
             }
         }
     },

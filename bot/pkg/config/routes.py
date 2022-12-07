@@ -5,42 +5,51 @@ from pkg.controller import welcome_controller, chats_controller
 
 class RouteMap:
     ROUTES = {
-        "start": {
-            "method": welcome_controller.start,
-            "routes": [
-                "menu"
+        # ['method', 'routes', 'commands', 'wait_for_input', 'actions']
+        'start': {
+            'method': welcome_controller.start,
+            'routes': [
+                'menu'
             ],
-            "commands": ["start"]
+            'commands': ['start']
         },
-        "menu": {
-            "method": welcome_controller.menu,
-            "routes": [
-                "add_chat"
+        'menu': {
+            'method': welcome_controller.menu,
+            'routes': [
+                'add_chat',
+                'my_chats'
             ],
-            "commands": ["menu"]
+            'commands': ['menu']
         },
-        "add_chat": {
-            "method": chats_controller.add_chat,
-            "commands": ["add_chat"],
-            "wait_for_input": True,
-            # "available_from": ["call", "command", "message"],
-            # "chat_type": types.ChatType.PRIVATE
+        'add_chat': {
+            'method': chats_controller.add_chat,
+            'commands': ['add_chat'],
+            'wait_for_input': True,
+            # 'available_from': ['call', 'command', 'message'],
+            # 'chat_type': types.ChatType.PRIVATE
         },
-        "my_chats": {
-            "method": chats_controller.my_chats,
-            "commands": ["my_chats"],
-            "wait_for_input": True
+        'my_chats': {
+            'method': chats_controller.my_chats,
+            'commands': ['my_chats'],
+            'wait_for_input': True
         },
         'chat': {
             'method': chats_controller.show,
+            'routes': [
+              'add_to_chat_whitelist'
+            ],
             'actions': {
                 'switch_active': {
                     'method': chats_controller.switch_active
                 }
             }
         },
+        'add_to_chat_whitelist': {
+            'method': chats_controller.add_to_chat_whitelist,
+            'wait_for_input': True
+        },
 
-        "nowhere": {}
+        'nowhere': {}
     }
 
     @staticmethod
@@ -83,10 +92,10 @@ class RouteMap:
     @staticmethod
     def get_route_commands(route_name: str):
         route = RouteMap.find_route(route_name)
-        if route is None or "commands" not in route:
-            return ["menu"]
+        if route is None or 'commands' not in route:
+            return ['menu']
 
-        return route["commands"]
+        return route['commands']
 
     @staticmethod
     def get_route_main_command(route_name: str):
@@ -95,7 +104,7 @@ class RouteMap:
     @staticmethod
     def type(route_type: str):
         if route_type not in RouteMap.ROUTES:
-            return "menu"
+            return 'menu'
 
         return route_type
 
