@@ -68,7 +68,7 @@ def add_user_state(chat_id, state):
 
 def add_user_state_data(chat_id, state, data):
     return Storage().connection.hset(
-        STORAGE_KEYS["users"]["tg"]["@id"]["state_data"].format(chat_id=chat_id), state, json.dumps(data))
+        STORAGE_KEYS["users"]["tg"]["@id"]["state_data"].format(chat_id=chat_id), state, json.dumps(data, default=str))
 
 
 def del_user_curr_state(chat_id):
