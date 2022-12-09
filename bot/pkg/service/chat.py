@@ -25,9 +25,10 @@ class Chat:
         return chat_repository.find(chat_id)
 
     @staticmethod
-    async def _validate_bot_rights(bot: aiogram.bot.bot.Bot, chat_service_id: int):
+    async def _get_chat_member(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_id: int):
         try:
-            chat_member = await bot.get_chat_member(chat_service_id, bot.id)
+            chat_member = await bot.get_chat_member(chat_service_id, user_id)
+            return chat_member
         except exceptions.Unauthorized:
             return {'error': 'not_member'}
         except exceptions.ChatNotFound:
@@ -36,6 +37,8 @@ class Chat:
             logger.err(e)
             return {'error': 'unknown'}
 
+    @staticmethod
+    async def _validate_bot_rights(chat_member: types.chat_member):
         if chat_member.status == "user":
             return {'error': 'not_admin'}
 
@@ -67,7 +70,11 @@ class Chat:
     @staticmethod
     async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int):
         # Validate we are admin with deletion rights
-        result = await Chat._validate_bot_rights(bot, chat_service_id)
+        chat_member = await Chat._get_chat_member(bot, chat_service_id, bot.id)
+        if "error" in chat_member:
+            return {"error": chat_member["error"]}
+
+        result = await Chat._validate_bot_rights(chat_member)
         if "error" in result:
             return {"error": result["error"]}
 
@@ -116,3 +123,17 @@ class Chat:
     @staticmethod
     def switch_active(chat_id: int):
         return chat_repository.switch_active(chat_id)
+
+    @staticmethod
+    def add_to_whitelist(chat_id: int, user_nickname: str):
+        # chat_member = await Chat._get_chat_member(bot, chat_service_id, user_)
+        # if "error" in chat_member:
+        #     return {"error": chat_member["error"]}
+
+        try:
+            result_whitelisted = chat_repository.add_to_whitelist(chat_id, user_nickname)
+        except Exception as e:
+            logger.err(e)
+            return {"error": "unexpected"}
+
+        return result_whitelisted

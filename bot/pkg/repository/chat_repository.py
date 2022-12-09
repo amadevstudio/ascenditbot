@@ -82,3 +82,9 @@ def switch_active(chat_id: int):
     return db.commit("""
         UPDATE moderated_chats SET active = NOT active WHERE id = %s
     """, (chat_id, ), returning='active')
+
+
+def add_to_whitelist(chat_id: int, user_nickname: str):
+    allowed_user = {'moderated_chat_id': chat_id, 'nickname': user_nickname}
+    return db.insert_model(
+        'allowed_users', allowed_user, conflict_fields=['moderated_chat_id', 'nickname'])

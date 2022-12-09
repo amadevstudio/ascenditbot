@@ -37,17 +37,18 @@ create table allowed_users (
     id bigserial primary key not null,
     moderated_chat_id bigint not null,
     nickname varchar(255),
-    service_id varchar(255),
-    active boolean not null,
-    images_allowed boolean not null,
-    links_allowed boolean not null,
+--    service_id varchar(255),
+    active boolean not null default true,
+    images_allowed boolean not null default true,
+    links_allowed boolean not null default true,
     period_quantity integer,
     period_type varchar(255),
     period_quantity_left integer,
     ban_expiration_date timestamp,
     created_at timestamp not null,
     updated_at timestamp not null,
-    constraint fk_moderated_chat foreign key(moderated_chat_id) references moderated_chats(id)
+    constraint fk_moderated_chat foreign key(moderated_chat_id) references moderated_chats(id),
+    unique (moderated_chat_id, nickname)
 );
 
 create table moderated_chat_statistics (

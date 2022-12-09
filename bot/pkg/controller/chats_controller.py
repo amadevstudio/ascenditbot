@@ -30,6 +30,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
 
         return
 
+    # ---
     # Chat adding
 
     if message.forward_from_chat is not None:
@@ -44,9 +45,13 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
             result_connection = result_connection["connection"]
 
         else:
-            await notify(call, message, localization.get_message(
-                ["add_chat", "errors", result_connection["error"]], message.from_user.language_code),
-                         alert=True, button_text="cancel")
+            if result_connection['error'] in ['unexpected', 'user_none']:
+                error_trace = ['errors', result_connection["error"]]
+            else:
+                error_trace = ["add_chat", "errors", result_connection["error"]]
+            await notify(
+                call, message, localization.get_message(error_trace, message.from_user.language_code),
+                alert=True, button_text="cancel")
             return
 
     chat_info = await Chat.get_info(message.bot, chat_service_id=str(chat_service_id))
@@ -178,10 +183,7 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
 
     if change_user_state:
         UserStorage.change_page(message.chat.id, 'chat')
-        UserStorage.add_user_state_data(
-            message.chat.id, 'chat',
-            {'id': chat_data['id'], 'active': chat_data['active']}
-        )
+        UserStorage.add_user_state_data(message.chat.id, 'chat', chat_data)
 
 
 async def switch_active(call: types.CallbackQuery, message: types.Message):
@@ -215,13 +217,34 @@ async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Messag
         await message_sender(message, resending=call is None, message_structures=message_structures)
 
         if change_user_state:
-            UserStorage.change_page(message.chat.id, 'add_chat')
+            UserStorage.change_page(message.chat.id, 'add_to_chat_whitelist')
 
         return
 
-    # # Chat adding
-    #
-    # if message.forward_from_chat is not None:
-    #     chat_service_id = message.forward_from_chat.id
-    # else:
-    #     chat_service_id = message.text
+    # ---
+    # User adding
+
+    user_nickname = message.text
+
+    chat_state_data = UserStorage.get_user_state_data(message.chat.id, 'chat')
+
+    result_connection = Chat.add_to_whitelist(chat_state_data['id'], user_nickname)
+
+    if 'error' in result_connection:
+        if result_connection['error'] == 'unexpected':
+            error_trace = ['errors', result_connection["error"]]
+        else:
+            error_trace = ['chat', 'add_to_whitelist', 'errors', result_connection["error"]]
+        await notify(
+            call, message, localization.get_message(error_trace, message.from_user.language_code),
+            alert=True, button_text="cancel")
+        return
+
+    message_structures = [{
+        'type': 'text',
+        'text': localization.get_message(
+            ['chat', 'add_to_whitelist', 'success'], message.from_user.language_code).format(nickname=user_nickname),
+        'reply_markup': go_back_inline_markup(message.from_user.language_code)
+    }]
+
+    await message_sender(message, resending=call is None, message_structures=message_structures)
