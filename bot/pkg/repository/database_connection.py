@@ -92,7 +92,8 @@ class Database(metaclass=Singleton):
         return cursor.fetchone()
 
     def insert_model(
-            self, model_name: str, model_data: dict, commit: bool = True, cursor: psycopg2.extensions.cursor = None):
+            self, model_name: str, model_data: dict, commit: bool = True, cursor: psycopg2.extensions.cursor = None,
+            conflict_fields: list = None):
         model_data = self.__class__.inject_timestamps(model_data)
 
         query = """
@@ -101,12 +102,22 @@ class Database(metaclass=Singleton):
             model_name=model_name, columns=(', '.join(model_data.keys())),
             sss=(', '.join(["%s" for _ in range(0, len(model_data))])))
 
+        query_values = tuple(model_data.values())
+
+        if conflict_fields is not None:
+            query += """
+                ON CONFLICT ({conflict_fields}) DO UPDATE SET {columns_equal_values}
+            """.format(
+                conflict_fields=', '.join(conflict_fields),
+                columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])))
+            query_values *= 2
+
         if commit:
-            model_id = self.commit(query, tuple(model_data.values()), cursor=cursor)
+            model_id = self.commit(query, query_values, cursor=cursor)
             return self.fetchone(f"SELECT * FROM {model_name} WHERE id = %s", (model_id,))
 
         else:
-            model_id, cursor = self.execute(query, tuple(model_data.values()), cursor=cursor)
+            model_id, cursor = self.execute(query, query_values, cursor=cursor)
             return self.fetchone(f"SELECT * FROM {model_name} WHERE id = %s", (model_id,)), cursor
 
     def update_model(self, model_name: str, model_data: dict):
