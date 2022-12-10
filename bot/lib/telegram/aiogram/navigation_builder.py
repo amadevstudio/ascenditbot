@@ -31,7 +31,7 @@ class NavigationBuilder(metaclass=Singleton):
             if call is not None:
                 try:
                     p = json.loads(call.data)["p"]
-                except Exception:
+                except KeyError:
                     # не удалось получить канал из кнопки — берём из состояния
                     p = state_data["p"]
             else:

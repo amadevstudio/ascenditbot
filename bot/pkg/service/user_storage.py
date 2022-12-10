@@ -12,10 +12,14 @@ class UserStorage:
         user_storage_repository.add_user_state(chat_id, initial_page)
 
     @staticmethod
-    def change_page(chat: int, state: str, data: dict[str, any] = None):
-        user_storage_repository.add_user_state(chat, state)
+    def change_page(service_chat_id: int, state: str, data: dict[str, any] = None):
+        curr_state = user_storage_repository.get_user_curr_state(service_chat_id)
+        if curr_state == state:
+            return
+
+        user_storage_repository.add_user_state(service_chat_id, state)
         if data is not None:
-            user_storage_repository.add_user_state_data(chat, state, data)
+            user_storage_repository.add_user_state_data(service_chat_id, state, data)
 
     @staticmethod
     def go_back(chat_id: int, state: str = None):

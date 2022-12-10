@@ -93,7 +93,7 @@ class Database(metaclass=Singleton):
 
     def insert_model(
             self, model_name: str, model_data: dict, commit: bool = True, cursor: psycopg2.extensions.cursor = None,
-            conflict_fields: list = None):
+            conflict_unique_fields: list = None):
         model_data = self.__class__.inject_timestamps(model_data)
 
         query = """
@@ -104,11 +104,11 @@ class Database(metaclass=Singleton):
 
         query_values = tuple(model_data.values())
 
-        if conflict_fields is not None:
+        if conflict_unique_fields is not None:
             query += """
                 ON CONFLICT ({conflict_fields}) DO UPDATE SET {columns_equal_values}
             """.format(
-                conflict_fields=', '.join(conflict_fields),
+                conflict_fields=', '.join(conflict_unique_fields),
                 columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])))
             query_values *= 2
 
