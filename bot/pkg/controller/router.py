@@ -98,4 +98,12 @@ def init_routes(environment):
     async def chat_switch_active(call: types.CallbackQuery):
         await event_wrapper(RouteMap.type('add_to_chat_whitelist'), call)
 
+
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.type('chat_whitelist'), chat_type=types.ChatType.PRIVATE)
+    @dispatcher.message_handler(
+        lambda message: user_state(message) == RouteMap.state('chat_whitelist'), chat_type=types.ChatType.PRIVATE)
+    async def chat_whitelist(call: types.CallbackQuery):
+        await event_wrapper(RouteMap.type('chat_whitelist'), call)
+
     return executor, dispatcher

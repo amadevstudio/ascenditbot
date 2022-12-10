@@ -21,6 +21,8 @@ class RouteMap:
             ],
             'commands': ['menu']
         },
+
+
         'add_chat': {
             'method': chats_controller.add_chat,
             'commands': ['add_chat'],
@@ -28,6 +30,8 @@ class RouteMap:
             # 'available_from': ['call', 'command', 'message'],
             # 'chat_type': types.ChatType.PRIVATE
         },
+
+
         'my_chats': {
             'method': chats_controller.my_chats,
             'commands': ['my_chats'],
@@ -36,7 +40,8 @@ class RouteMap:
         'chat': {
             'method': chats_controller.show,
             'routes': [
-              'add_to_chat_whitelist'
+                'add_to_chat_whitelist',
+                'chat_whitelist'
             ],
             'actions': {
                 'switch_active': {
@@ -47,6 +52,13 @@ class RouteMap:
         'add_to_chat_whitelist': {
             'method': chats_controller.add_to_chat_whitelist,
             'wait_for_input': True
+        },
+        'chat_whitelist': {
+            'method': chats_controller.chat_whitelist,
+            'commands': ['chat_whitelist_member']
+        },
+        'chat_whitelist_member': {
+
         },
 
         'nowhere': {}

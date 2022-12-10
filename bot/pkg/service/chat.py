@@ -137,3 +137,11 @@ class Chat:
             return {"error": "unexpected"}
 
         return result_whitelisted
+
+    @staticmethod
+    def whitelist_data_count_provider(chat_id: int):
+        return chat_repository.chat_whitelist_count(chat_id)
+
+    @staticmethod
+    def whitelist_data_provider(chat_id: int, order_by: str, limit: int, offset: int):
+        return chat_repository.chat_whitelist(chat_id, order_by, limit, offset)

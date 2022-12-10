@@ -19,8 +19,8 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
         message_structures = [{
             'type': 'image',
             'image': image_link_or_object(
-                localization.get_link(["add_chat", "anon_admin_example"], message.from_user.language_code)),
-            'text': localization.get_message(["add_chat", "instruction"], message.from_user.language_code),
+                localization.get_link(['add_chat', 'anon_admin_example'], message.from_user.language_code)),
+            'text': localization.get_message(['add_chat', 'instruction'], message.from_user.language_code),
             'reply_markup': go_back_inline_markup(message.from_user.language_code)
         }]
         await message_sender(message, resending=call is None, message_structures=message_structures)
@@ -40,24 +40,24 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
 
     result_connection = await Chat.add(message.bot, chat_service_id, message.from_user.id)
 
-    if "error" in result_connection:
-        if result_connection["error"] == "connection_exists":
-            result_connection = result_connection["connection"]
+    if 'error' in result_connection:
+        if result_connection['error'] == 'connection_exists':
+            result_connection = result_connection['connection']
 
         else:
             if result_connection['error'] in ['unexpected', 'user_none']:
-                error_trace = ['errors', result_connection["error"]]
+                error_trace = ['errors', result_connection['error']]
             else:
-                error_trace = ["add_chat", "errors", result_connection["error"]]
+                error_trace = ['add_chat', 'errors', result_connection['error']]
             await notify(
                 call, message, localization.get_message(error_trace, message.from_user.language_code),
-                alert=True, button_text="cancel")
+                alert=True, button_text='cancel')
             return
 
     chat_info = await Chat.get_info(message.bot, chat_service_id=str(chat_service_id))
 
     button = types.InlineKeyboardButton(
-        localization.get_message(["buttons", "go_to_settings"], message.from_user.language_code),
+        localization.get_message(['buttons', 'go_to_settings'], message.from_user.language_code),
         callback_data=json.dumps({'tp': 'chat', 'id': result_connection['moderated_chat_id']}))
     reply_markup = types.InlineKeyboardMarkup().add(button).add()
     reply_markup.add(go_back_inline_button(message.from_user.language_code))
@@ -65,7 +65,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
     message_structures = [{
         'type': 'text',
         'text': localization.get_message(
-            ["add_chat", "success"], message.from_user.language_code).format(chat_name=chat_info['title']),
+            ['add_chat', 'success'], message.from_user.language_code).format(chat_name=chat_info['title']),
         'reply_markup': reply_markup
     }]
 
@@ -73,7 +73,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
 
 
 async def my_chats(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    current_type = routes.RouteMap.type("my_chats")
+    current_type = routes.RouteMap.type('my_chats')
 
     # Getting data and full navigation setup
     state_data = UserStorage.get_user_state_data(message.chat.id, current_type)
@@ -82,38 +82,38 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
 
         Chat.data_provider_by_service_id, [message.chat.id],
         Chat.data_count_provider_by_service_id, [message.chat.id],
-        _PER_PAGE, "created_at"
+        _PER_PAGE, 'created_at'
     )
 
     # Error processing
-    if "error" in user_chat_page_data:
-        if user_chat_page_data["error"] in ["empty"]:
+    if 'error' in user_chat_page_data:
+        if user_chat_page_data['error'] in ['empty']:
             error_message = localization.get_message(
-                ["my_chats", "errors", user_chat_page_data["error"]],
+                ['my_chats', 'errors', user_chat_page_data['error']],
                 message.from_user.language_code,
-                command=routes.RouteMap.get_route_main_command("add_chat"))
+                command=routes.RouteMap.get_route_main_command('add_chat'))
         else:
             error_message = localization.get_message(
-                ["navigation_builder", "errors", user_chat_page_data["error"]],
+                ['navigation_builder', 'errors', user_chat_page_data['error']],
                 message.from_user.language_code)
         await notify(
             call, message, error_message, alert=True)
         return
 
     # Building message
-    message_text = localization.get_message(["my_chats", "list", "main"], message.from_user.language_code)
-    message_text += "\n" + routing_helper_message
+    message_text = localization.get_message(['my_chats', 'list', 'main'], message.from_user.language_code)
+    message_text += '\n' + routing_helper_message
 
     # Chat buttons
     reply_markup = types.InlineKeyboardMarkup()
-    for chat_data in user_chat_page_data["data"]:
+    for chat_data in user_chat_page_data['data']:
         chat_info = await Chat.get_info(message.bot, chat_service_id=str(chat_data['service_id']))
 
         button_text = localization.get_message(
-            ["my_chats", "list", "chat_button", "active" if chat_data['active'] else "inactive"],
-            message.from_user.language_code, chat_name=chat_info["title"])
+            ['my_chats', 'list', 'chat_button', 'active' if chat_data['active'] else 'inactive'],
+            message.from_user.language_code, chat_name=chat_info['title'])
 
-        button_data = {"tp": "chat", "id": chat_data['id']}
+        button_data = {'tp': 'chat', 'id': chat_data['id']}
 
         b = types.InlineKeyboardButton(
             text=button_text,
@@ -133,7 +133,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
 
     if change_user_state:
         UserStorage.change_page(message.chat.id, current_type)
-        UserStorage.add_user_state_data(message.chat.id, current_type, {"p": current_page})
+        UserStorage.add_user_state_data(message.chat.id, current_type, {'p': current_page})
 
 
 async def show(call: types.CallbackQuery, message: types.Message, change_user_state=True):
@@ -232,12 +232,12 @@ async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Messag
 
     if 'error' in result_connection:
         if result_connection['error'] == 'unexpected':
-            error_trace = ['errors', result_connection["error"]]
+            error_trace = ['errors', result_connection['error']]
         else:
-            error_trace = ['chat', 'add_to_whitelist', 'errors', result_connection["error"]]
+            error_trace = ['chat', 'add_to_whitelist', 'errors', result_connection['error']]
         await notify(
             call, message, localization.get_message(error_trace, message.from_user.language_code),
-            alert=True, button_text="cancel")
+            alert=True, button_text='cancel')
         return
 
     message_structures = [{
@@ -248,3 +248,61 @@ async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Messag
     }]
 
     await message_sender(message, resending=call is None, message_structures=message_structures)
+
+
+async def chat_whitelist(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+    current_type = routes.RouteMap.type('chat_whitelist')
+
+    # Getting data and full navigation setup
+    channel_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('chat'))
+    state_data = UserStorage.get_user_state_data(message.chat.id, current_type)
+
+    current_page, chat_whitelist_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
+        call, message, state_data, current_type, message.from_user.language_code,
+
+        Chat.whitelist_data_provider, [channel_state_data['id']],
+        Chat.whitelist_data_count_provider, [channel_state_data['id']],
+        _PER_PAGE, 'created_at'
+    )
+
+    # Error processing
+    if 'error' in chat_whitelist_page_data:
+        if chat_whitelist_page_data['error'] in ['empty']:
+            error_message = localization.get_message(
+                ['chat_whitelist', 'errors', chat_whitelist_page_data['error']],
+                message.from_user.language_code,
+                command=routes.RouteMap.get_route_main_command('add_chat'))
+        else:
+            error_message = localization.get_message(
+                ['navigation_builder', 'errors', chat_whitelist_page_data['error']],
+                message.from_user.language_code)
+        await notify(
+            call, message, error_message, alert=True)
+        return
+
+    # Building message
+    message_text = localization.get_message(['chat_whitelist', 'list', 'main'], message.from_user.language_code)
+    message_text += '\n' + routing_helper_message
+
+    # Chat buttons
+    reply_markup = types.InlineKeyboardMarkup()
+    for whitelist_data in chat_whitelist_page_data['data']:
+        b = types.InlineKeyboardButton(
+            text=whitelist_data['nickname'],
+            callback_data=json.dumps({'tp': 'chat_whitelist_member', 'id': whitelist_data['id']}))
+        reply_markup.add(b)
+
+    # Navigation markup
+    reply_markup.add(*nav_layout)
+
+    # Sending
+    message_structures = [{
+        'type': 'text',
+        'text': message_text,
+        'reply_markup': reply_markup
+    }]
+    await message_sender(message, resending=call is None, message_structures=message_structures)
+
+    if change_user_state:
+        UserStorage.change_page(message.chat.id, current_type)
+        UserStorage.add_user_state_data(message.chat.id, current_type, {'p': current_page})

@@ -87,4 +87,19 @@ def switch_active(chat_id: int):
 def add_to_whitelist(chat_id: int, user_nickname: str):
     allowed_user = {'moderated_chat_id': chat_id, 'nickname': user_nickname}
     return db.insert_model(
-        'allowed_users', allowed_user, conflict_fields=['moderated_chat_id', 'nickname'])
+        'allowed_users', allowed_user, conflict_unique_fields=['moderated_chat_id', 'nickname'])
+
+
+def chat_whitelist_count(chat_id: int):
+    return db.fetchone("""
+            SELECT COUNT(*) FROM allowed_users
+            WHERE moderated_chat_id = %s
+        """, (chat_id,))['count']
+
+
+def chat_whitelist(chat_id: int, order_by: str, limit: int, offset: int):
+    return db.fetchall("""
+        SELECT * FROM allowed_users
+        WHERE moderated_chat_id = %s
+        ORDER BY {order_field} LIMIT %s OFFSET %s
+    """.format(order_field=order_by), (chat_id, limit, offset,))
