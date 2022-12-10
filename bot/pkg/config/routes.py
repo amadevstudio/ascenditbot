@@ -55,7 +55,8 @@ class RouteMap:
         },
         'chat_whitelist': {
             'method': chats_controller.chat_whitelist,
-            'commands': ['chat_whitelist_member']
+            'commands': ['chat_whitelist_member'],
+            'wait_for_input': True
         },
         'chat_whitelist_member': {
 
