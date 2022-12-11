@@ -1,6 +1,8 @@
 .idea
 .vscode
 
+venv
+
 env/.env.local
 database/postgresql
 

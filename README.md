@@ -7,8 +7,17 @@ Telegram whitelist bot for a chats
   - *TELEGRAM_BOT_TOKEN*
 - `docker-compose build`
 - `docker-compose up`
-- `docker-compose run migrator up`
+- `docker-compose run migrator -e POSTGRES_URL up`
 - `sudo chmod u+x scripts/own_project.sh && ./scripts/own_project.sh`
+
+### Pycharm
+- Set bot folder: RClick on bot -> Mark directory as -> Mark as Sources Root
+- For Community version you can use local packages environment for packages mapping:
+  - `python3 -m venv venv`
+  - In Pycharm set Python Interpreter as existing Virtual Environment
+  - `source venv/bin/activate`
+  - `pip3 install virtualenv`
+  - `deactivate`
 
 ### Fast developing
 Run compose and stop the bot container  
