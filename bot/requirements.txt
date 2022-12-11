@@ -1,4 +1,6 @@
 aiogram
 
 redis
-psycopg2-binary # Postgres connection
+
+# psycopg2-binary # Postgres connection
+psycopg2

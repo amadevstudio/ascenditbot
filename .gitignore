@@ -1,9 +1,14 @@
+# Editors
 .idea
 .vscode
 
-venv
+# OS
+**/.DS_STORE
 
+# Python
+venv
+**/__pycache__
+
+# Environment
 env/.env.local
 database/postgresql
-
-**/__pycache__
