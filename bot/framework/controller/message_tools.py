@@ -83,4 +83,4 @@ def call_or_command(call: types.CallbackQuery = None, message: types.Message = N
     if entity is not None:
         call, message = call_and_message_accessed_processor(entity)
 
-    return call is not None or message.text[0] == '/'
+    return call is not None or (message.text is not None and message.text[0]) == '/'
