@@ -1,6 +1,7 @@
 # Editors
 .idea
 .vscode
+.devcontainer
 
 # OS
 **/.DS_STORE
