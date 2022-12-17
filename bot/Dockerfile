@@ -13,4 +13,4 @@ RUN pip install -r requirements.txt
 #USER appuser
 
 # run app
-CMD ["python", "main.py"]
+CMD ["python", "autoreload.py", "python", "main.py"]
