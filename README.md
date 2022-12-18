@@ -19,7 +19,7 @@ Telegram whitelist bot for a chats
   - `pip3 install virtualenv`
   - `deactivate`
 
-### Fast developing
+### Fast developing (deprecated because auto-reload added)
 Run compose and stop the bot container  
 `docker-compose up`  
 Then in new terminal run  
