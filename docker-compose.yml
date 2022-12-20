@@ -1,4 +1,4 @@
-version: "3.8"
+version: "3.9"
 services:
   bot:
     build:
@@ -16,9 +16,10 @@ services:
       - env/.env.prod
       - env/.env.local
     depends_on:
-      - db
-      - check-db-started
       - storage
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:15.1-alpine
@@ -33,12 +34,11 @@ services:
       - env/.env.local
     environment:
       ALLOW_IP_RANGE: 0.0.0.0/0
-  # Wait for Database
-  check-db-started: 
-    image: jwilder/dockerize:0.6.1
-    depends_on:
-      - db
-    command: dockerize -wait=tcp://$${POSTGRES_SERVER}/$${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   migrator:
     build:
@@ -55,7 +55,8 @@ services:
       - env/.env.prod
       - env/.env.local
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   storage:
     build:
