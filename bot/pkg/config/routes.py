@@ -1,6 +1,7 @@
 from typing import Any
 
-from pkg.controller import welcome_controller, chats_controller
+from pkg.controller import (
+    welcome_controller, chats_controller, whitelist_controller)
 
 
 class RouteMap:
@@ -50,11 +51,11 @@ class RouteMap:
             }
         },
         'add_to_chat_whitelist': {
-            'method': chats_controller.add_to_chat_whitelist,
+            'method': whitelist_controller.add_to_chat_whitelist,
             'wait_for_input': True
         },
         'chat_whitelist': {
-            'method': chats_controller.chat_whitelist,
+            'method': whitelist_controller.chat_whitelist,
             'commands': ['chat_whitelist_member'],
             'wait_for_input': True
         },
