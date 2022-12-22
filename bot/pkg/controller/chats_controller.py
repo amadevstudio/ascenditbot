@@ -54,7 +54,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
                 alert=True, button_text='cancel')
             return
 
-    chat_info = await Chat.get_info(message.bot, chat_service_id=str(chat_service_id))
+    chat_info = await Chat.load_info(message.bot, chat_service_id=str(chat_service_id))
 
     button = types.InlineKeyboardButton(
         localization.get_message(['buttons', 'go_to_settings'], message.from_user.language_code),
@@ -107,7 +107,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     # Chat buttons
     reply_markup = types.InlineKeyboardMarkup()
     for chat_data in user_chat_page_data['data']:
-        chat_info = await Chat.get_info(message.bot, chat_service_id=str(chat_data['service_id']))
+        chat_info = await Chat.load_info(message.bot, chat_service_id=str(chat_data['service_id']))
 
         button_text = localization.get_message(
             ['my_chats', 'list', 'chat_button', 'active' if chat_data['active'] else 'inactive'],
@@ -139,7 +139,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
 async def show(call: types.CallbackQuery, message: types.Message, change_user_state=True):
     chat_income_data = get_current_state_data(call, message, 'chat')
 
-    if chat_income_data is None:
+    if not len(chat_income_data):
         await notify(
             None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
         return
@@ -150,7 +150,7 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
             call, message, localization.get_message(['chat', 'errors', 'not_found'], message.from_user.language_code))
         return
 
-    chat_info = await Chat.get_info(call.bot, str(chat_data['service_id']))
+    chat_info = await Chat.load_info(call.bot, str(chat_data['service_id']))
 
     message_text = localization.get_message(
         ['chat', 'show', 'text'], message.from_user.language_code, chat_name=chat_info['title'])
@@ -204,5 +204,3 @@ async def switch_active(call: types.CallbackQuery, message: types.Message):
     # Tell show method to take date from state
     call.data = {}
     await show(call, message, change_user_state=False)
-
-

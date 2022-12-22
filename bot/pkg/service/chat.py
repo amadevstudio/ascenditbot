@@ -97,7 +97,7 @@ class Chat:
         return result_connection
 
     @staticmethod
-    async def get_info(bot: aiogram.bot.bot.Bot, chat_service_id: str):
+    async def load_info(bot: aiogram.bot.bot.Bot, chat_service_id: str):
         chat_info = await bot.get_chat(chat_service_id)
         return {
             'service_id': chat_info['id'],

@@ -232,6 +232,28 @@ routed_messages = {
             }
         }
     },
+    'whitelist': {
+        'list': {
+            'button': {
+                'active': {
+                    'en': "",
+                    'ru': emoji_codes.get('heavy_check_mark', '') + " {nickname}"
+                },
+                'inactive': {
+                    'en': "",
+                    'ru': "{nickname}"
+                }
+            }
+        },
+    },
+    'allowed_user': {
+        'show': {
+            'text': {
+                'en': "",
+                'ru': ""
+            }
+        }
+    },
 
     'navigation_builder': {
         'actions': {
