@@ -56,11 +56,19 @@ class RouteMap:
         },
         'chat_whitelist': {
             'method': whitelist_controller.chat_whitelist,
-            'commands': ['chat_whitelist_member'],
+            'commands': ['allowed_user'],
             'wait_for_input': True
         },
-        'chat_whitelist_member': {
-
+        'allowed_user': {
+            'method': whitelist_controller.allowed_user,
+            'actions': {
+                'switch_active': {
+                    'method': None
+                },
+                'delete': {
+                    'method': None
+                }
+            }
         },
 
         'nowhere': {}

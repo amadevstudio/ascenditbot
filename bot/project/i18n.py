@@ -8,6 +8,8 @@ emoji_codes = {
     'down_arrow': '⬇️',
     'heavy_check_mark': '✅',
     'cross_mark': '❌',
+    'warning_sign': '⚠️',
+    'wastebasket': '🗑️',
 }
 
 links = {
@@ -214,7 +216,9 @@ routed_messages = {
         'add_to_whitelist': {
             'text': {
                 'en': "",
-                'ru': emoji_codes.get('chat', '') + " Чтобы добавить пользователя, пришлите его никнейм, например `mike`"
+                'ru':
+                    emoji_codes.get('chat', '') +
+                    " Чтобы добавить пользователя, пришлите его никнейм, например `mike`"
             },
             'success': {
                 'en': "",
@@ -250,9 +254,29 @@ routed_messages = {
         'show': {
             'text': {
                 'en': "",
-                'ru': ""
+                'ru': "{chat_name}\nПользователь: {nickname}"
+            },
+            'active_button': {
+                'active': {
+                    'en': "",
+                    'ru': emoji_codes.get('heavy_check_mark', '') + " Может писать"
+                },
+                'inactive': {
+                    'en': "",
+                    'ru': emoji_codes.get('cross_mark', '') + " Сообщения удаляются"
+                }
+            },
+            'delete_button': {
+                'initial': {
+                    'en': "",
+                    'ru': emoji_codes.get('wastebasket') + " Удалить из белого списка"
+                },
+                'deleting': {
+                    'en': "",
+                    'ru': emoji_codes.get('warning_sign', '') + " Подтвердить удаление?"
+                }
             }
-        }
+        },
     },
 
     'navigation_builder': {

@@ -1,22 +1,28 @@
 import datetime
+from typing import TypedDict
 
-allowed_user_interface = {
-    'id': int,
-    'moderated_chat_id': int,
-    'nickname': str,
-    'active': bool,
-    'images_allowed': bool,
-    'links_allowed': bool,
-    'period_quantity': int,
-    'period_type': str,
-    'period_quantity_left': int,
-    'ban_expiration_date': datetime.datetime,
-    'created_at': datetime.datetime,
-    'updated_at': datetime.datetime
-}
+from pkg.repository import allowed_user_repository
+
+
+class AllowedUserInterface(TypedDict):
+    id: int
+    moderated_chat_id: int
+    nickname: str
+    active: bool
+    images_allowed: bool
+    links_allowed: bool
+    period_quantity: int
+    period_type: str
+    period_quantity_left: int
+    ban_expiration_date: datetime.datetime
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+# allowed_user_interface = AllowedUserInterface.__annotations__
 
 
 class AllowedUser:
-    @classmethod
-    def find(user_id: int):
-        pass
+    @staticmethod
+    def find(allowed_user_id: int) -> AllowedUserInterface | None:
+        return allowed_user_repository.find(allowed_user_id)
