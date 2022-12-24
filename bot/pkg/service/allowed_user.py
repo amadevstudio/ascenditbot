@@ -4,7 +4,7 @@ from typing import TypedDict
 from pkg.repository import allowed_user_repository
 
 
-class AllowedUserInterface(TypedDict):
+class AllowedUserInterface(TypedDict, total=False):
     id: int
     moderated_chat_id: int
     nickname: str

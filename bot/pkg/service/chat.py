@@ -1,4 +1,5 @@
 import datetime
+from typing import TypedDict
 
 import aiogram.bot.bot
 from aiogram import types
@@ -7,21 +8,21 @@ from aiogram.utils import exceptions
 from pkg.repository import chat_repository
 from pkg.system.logger import logger
 
-chat_interface = {
-    'id': int,
-    'service_id': str,
-    'active': bool,
-    'disabled': bool,
-    'allow_administrators': bool,
-    'allowed_keywords': str,
-    'created_at': datetime.datetime,
-    'updated_at': datetime.datetime
-}
+
+class ChatInterface(TypedDict, total=False):
+    id: int
+    service_id: str
+    active: bool
+    disabled: bool
+    allow_administrators: bool
+    allowed_keywords: str
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
 
 
 class Chat:
     @staticmethod
-    def find(chat_id: int):
+    def find(chat_id: int) -> ChatInterface | None:
         return chat_repository.find(chat_id)
 
     @staticmethod
