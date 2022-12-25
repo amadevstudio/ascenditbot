@@ -201,6 +201,6 @@ async def switch_active(call: types.CallbackQuery, message: types.Message):
     chat_state_data['active'] = new_active_values
     UserStorage.add_user_state_data(message.chat.id, 'chat', chat_state_data)
 
-    # Tell show method to take date from state
+    # Tell show method to take data from state
     call.data = {}
     await show(call, message, change_user_state=False)

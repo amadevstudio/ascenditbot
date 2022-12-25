@@ -78,7 +78,7 @@ def user_chats_by_service_id(chat_id: str, order_by: str, limit: int, offset: in
     """.format(order_field=order_by), (chat_id, limit, offset,))
 
 
-def switch_active(chat_id: int):
+def switch_active(chat_id: int) -> bool:
     return db.commit("""
         UPDATE moderated_chats SET active = NOT active WHERE id = %s
     """, (chat_id, ), returning='active')

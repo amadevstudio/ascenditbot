@@ -1,7 +1,7 @@
 from typing import Any
 
 from pkg.controller import (
-    welcome_controller, chats_controller, whitelist_controller)
+    welcome_controller, chats_controller, allowed_users_controller)
 
 
 class RouteMap:
@@ -51,19 +51,19 @@ class RouteMap:
             }
         },
         'add_to_chat_whitelist': {
-            'method': whitelist_controller.add_to_chat_whitelist,
+            'method': allowed_users_controller.add_to_chat_whitelist,
             'wait_for_input': True
         },
         'chat_whitelist': {
-            'method': whitelist_controller.chat_whitelist,
+            'method': allowed_users_controller.chat_whitelist,
             'commands': ['allowed_user'],
             'wait_for_input': True
         },
         'allowed_user': {
-            'method': whitelist_controller.allowed_user,
+            'method': allowed_users_controller.show,
             'actions': {
                 'switch_active': {
-                    'method': None
+                    'method': allowed_users_controller.switch_active
                 },
                 'delete': {
                     'method': None
@@ -123,6 +123,7 @@ class RouteMap:
     def get_route_main_command(route_name: str):
         return RouteMap.get_route_commands(route_name)[0]
 
+    # Get action type
     @staticmethod
     def type(route_type: str):
         if route_type not in RouteMap.ROUTES:
@@ -130,10 +131,12 @@ class RouteMap:
 
         return route_type
 
+    # Get state from state list
     @staticmethod
     def state(route_state: str):
         return RouteMap.type(route_state)
 
+    # Get inline action type
     @staticmethod
     def action_type(route_state: str, action: str):
         actions = RouteMap.get_route_prop(route_state, 'actions')

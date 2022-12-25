@@ -124,7 +124,7 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
 
 
 # Show allowed user
-async def allowed_user(call: types.CallbackQuery, message: types.message, change_user_state=True):
+async def show(call: types.CallbackQuery, message: types.message, change_user_state=True):
     allowed_user_state_data = get_current_state_data(call, message, 'allowed_user')
     chat_state_data = UserStorage.get_user_state_data(message.chat.id, 'chat')
 
@@ -174,3 +174,23 @@ async def allowed_user(call: types.CallbackQuery, message: types.message, change
     if change_user_state:
         UserStorage.change_page(message.chat.id, 'allowed_user')
         UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_data)
+
+
+async def switch_active(call: types.CallbackQuery, message: types.Message):
+    allowed_user_state_data = UserStorage.get_user_state_data(message.chat.id, 'allowed_user')
+    if allowed_user_state_data is None:
+        await notify(
+            None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
+        return
+
+    new_active_values = AllowedUser.switch_active(allowed_user_state_data['id'])
+
+    if new_active_values is None or new_active_values == allowed_user_state_data['active']:
+        return
+
+    allowed_user_state_data['active'] = new_active_values
+    UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_state_data)
+
+    # Tell show method to take data from state
+    call.data = {}
+    await show(call, message, change_user_state=False)

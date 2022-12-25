@@ -26,3 +26,7 @@ class AllowedUser:
     @staticmethod
     def find(allowed_user_id: int) -> AllowedUserInterface | None:
         return allowed_user_repository.find(allowed_user_id)
+
+    @staticmethod
+    def switch_active(chat_id: int) -> bool:
+        return allowed_user_repository.switch_active(chat_id)

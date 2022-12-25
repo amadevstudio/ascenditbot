@@ -13,8 +13,12 @@ def get_type(call: types.CallbackQuery):
     return json.loads(call.data).get("tp", "")
 
 
-def user_state(message: types.Message):
-    return UserStorage.curr_state(message.chat.id)
+def user_state(entity: types.Message | types.CallbackQuery):
+    try:
+        chat_id = entity.message.chat.id
+    except AttributeError:
+        chat_id = entity.chat.id
+    return UserStorage.curr_state(chat_id)
 
 
 async def event_wrapper(route_type: str, entity: types.Message | types.CallbackQuery, *args, **kwargs):
