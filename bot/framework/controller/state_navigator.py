@@ -19,7 +19,7 @@ async def go_back(call: types.CallbackQuery):
 
         await method(call, call.message, change_user_state=False)
 
-        UserStorage.go_back(call.message.chat.id, "curr")
+        UserStorage.go_back(call.message.chat.id, curr)
 
         # except Exception as e:
         #     welcome_controller.menu(call.message)
