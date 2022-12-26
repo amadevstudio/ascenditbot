@@ -28,6 +28,10 @@ class Database(metaclass=Singleton):
         query = "SELECT * FROM {model} WHERE id = %s".format(model=model)
         return self.fetchone(query, (id,))
 
+    def delete(self, model: str, id: int):
+        query = "DELETE FROM {model} WHERE id = %s".format(model=model)
+        return self.execute(query, (id,))
+
     @staticmethod
     def inject_updated_at(model):
         utc_dt = datetime.now(timezone.utc)  # UTC time

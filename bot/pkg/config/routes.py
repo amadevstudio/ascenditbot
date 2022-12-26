@@ -66,7 +66,7 @@ class RouteMap:
                     'method': allowed_users_controller.switch_active
                 },
                 'delete': {
-                    'method': None
+                    'method': allowed_users_controller.delete
                 }
             }
         },

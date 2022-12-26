@@ -28,5 +28,9 @@ class AllowedUser:
         return allowed_user_repository.find(allowed_user_id)
 
     @staticmethod
-    def switch_active(chat_id: int) -> bool:
-        return allowed_user_repository.switch_active(chat_id)
+    def switch_active(allowed_user_id: int) -> bool | None:
+        return allowed_user_repository.switch_active(allowed_user_id)
+
+    @staticmethod
+    def delete(allowed_user_id: int) -> int | None:
+        return allowed_user_repository.delete(allowed_user_id)

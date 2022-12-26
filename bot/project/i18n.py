@@ -277,6 +277,12 @@ routed_messages = {
                 }
             }
         },
+        'delete': {
+            'confirm': {
+                'en': "",
+                'ru': "Для удаления нажмите на кнопку ещё раз"
+            }
+        }
     },
 
     'navigation_builder': {

@@ -26,7 +26,7 @@ class NavigationBuilder(metaclass=Singleton):
 
     # возвращает текущую страницу
     @staticmethod
-    def get_page(call: types.CallbackQuery, message: types.Message, state_data):
+    def get_state_page(call: types.CallbackQuery, message: types.Message, state_data):
         try:
             if call is not None:
                 try:
@@ -36,6 +36,8 @@ class NavigationBuilder(metaclass=Singleton):
                     p = state_data["p"]
             else:
                 p = int(message.text)
+                if p < 1:
+                    p = 1
 
         except Exception:
             p = 1
@@ -48,19 +50,8 @@ class NavigationBuilder(metaclass=Singleton):
             data_provider: Callable, data_params: list, data_count_provider: Callable, data_count_params: list,
             curr_page: int, per_page: int, order_field: str):
 
-        # if curr_page == -1:
-        #     return {
-        #         "error": "already_on_this_page"
-        #     }
-        # elif curr_page == -2:
-        #     return {
-        #         "error": "page_does_not_exist"
-        #     }
-
         if curr_page < 1:
-            return {
-                "error": "page_does_not_exist"
-            }
+            curr_page = 1
 
         count = data_count_provider(*data_count_params)
 
@@ -69,20 +60,18 @@ class NavigationBuilder(metaclass=Singleton):
                 "error": "empty"
             }
 
+        page_count = math.ceil(count / per_page)
+        if curr_page > page_count:
+            curr_page = page_count
+
         offset = per_page * (curr_page - 1)
 
         data = data_provider(*data_params, order_field, per_page, offset)
 
-        page_count = math.ceil(count / per_page)
-
-        if curr_page > page_count or curr_page < 1:
-            return {
-                "error": "page_does_not_exist"
-            }
-
         return {
-            "data": data,
-            "page_count": page_count
+            'data': data,
+            'page_count': page_count,
+            'curr_page': curr_page
         }
 
     # возвращает кнопки переключения страниц
@@ -130,11 +119,13 @@ class NavigationBuilder(metaclass=Singleton):
     def full_message_setup(self, call, message, state_data, current_type, language_code,
                            data_provider, data_params, data_count_provider, data_count_params, per_page, order_field
     ):
-        current_page = self.__class__.get_page(call, message, state_data)
+        current_page = self.__class__.get_state_page(call, message, state_data)
         user_chat_page_data = self.__class__.load_page_data(
             data_provider, data_params, data_count_provider, data_count_params, current_page, per_page, order_field)
         if "error" in user_chat_page_data:
             return current_page, user_chat_page_data, None, None
+
+        current_page = user_chat_page_data['curr_page']
 
         routing_helper_message = self.get_routing_helper_message(
             current_page, user_chat_page_data['page_count'], language_code)

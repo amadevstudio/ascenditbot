@@ -12,7 +12,7 @@ async def go_back(call: types.CallbackQuery):
         # lastText = storage.get_user_last_text(call.message.chat.id)
         prev, curr = UserStorage.prev_curr_states(call.message.chat.id)
 
-        method = RouteMap.get_route_prop(prev, "method")
+        method = RouteMap.get_route_prop(prev, 'method')
         if method is None:
             # TODO: show error
             return

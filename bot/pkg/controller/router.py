@@ -121,4 +121,13 @@ def init_routes(environment):
         await event_action_wrapper(
             RouteMap.type('allowed_user'), RouteMap.action_type('allowed_user', 'switch_active'), call)
 
+    @dispatcher.callback_query_handler(
+        lambda call: (
+                user_state(call) == RouteMap.state('allowed_user')
+                and get_type(call) == RouteMap.action_type('allowed_user', 'delete')),
+        chat_type=types.ChatType.PRIVATE)
+    async def allowed_user_switch_active(call: types.CallbackQuery):
+        await event_action_wrapper(
+            RouteMap.type('allowed_user'), RouteMap.action_type('allowed_user', 'delete'), call)
+
     return executor, dispatcher

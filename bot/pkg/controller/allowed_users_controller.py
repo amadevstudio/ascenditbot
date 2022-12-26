@@ -173,7 +173,7 @@ async def show(call: types.CallbackQuery, message: types.message, change_user_st
 
     if change_user_state:
         UserStorage.change_page(message.chat.id, 'allowed_user')
-        UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_data)
+        UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_state_data | allowed_user_data)
 
 
 async def switch_active(call: types.CallbackQuery, message: types.Message):
@@ -194,3 +194,27 @@ async def switch_active(call: types.CallbackQuery, message: types.Message):
     # Tell show method to take data from state
     call.data = {}
     await show(call, message, change_user_state=False)
+
+
+async def delete(call: types.CallbackQuery, message: types.Message):
+    allowed_user_state_data = UserStorage.get_user_state_data(message.chat.id, 'allowed_user')
+    if allowed_user_state_data is None:
+        await notify(
+            call, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
+        return
+
+    # Already deleting
+    if 'deleting' in allowed_user_state_data:
+        deleted_id = AllowedUser.delete(allowed_user_state_data['id'])
+        if deleted_id is not None:
+            await chat_whitelist(call, message, change_user_state=False)
+            UserStorage.go_back(message.chat.id, 'allowed_user')
+            return
+
+    allowed_user_state_data['deleting'] = True
+    UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_state_data)
+
+    await notify(call, message, localization.get_message(
+        ['allowed_user', 'delete', 'confirm'], message.from_user.language_code), alert=True)
+
+    await show(call, message)
