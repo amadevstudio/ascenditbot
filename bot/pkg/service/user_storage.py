@@ -1,6 +1,3 @@
-import json
-from typing import Dict
-
 from pkg.config import routes
 from pkg.repository import user_storage_repository
 

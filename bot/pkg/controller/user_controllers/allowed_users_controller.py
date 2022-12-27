@@ -8,10 +8,9 @@ from framework.controller.state_data import get_current_state_data
 from lib.language import localization
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
-from pkg.controller.chats_controller import _PER_PAGE
+from pkg.controller.user_controllers.chats_controller import _PER_PAGE
 from pkg.service.allowed_user import AllowedUser
 from pkg.service.chat import Chat
-from pkg.service.user import User
 from pkg.service.user_storage import UserStorage
 
 

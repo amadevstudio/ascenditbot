@@ -1,22 +1,5 @@
-import datetime
-from typing import TypedDict
-
-from pkg.repository import allowed_user_repository
-
-
-class AllowedUserInterface(TypedDict, total=False):
-    id: int
-    moderated_chat_id: int
-    nickname: str
-    active: bool
-    images_allowed: bool
-    links_allowed: bool
-    period_quantity: int
-    period_type: str
-    period_quantity_left: int
-    ban_expiration_date: datetime.datetime
-    created_at: datetime.datetime
-    updated_at: datetime.datetime
+from pkg.repository import allowed_user_repository, chat_repository
+from project.types import AllowedUserInterface
 
 
 # allowed_user_interface = AllowedUserInterface.__annotations__
@@ -34,3 +17,17 @@ class AllowedUser:
     @staticmethod
     def delete(allowed_user_id: int) -> int | None:
         return allowed_user_repository.delete(allowed_user_id)
+
+    @staticmethod
+    def check_privilege(nickname: str, chat_service_id: str) -> bool:
+        chat_monitoring_active: bool = chat_repository.is_active_by_service_id(str(chat_service_id))
+        if not chat_monitoring_active:
+            return True
+
+        privileges: AllowedUserInterface | None = allowed_user_repository.get_privileges(nickname, chat_service_id)
+        if privileges is None:
+            return False
+
+        able_to_write = privileges['active']
+        # TODO: add more filters: images, ban period etc
+        return able_to_write

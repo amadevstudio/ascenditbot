@@ -1,23 +1,14 @@
-import datetime
-from typing import TypedDict
+from typing import TypedDict, List
 
 import aiogram.bot.bot
 from aiogram import types
 from aiogram.utils import exceptions
 
+import pkg.repository.allowed_user_repository
+import pkg.repository.chat_repository
 from pkg.repository import chat_repository
 from pkg.system.logger import logger
-
-
-class ChatInterface(TypedDict, total=False):
-    id: int
-    service_id: str
-    active: bool
-    disabled: bool
-    allow_administrators: bool
-    allowed_keywords: str
-    created_at: datetime.datetime
-    updated_at: datetime.datetime
+from project.types import ChatInterface, ErrorDictInterface
 
 
 class Chat:
@@ -26,7 +17,8 @@ class Chat:
         return chat_repository.find(chat_id)
 
     @staticmethod
-    async def _get_chat_member(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_id: int):
+    async def _get_chat_member(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_id: int) \
+            -> types.ChatMember | ErrorDictInterface:
         try:
             chat_member = await bot.get_chat_member(chat_service_id, user_id)
             return chat_member
@@ -39,7 +31,7 @@ class Chat:
             return {'error': 'unknown'}
 
     @staticmethod
-    async def _validate_bot_rights(chat_member: types.chat_member):
+    async def _validate_bot_rights(chat_member: types.chat_member) -> ErrorDictInterface:
         if chat_member.status == "user":
             return {'error': 'not_admin'}
 
@@ -52,7 +44,8 @@ class Chat:
         return {}
 
     @staticmethod
-    async def _validate_admin_rights(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int):
+    async def _validate_admin_rights(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
+            -> ErrorDictInterface | TypedDict('_', {'administrator': types.ChatMember}):
         chat_administrators = await bot.get_chat_administrators(chat_service_id)
         administrator: types.ChatMemberAdministrator | types.ChatMemberOwner | None = None
 
@@ -69,7 +62,8 @@ class Chat:
         return {"administrator": administrator}
 
     @staticmethod
-    async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int):
+    async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
+            -> ChatInterface | ErrorDictInterface:
         # Validate we are admin with deletion rights
         chat_member = await Chat._get_chat_member(bot, chat_service_id, bot.id)
         if "error" in chat_member:
@@ -98,35 +92,37 @@ class Chat:
         return result_connection
 
     @staticmethod
-    async def load_info(bot: aiogram.bot.bot.Bot, chat_service_id: str):
-        chat_info = await bot.get_chat(chat_service_id)
+    async def load_info(bot: aiogram.bot.bot.Bot, chat_service_id: str) \
+            -> TypedDict('_', {'service_id': str, 'title': str}):
+        chat_info: types.Chat = await bot.get_chat(chat_service_id)
         return {
-            'service_id': chat_info['id'],
+            'service_id': str(chat_info['id']),
             'title': chat_info['title']
         }
 
     @staticmethod
-    def data_count_provider(user_id: int):
+    def data_count_provider(user_id: int) -> int | None:
         return chat_repository.user_chats_count(str(user_id))
 
     @staticmethod
-    def data_count_provider_by_service_id(chat_id: int):
-        return chat_repository.user_chats_count_by_service_id(str(chat_id))
+    def data_count_provider_by_service_id(user_chat_id: int) -> int | None:
+        return chat_repository.user_chats_count_by_service_id(str(user_chat_id))
 
     @staticmethod
-    def data_provider(user_id: int, order_by: str, limit: int, offset: int):
+    def data_provider(user_id: int, order_by: str, limit: int, offset: int) -> List[ChatInterface]:
         return chat_repository.user_chats(str(user_id), order_by, limit, offset)
 
     @staticmethod
-    def data_provider_by_service_id(chat_id: int, order_by: str, limit: int, offset: int):
-        return chat_repository.user_chats_by_service_id(str(chat_id), order_by, limit, offset)
+    def data_provider_by_service_id(
+            chat_service_id: int, order_by: str, limit: int, offset: int) -> List[ChatInterface]:
+        return chat_repository.user_chats_by_service_id(str(chat_service_id), order_by, limit, offset)
 
     @staticmethod
-    def switch_active(chat_id: int):
+    def switch_active(chat_id: int) -> bool:
         return chat_repository.switch_active(chat_id)
 
     @staticmethod
-    def add_to_whitelist(chat_id: int, user_nickname: str):
+    def add_to_whitelist(chat_id: int, user_nickname: str) -> ChatInterface | None | ErrorDictInterface:
         # chat_member = await Chat._get_chat_member(bot, chat_service_id, user_)
         # if "error" in chat_member:
         #     return {"error": chat_member["error"]}
@@ -140,9 +136,9 @@ class Chat:
         return result_whitelisted
 
     @staticmethod
-    def whitelist_data_count_provider(chat_id: int):
+    def whitelist_data_count_provider(chat_id: int) -> int:
         return chat_repository.chat_whitelist_count(chat_id)
 
     @staticmethod
     def whitelist_data_provider(chat_id: int, order_by: str, limit: int, offset: int):
-        return chat_repository.chat_whitelist(chat_id, order_by, limit, offset)
+        return pkg.repository.chat_repository.chat_whitelist(chat_id, order_by, limit, offset)

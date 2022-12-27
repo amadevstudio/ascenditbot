@@ -1,12 +1,36 @@
-from typing import Any
+from typing import Any, TypedDict, Callable, List, Dict, Literal
 
-from pkg.controller import (
-    welcome_controller, chats_controller, allowed_users_controller)
+from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller
+
+AvailableRoutes = Literal['start', 'menu', 'add_chat', 'my_chats']
+
+
+class RouteActionsInterface(TypedDict):
+    method: Callable
+
+
+class RouteInterface(TypedDict, total=False):
+    method: Callable
+    routes: List[AvailableRoutes]
+    commands: List[AvailableRoutes]
+    wait_for_input: bool
+    actions: Dict[str, RouteActionsInterface]
+
+
+class RoutesInterface(TypedDict):
+    start: RouteInterface
+    menu: RouteInterface
+    add_chat: RouteInterface
+    my_chats: RouteInterface
+    chat: RouteInterface
+    add_to_chat_whitelist: RouteInterface
+    chat_whitelist: RouteInterface
+    allowed_user: RouteInterface
+    nowhere: RouteInterface
 
 
 class RouteMap:
-    ROUTES = {
-        # ['method', 'routes', 'commands', 'wait_for_input', 'actions']
+    ROUTES: RoutesInterface = {
         'start': {
             'method': welcome_controller.start,
             'routes': [
@@ -23,7 +47,6 @@ class RouteMap:
             'commands': ['menu']
         },
 
-
         'add_chat': {
             'method': chats_controller.add_chat,
             'commands': ['add_chat'],
@@ -31,7 +54,6 @@ class RouteMap:
             # 'available_from': ['call', 'command', 'message'],
             # 'chat_type': types.ChatType.PRIVATE
         },
-
 
         'my_chats': {
             'method': chats_controller.my_chats,

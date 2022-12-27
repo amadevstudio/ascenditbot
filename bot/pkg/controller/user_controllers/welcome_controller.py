@@ -15,7 +15,7 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
         User.register(message.chat.id, message.from_user.language_code)
 
     button = types.InlineKeyboardButton(localization.get_message(
-        ["welcome", "let's begin"], message.from_user.language_code), callback_data=json.dumps({'tp': 'menu'}))
+        ['welcome', 'lets_begin'], message.from_user.language_code), callback_data=json.dumps({'tp': 'menu'}))
     markup = types.InlineKeyboardMarkup().add(button)
 
     message_structures = [{

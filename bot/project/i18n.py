@@ -83,7 +83,7 @@ routed_messages = {
                 "Экономьте время с помощью @{bot_name}!"
                 .format(bot_name=constants.bot_name.lower())
         },
-        'let\'s begin': {
+        'lets_begin': {
             'en': "",
             'ru':
                 "Начнём!"

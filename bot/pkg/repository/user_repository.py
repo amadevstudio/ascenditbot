@@ -3,7 +3,7 @@ from pkg.repository.database_connection import Database
 db = Database()
 
 
-def register_or_update_by_service_id(user_data):
+def register_or_update_by_service_id(user_data) -> id:
     user_data['service_id'] = str(user_data['service_id'])
 
     user = db.fetchone("""
