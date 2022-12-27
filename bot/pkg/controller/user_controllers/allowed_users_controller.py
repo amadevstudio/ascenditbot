@@ -35,6 +35,10 @@ async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Messag
 
     user_nickname = message.text
 
+    # Rid of the leading @: @zxc -> zxc
+    if user_nickname[0] == '@':
+        user_nickname = user_nickname[1:]
+
     chat_state_data = UserStorage.get_user_state_data(message.chat.id, 'chat')
 
     result_connection = Chat.add_to_whitelist(chat_state_data['id'], user_nickname)
