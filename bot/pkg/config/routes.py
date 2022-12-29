@@ -1,8 +1,12 @@
 from typing import Any, TypedDict, Callable, List, Dict, Literal
 
 from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller
+from pkg.controller.user_controllers.validators.chat_access_validator import chat_access_validator
 
-AvailableRoutes = Literal['start', 'menu', 'add_chat', 'my_chats']
+AvailableCommands = Literal['start', 'menu', 'add_chat', 'my_chats']
+AvailableRoutes = Literal[
+    'start', 'menu', 'add_chat', 'my_chats', 'chat',
+    'add_to_chat_whitelist', 'chat_whitelist', 'allowed_user', 'nowhere']
 
 
 class RouteActionsInterface(TypedDict):
@@ -12,9 +16,10 @@ class RouteActionsInterface(TypedDict):
 class RouteInterface(TypedDict, total=False):
     method: Callable
     routes: List[AvailableRoutes]
-    commands: List[AvailableRoutes]
+    commands: List[AvailableCommands]
     wait_for_input: bool
     actions: Dict[str, RouteActionsInterface]
+    validator: Callable
 
 
 class RoutesInterface(TypedDict):
@@ -29,6 +34,7 @@ class RoutesInterface(TypedDict):
     nowhere: RouteInterface
 
 
+# TODO: use nesting routing
 class RouteMap:
     ROUTES: RoutesInterface = {
         'start': {
@@ -58,7 +64,7 @@ class RouteMap:
         'my_chats': {
             'method': chats_controller.my_chats,
             'commands': ['my_chats'],
-            'wait_for_input': True
+            'wait_for_input': True,
         },
         'chat': {
             'method': chats_controller.show,
