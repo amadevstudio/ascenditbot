@@ -8,6 +8,7 @@ from framework.controller.message_tools import message_sender, go_back_inline_ma
     image_link_or_object, notify, go_back_inline_button
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
+from pkg.controller.user_controllers.common_controller import chat_access_denied
 from pkg.service.user_storage import UserStorage
 from pkg.service.chat import Chat
 
@@ -45,13 +46,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
             result_connection = result_connection['connection']
 
         else:
-            if result_connection['error'] in ['unexpected', 'user_none']:
-                error_trace = ['errors', result_connection['error']]
-            else:
-                error_trace = ['add_chat', 'errors', result_connection['error']]
-            await notify(
-                call, message, localization.get_message(error_trace, message.from_user.language_code),
-                alert=True, button_text='cancel')
+            await chat_access_denied(call, message, result_connection)
             return
 
     chat_info = await Chat.load_info(message.bot, chat_service_id=str(chat_service_id))

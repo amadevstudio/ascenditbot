@@ -76,16 +76,19 @@ class RouteMap:
                 'switch_active': {
                     'method': chats_controller.switch_active
                 }
-            }
+            },
+            'validator': chat_access_validator
         },
         'add_to_chat_whitelist': {
             'method': allowed_users_controller.add_to_chat_whitelist,
-            'wait_for_input': True
+            'wait_for_input': True,
+            'validator': chat_access_validator
         },
         'chat_whitelist': {
             'method': allowed_users_controller.chat_whitelist,
             'commands': ['allowed_user'],
-            'wait_for_input': True
+            'wait_for_input': True,
+            'validator': chat_access_validator
         },
         'allowed_user': {
             'method': allowed_users_controller.show,
@@ -96,7 +99,8 @@ class RouteMap:
                 'delete': {
                     'method': allowed_users_controller.delete
                 }
-            }
+            },
+            'validator': chat_access_validator
         },
 
         'nowhere': {}

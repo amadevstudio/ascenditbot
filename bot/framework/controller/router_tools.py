@@ -23,6 +23,13 @@ def user_state(entity: types.Message | types.CallbackQuery):
 
 async def event_wrapper(route_type: str, entity: types.Message | types.CallbackQuery, *args, **kwargs):
     call, message = call_and_message_accessed_processor(entity)
+
+    validator = RouteMap.get_route_prop(route_type, 'validator')
+    if validator is not None:
+        valid = await validator(call, message)
+        if not valid:
+            return
+
     await RouteMap.get_route_prop(route_type, 'method')(call, message, *args, **kwargs)
 
 

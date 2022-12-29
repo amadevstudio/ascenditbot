@@ -1,4 +1,4 @@
-from typing import TypedDict, List
+from typing import TypedDict, List, Literal
 
 import aiogram.bot.bot
 from aiogram import types
@@ -62,8 +62,8 @@ class Chat:
         return {"administrator": administrator}
 
     @staticmethod
-    async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
-            -> ChatInterface | ErrorDictInterface:
+    async def validate_access(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
+            -> ErrorDictInterface:
         # Validate we are admin with deletion rights
         chat_member = await Chat._get_chat_member(bot, chat_service_id, bot.id)
         if "error" in chat_member:
@@ -80,6 +80,16 @@ class Chat:
 
         # administrator = result["administrator"]
         # TODO: validate administrator.status == 'creator' without premium subscription
+
+        return {}
+
+    @staticmethod
+    async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
+            -> ChatInterface | ErrorDictInterface:
+
+        validate_result = await Chat.validate_access(bot, chat_service_id, user_service_id)
+        if 'error' in validate_result:
+            return validate_result
 
         try:
             result_connection = chat_repository.create(str(chat_service_id), str(user_service_id))
