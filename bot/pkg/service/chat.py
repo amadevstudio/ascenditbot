@@ -7,11 +7,12 @@ from aiogram.utils import exceptions
 import pkg.repository.allowed_user_repository
 import pkg.repository.chat_repository
 from pkg.repository import chat_repository
+from pkg.service.service import Service
 from pkg.system.logger import logger
 from project.types import ChatInterface, ErrorDictInterface
 
 
-class Chat:
+class Chat(Service):
     @staticmethod
     def find(chat_id: int) -> ChatInterface | None:
         return chat_repository.find(chat_id)

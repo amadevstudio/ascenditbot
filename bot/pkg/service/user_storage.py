@@ -2,7 +2,7 @@ from pkg.config import routes
 from pkg.repository import user_storage_repository
 
 
-class UserStorage:
+class UserStorage(Service):
     @staticmethod
     def new_navigation_journey(chat_id: int, initial_page: str):
         user_storage_repository.del_user_states(chat_id)

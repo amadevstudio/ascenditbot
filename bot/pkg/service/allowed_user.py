@@ -1,11 +1,12 @@
 from pkg.repository import allowed_user_repository, chat_repository
+from pkg.service.service import Service
 from project.types import AllowedUserInterface
 
 
 # allowed_user_interface = AllowedUserInterface.__annotations__
 
 
-class AllowedUser:
+class AllowedUser(Service):
     @staticmethod
     def find(allowed_user_id: int) -> AllowedUserInterface | None:
         return allowed_user_repository.find(allowed_user_id)
