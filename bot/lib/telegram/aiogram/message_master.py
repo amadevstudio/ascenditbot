@@ -35,7 +35,7 @@ message_structures_interface = {
 
     'text': str,
     'reply_markup': types.InlineKeyboardMarkup,
-    'parse_mode': ('Markdown', 'HTML', None),
+    'parse_mode': ('Markdown', 'MarkdownV2', 'HTML', None),
     'disable_web_page_preview': bool,
     'image': (str, types.InputFile),
 }
