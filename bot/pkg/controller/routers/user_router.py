@@ -82,3 +82,9 @@ def user_router(dispatcher):
     async def allowed_user_switch_active(call: types.CallbackQuery):
         await event_action_wrapper(
             RouteMap.type('allowed_user'), RouteMap.action_type('allowed_user', 'delete'), call)
+
+    @dispatcher.message_handler(commands=RouteMap.get_route_commands('subscription'), chat_type=types.ChatType.PRIVATE)
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.type('subscription'), chat_type=types.ChatType.PRIVATE)
+    async def my_chats(entity: types.Message | types.CallbackQuery, *args, **kwargs):
+        await event_wrapper(RouteMap.type('subscription'), entity)

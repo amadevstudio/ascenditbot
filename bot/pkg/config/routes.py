@@ -1,12 +1,15 @@
 from typing import Any, TypedDict, Callable, List, Dict, Literal
 
-from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller
+from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller, \
+    subscription_controller
 from pkg.controller.user_controllers.validators.chat_access_validator import chat_access_validator
 
-AvailableCommands = Literal['start', 'menu', 'add_chat', 'my_chats']
+AvailableCommands = Literal['start', 'menu', 'add_chat', 'my_chats', 'subscription']
 AvailableRoutes = Literal[
     'start', 'menu', 'add_chat', 'my_chats', 'chat',
-    'add_to_chat_whitelist', 'chat_whitelist', 'allowed_user', 'nowhere']
+    'add_to_chat_whitelist', 'chat_whitelist', 'allowed_user',
+    'subscription',
+    'nowhere']
 
 
 class RouteActionsInterface(TypedDict):
@@ -39,18 +42,19 @@ class RouteMap:
     ROUTES: RoutesInterface = {
         'start': {
             'method': welcome_controller.start,
+            'commands': ['start'],
             'routes': [
                 'menu'
             ],
-            'commands': ['start']
         },
         'menu': {
             'method': welcome_controller.menu,
+            'commands': ['menu'],
             'routes': [
                 'add_chat',
-                'my_chats'
+                'my_chats',
+                'subscription'
             ],
-            'commands': ['menu']
         },
 
         'add_chat': {
@@ -64,6 +68,7 @@ class RouteMap:
         'my_chats': {
             'method': chats_controller.my_chats,
             'commands': ['my_chats'],
+            'routes': ['chat'],
             'wait_for_input': True,
         },
         'chat': {
@@ -86,7 +91,7 @@ class RouteMap:
         },
         'chat_whitelist': {
             'method': allowed_users_controller.chat_whitelist,
-            'commands': ['allowed_user'],
+            'routes': ['allowed_user'],
             'wait_for_input': True,
             'validator': chat_access_validator
         },
@@ -101,6 +106,14 @@ class RouteMap:
                 }
             },
             'validator': chat_access_validator
+        },
+        'subscription': {
+            'method': subscription_controller.page,
+            'commands': ['subscription'],
+            'routes': [
+                'tariffs',
+                'replenish'
+            ]
         },
 
         'nowhere': {}

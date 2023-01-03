@@ -5,11 +5,13 @@ emoji_codes = {
     'chat': '👥',
     'sos': '🆘',
     'credit_card': '💳',
+    'money_with_wings': '💸',
     'down_arrow': '⬇️',
     'heavy_check_mark': '✅',
     'cross_mark': '❌',
     'warning_sign': '⚠️',
     'wastebasket': '🗑️',
+    'bar_chart': '📊'
 }
 
 links = {
@@ -48,9 +50,9 @@ routed_messages = {
             'en': "",
             'ru': f"{emoji_codes.get('sos', '')} Помощь"
         },
-        'payment': {
+        'subscription': {
             'en': "",
-            'ru': f"{emoji_codes.get('credit_card', '')} Оплата"
+            'ru': f"{emoji_codes.get('credit_card', '')} Подписка"
         }
     },
     'errors': {
@@ -281,6 +283,83 @@ routed_messages = {
             'confirm': {
                 'en': "",
                 'ru': "Для удаления нажмите на кнопку ещё раз"
+            }
+        }
+    },
+    'subscription': {
+        'tariffs': {
+            0: {
+                'en': "",
+                'ru': "Без подписки"
+            },
+            1: {
+                'en': "",
+                'ru': "Начальный"
+            },
+            2: {
+                'en': "",
+                'ru': "Продвинутый"
+            },
+            3: {
+                'en': "",
+                'ru': "Профессиональный"
+            },
+        },
+        'info_block': {
+            'text': {
+                'en': "",
+                'ru':
+                    "{tariff_name}\n{balance} {currency_code}\n{max_channels}"
+            },
+            'of_channels': {
+                'en': {},
+                'ru': {
+                    1: 'чат',
+                    2: 'чата',
+                    5: 'чатов'
+                }
+            },
+            'days_left': {
+                'en': {},
+                'ru': {
+                    1: 'Остался {days_left} день',
+                    2: 'Осталось {days_left} дня',
+                    5: 'Осталось {days_left} дней'
+                }
+            },
+            'balance': {
+                'en': {},
+                'ru': 'Баланс'
+            },
+            'not_enough_for_renewal': {
+                'en': "",
+                'ru': "Недостаточно средств для продления"
+            },
+            'unlimited': {
+                'en': "",
+                'ru': "Не ограничено"
+            },
+        },
+        'show': {
+            'text': {
+                'en': "",
+                'ru':
+                    f"{emoji_codes.get('credit_card', '')} Подписка\n\n"
+                    "Описание подписки...\n\n"
+                    "<b>Ваши текущие условия</b>\n"
+            },
+            'button': {
+
+            }
+        },
+        'buttons': {
+            'choose_tariff': {
+                'en': "",
+                'ru': f"{emoji_codes.get('bar_chart', '')} Выбрать тариф"
+            },
+            'replenish': {
+                'en': "",
+                'ru': f"{emoji_codes.get('money_with_wings', '')} Пополнить"
             }
         }
     },

@@ -23,7 +23,40 @@ def get_language(lang_code: str):
         return panic_language
 
 
-def get_message(message_route: [str], lang_code: str, **kwargs) -> str:
+def get_message(message_route: [str | int], lang_code: str, **kwargs) -> str:
+    lang_code = get_language(lang_code)
+    curr_route = None
+    msg = None
+    if len(message_route) > 0:
+        try:
+            for r in message_route:
+                if isinstance(r, str):
+                    r = r.lower()
+                if curr_route is None:
+                    curr_route = routed_messages.get(r)
+                else:
+                    curr_route = curr_route.get(r)
+            try:
+                msg = curr_route.get(lang_code)
+            except AttributeError:
+                msg = curr_route.get(panic_language)
+
+            if len(kwargs) > 0:
+                try:
+                    msg = msg.format(**kwargs)
+                except AttributeError:
+                    pass
+
+        except AttributeError:
+            msg = str(' '.join([str(route) for route in message_route]))
+
+    if msg is None:
+        msg = ""
+
+    return msg
+
+
+def get_numerical_declension_message(message_route: [str | int], lang_code: str, number: int, **kwargs) -> str:
     lang_code = get_language(lang_code)
     curr_route = None
     msg = None
@@ -38,6 +71,20 @@ def get_message(message_route: [str], lang_code: str, **kwargs) -> str:
                 msg = curr_route.get(lang_code)
             except AttributeError:
                 msg = curr_route.get(panic_language)
+
+            number = abs(number)
+            number %= 100
+
+            if 5 <= number <= 20:
+                msg = msg[5]
+            else:
+                number %= 10
+                if number == 1:
+                    msg = msg[1]
+                elif 2 <= number <= 4:
+                    msg = msg[2]
+                else:
+                    msg = msg[5]
 
             if len(kwargs) > 0:
                 try:
@@ -54,7 +101,7 @@ def get_message(message_route: [str], lang_code: str, **kwargs) -> str:
     return msg
 
 
-def get_link(link_route: [str], lang_code: str):
+def get_link(link_route: [str | int], lang_code: str):
     lang_code = get_language(lang_code)
     curr_route = None
     link = None

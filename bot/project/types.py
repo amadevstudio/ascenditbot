@@ -39,3 +39,39 @@ class AllowedUserInterface(TypedDict, total=False):
     ban_expiration_date: datetime.datetime
     created_at: datetime.datetime
     updated_at: datetime.datetime
+
+
+class TariffInterface(TypedDict, total=False):
+    id: int
+    channels_count: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class TariffPriceInterface(TypedDict, total=False):
+    tariff_id: int
+    currency_code: str
+    price: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class UserTariffConnectionInterface(TypedDict, total=False):
+    user_id: int
+    tariff_id: int
+    balance: int
+    currency_code: str
+    start_date: datetime.datetime | None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class PaymentHistoryInterface(TypedDict, total=False):
+    id: int
+    user_id: int
+    payment_service: str
+    status: int
+    amount: int
+    currency_code: str
+    created_at: datetime.datetime
+    updated_at: datetime.datetime

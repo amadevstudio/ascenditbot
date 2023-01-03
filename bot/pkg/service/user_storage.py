@@ -1,5 +1,6 @@
 from pkg.config import routes
 from pkg.repository import user_storage_repository
+from pkg.service.service import Service
 
 
 class UserStorage(Service):
