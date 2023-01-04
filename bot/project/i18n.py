@@ -11,7 +11,10 @@ emoji_codes = {
     'cross_mark': '❌',
     'warning_sign': '⚠️',
     'wastebasket': '🗑️',
-    'bar_chart': '📊'
+    'bar_chart': '📊',
+    'gold_medal': '🥇',
+    'silver_medal': '🥈',
+    'bronze_medal': '🥉',
 }
 
 links = {
@@ -287,24 +290,6 @@ routed_messages = {
         }
     },
     'subscription': {
-        'tariffs': {
-            0: {
-                'en': "",
-                'ru': "Без подписки"
-            },
-            1: {
-                'en': "",
-                'ru': "Начальный"
-            },
-            2: {
-                'en': "",
-                'ru': "Продвинутый"
-            },
-            3: {
-                'en': "",
-                'ru': "Профессиональный"
-            },
-        },
         'info_block': {
             'text': {
                 'en': "",
@@ -360,6 +345,46 @@ routed_messages = {
             'replenish': {
                 'en': "",
                 'ru': f"{emoji_codes.get('money_with_wings', '')} Пополнить"
+            }
+        },
+    },
+    'tariffs': {
+        'index': {
+            'en': "",
+            'ru':
+                f"{emoji_codes.get('bar_chart', '')} Тарифы\n\n"
+                "Описание тарифов...\n\n"
+        },
+        'current': {
+            'en': "",
+            'ru': "<b>Ваши текущие условия</b>"
+        },
+        'list': {
+            0: {
+                'en': "",
+                'ru': "Без подписки"
+            },
+            1: {
+                'en': "",
+                'ru': emoji_codes.get('bronze_medal', '') + " Начальный"
+            },
+            2: {
+                'en': "",
+                'ru': emoji_codes.get('silver_medal', '') + " Продвинутый"
+            },
+            3: {
+                'en': "",
+                'ru': emoji_codes.get('gold_medal', '') + " Профессиональный"
+            },
+        },
+        'disable': {
+            'en': "",
+            'ru': 'Отключить'
+        },
+        'info': {
+            'selected': {
+                'en': "",
+                'ru': "(выбран)"
             }
         }
     },

@@ -88,3 +88,8 @@ def user_router(dispatcher):
         lambda call: get_type(call) == RouteMap.type('subscription'), chat_type=types.ChatType.PRIVATE)
     async def my_chats(entity: types.Message | types.CallbackQuery, *args, **kwargs):
         await event_wrapper(RouteMap.type('subscription'), entity)
+
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.type('tariffs'), chat_type=types.ChatType.PRIVATE)
+    async def chat(call: types.CallbackQuery):
+        await event_wrapper(RouteMap.type('tariffs'), call)

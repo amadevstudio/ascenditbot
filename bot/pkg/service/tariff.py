@@ -2,7 +2,7 @@ import datetime
 
 from lib.language import localization
 from pkg.repository import tariff_repository
-from pkg.repository.tariff_repository import UserTariffInfoInterface
+from pkg.repository.tariff_repository import UserTariffInfoInterface, TariffInfoInterface
 from pkg.service.service import Service
 
 from project import constants
@@ -26,8 +26,8 @@ class Tariff(Service):
         return tariff_info
 
     @staticmethod
-    def build_tariff_info_message(tariff_info: UserTariffInfoInterface | None, language_code: str) -> str:
-        tariff_name = localization.get_message(['subscription', 'tariffs', tariff_info['tariff_id']], language_code)
+    def build_subscription_info(tariff_info: UserTariffInfoInterface | None, language_code: str) -> str:
+        tariff_name = localization.get_message(['tariffs', 'list', tariff_info['tariff_id']], language_code)
         info_message = f"{tariff_name}\n"
         info_message += f"{localization.get_message(['subscription', 'info_block', 'balance'], language_code)} " \
                         f"{tariff_info['balance']} {tariff_info['currency_code']}\n"
@@ -45,11 +45,23 @@ class Tariff(Service):
                 ['subscription', 'info_block', 'days_left'], language_code,
                 days_left if days_left >= 0 else 0, days_left=days_left)
 
-        info_message += (
-           localization.get_message(['subscription', 'info_block', 'unlimited'], language_code)
-           if tariff_info['channels_count'] == -1
-           else str(tariff_info['channels_count'])
+        info_message += Tariff.channels_count_text(tariff_info['channels_count'], language_code)
+        return info_message
+
+    @staticmethod
+    def channels_count_text(channels_count: int, language_code: str) -> str:
+        return (
+            localization.get_message(['subscription', 'info_block', 'unlimited'], language_code)
+            if channels_count == -1
+            else str(channels_count)
         ) + ' ' + localization.get_numerical_declension_message(
             ['subscription', 'info_block', 'of_channels'], language_code,
-            5 if tariff_info['channels_count'] == -1 else tariff_info['channels_count'])  # unlimited
-        return info_message
+            5 if channels_count == -1 else channels_count)  # unlimited
+
+    # @staticmethod
+    # def tariffs() -> list[TariffInterface]:
+    #     return tariff_repository.tariffs()
+
+    @staticmethod
+    def tariffs_info(user_id: int) -> list[TariffInfoInterface]:
+        return tariff_repository.tariffs_info(user_id)

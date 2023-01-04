@@ -115,6 +115,14 @@ class RouteMap:
                 'replenish'
             ]
         },
+        'tariffs': {
+            'method': subscription_controller.tariffs,
+            'actions': {
+                'set_tariff': {
+                    'method': None
+                }
+            }
+        },
 
         'nowhere': {}
     }

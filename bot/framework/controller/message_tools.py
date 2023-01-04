@@ -29,7 +29,10 @@ def image_link_or_object(path: str):
 
 
 async def message_sender(
-        message: types.Message, resending=False, message_structures=[]):
+        message: types.Message, resending=False, message_structures=None):
+    if message_structures is None:
+        message_structures = []
+
     resending |= UserStorage.should_resend(message.chat.id)
 
     previous_message_structures = UserStorage.get_message_structures(message.chat.id) if resending is False else []
