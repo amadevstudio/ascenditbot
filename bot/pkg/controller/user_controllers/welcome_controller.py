@@ -4,6 +4,7 @@ from aiogram import types
 
 from lib.language import localization
 from framework.controller.message_tools import message_sender
+from pkg.service.tariff import Tariff
 
 from pkg.service.user import User
 from pkg.service.user_storage import UserStorage
@@ -20,7 +21,7 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
 
     message_structures = [{
         'type': 'text',
-        'text': localization.get_message(["welcome", "introduction"], message.from_user.language_code),
+        'text': localization.get_message(['welcome', 'introduction'], message.from_user.language_code),
         'reply_markup': markup,
     }]
     await message_sender(message, resending=call is None, message_structures=message_structures)
@@ -31,19 +32,34 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
 
 async def menu(call: types.CallbackQuery, message: types.Message, change_user_state=True):
     buttons = []
-    for button_type in ["add_chat", "my_chats", "help", "subscription"]:
+    for button_type in ['add_chat', 'my_chats', 'help', 'subscription']:
         buttons.append(types.InlineKeyboardButton(
-            localization.get_message(["buttons", button_type], message.from_user.language_code),
+            localization.get_message(['buttons', button_type], message.from_user.language_code),
             callback_data=json.dumps({'tp': button_type})))
     markup = types.InlineKeyboardMarkup().row(buttons[0], buttons[1])
     markup.row(buttons[2], buttons[3])
 
-    message_structures = [{
+    answer_messages = []
+
+    user_id = User.get_id_by_service_id(message.chat.id)
+
+    trial_info = Tariff.activate_trial(user_id)
+    if trial_info is not None:
+        answer_messages.append({
+            'type': 'text',
+            'text': localization.get_message(['subscription', 'free_trial'], message.from_user.language_code)
+        })
+
+    user_tariff_info = Tariff.user_tariff_info(user_id)
+    answer_messages.append({
         'type': 'text',
-        'text': localization.get_message(["menu", "menu"], message.from_user.language_code),
+        'text':
+            localization.get_message(['menu', 'menu'], message.from_user.language_code) + "\n\n"
+            + Tariff.build_subscription_info(user_tariff_info, message.from_user.language_code),
         'reply_markup': markup,
-    }]
-    await message_sender(message, resending=call is None, message_structures=message_structures)
+    })
+
+    await message_sender(message, resending=call is None, message_structures=answer_messages)
 
     if change_user_state:
         UserStorage.new_navigation_journey(message.chat.id, 'menu')
