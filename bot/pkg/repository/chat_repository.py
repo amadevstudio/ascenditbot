@@ -97,9 +97,9 @@ def is_active_by_service_id(chat_service_id: str) -> bool:
 
 
 def switch_active(chat_id: int) -> bool:
-    return db.commit("""
+    return db.execute("""
         UPDATE moderated_chats SET active = NOT active WHERE id = %s
-    """, (chat_id,), returning='active')
+    """, (chat_id,), commit=True, returning='active')['active']
 
 
 def add_to_whitelist(chat_id: int, user_nickname: str) -> ChatInterface | None:

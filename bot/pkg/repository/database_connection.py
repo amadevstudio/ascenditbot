@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Any
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -30,7 +31,7 @@ class Database(metaclass=Singleton):
 
     def delete(self, model: str, id: int):
         query = "DELETE FROM {model} WHERE id = %s".format(model=model)
-        return self.execute(query, (id,))
+        return self._execute_model(query, (id,))
 
     @staticmethod
     def inject_updated_at(model):
@@ -44,32 +45,30 @@ class Database(metaclass=Singleton):
         model['created_at'] = model['updated_at']
         return model
 
-    def execute(self, query: str, params: tuple, cursor: psycopg2.extensions.cursor = None):
-        if cursor is None:
-            cursor = self._build_cursor()
-        try:
-            cursor.execute(query + " RETURNING id", params)
-            row_id = cursor.fetchone()['id']
-            self.connection.commit()
-            return row_id, cursor
-        except psycopg2.DatabaseError as e:
-            self.connection.rollback()
-            logger.err(f"Can't register user: {e}")
-            return None, None
-
-    def commit(self, query: str, params: tuple, cursor: psycopg2.extensions.cursor = None, returning='id'):
+    def execute(
+            self, query: str, params: tuple, commit=True, cursor: psycopg2.extensions.cursor = None,
+            returning=None) -> dict | None:
         if cursor is None:
             cursor = self._build_cursor()
 
+        if returning is not None:
+            query += f" RETURNING {returning}"
+
         try:
-            cursor.execute(query + f" RETURNING {returning}", params)
-            row_returning = cursor.fetchone()[returning]
-            self.connection.commit()
+            cursor.execute(query, params)
+
+            row_returning = cursor.fetchone()
+
+            if commit:
+                self.connection.commit()
+
             return row_returning
+
         except psycopg2.DatabaseError as e:
             self.connection.rollback()
-            logger.err(f"Can't register user: {e}")
+            logger.err(f"Can't commit: {e}")
             return None
+
         finally:
             cursor.close()
 
@@ -96,8 +95,9 @@ class Database(metaclass=Singleton):
         return cursor.fetchone()
 
     def insert_model(
-            self, model_name: str, model_data: dict, commit: bool = True, cursor: psycopg2.extensions.cursor = None,
-            conflict_unique_fields: list = None):
+            self, model_name: str, model_data: dict[str, Any], commit: bool = True,
+            cursor: psycopg2.extensions.cursor = None, conflict_unique_fields: list[str] = None):
+
         model_data = self.__class__.inject_timestamps(model_data)
 
         query = """
@@ -116,23 +116,24 @@ class Database(metaclass=Singleton):
                 columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])))
             query_values *= 2
 
-        if commit:
-            model_id = self.commit(query, query_values, cursor=cursor)
-            return self.fetchone(f"SELECT * FROM {model_name} WHERE id = %s", (model_id,))
+        return self.execute(query, query_values, commit=commit, cursor=cursor, returning='*')
 
-        else:
-            model_id, cursor = self.execute(query, query_values, cursor=cursor)
-            return self.fetchone(f"SELECT * FROM {model_name} WHERE id = %s", (model_id,)), cursor
-
-    def update_model(self, model_name: str, model_data: dict):
+    def update_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] = None):
         model_data = self.__class__.inject_updated_at(model_data)
-        model_id = model_data.pop('id')
+
+        if key_fields is None:
+            key_fields = ['id']
 
         query = """
-            UPDATE {model_name} SET {columns_equal_values} WHERE id = %s
+            UPDATE {model_name} SET {columns_equal_values} WHERE {key_fields}
         """.format(
-            model_name=model_name, columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])))
+            model_name=model_name,
+            columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])),
+            key_fields=(' AND '.join([f"{c} = %s" for c in key_fields]))
+        )
 
-        model_id = self.commit(query, tuple(model_data.values()) + (model_id,))
+        key_fields_values = []
+        for key_field in key_fields:
+            key_fields_values.append(model_data[key_field])
 
-        return self.fetchone(f"SELECT * FROM {model_name} WHERE id = %s", (model_id,))
+        return self.execute(query, tuple(model_data.values()) + tuple(key_fields_values), returning='*')

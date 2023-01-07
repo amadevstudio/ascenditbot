@@ -9,9 +9,9 @@ def find(allowed_user_id: int) -> AllowedUserInterface | None:
 
 
 def switch_active(allowed_user_id: int) -> bool | None:
-    return db.commit("""
+    return db.execute("""
         UPDATE allowed_users SET active = NOT active WHERE id = %s
-    """, (allowed_user_id,), returning='active')
+    """, (allowed_user_id,), commit=True, returning='active')['active']
 
 
 def delete(allowed_user_id) -> int | None:
