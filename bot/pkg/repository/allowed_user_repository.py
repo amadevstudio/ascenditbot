@@ -5,7 +5,7 @@ db = Database()
 
 
 def find(allowed_user_id: int) -> AllowedUserInterface | None:
-    return db.find('allowed_users', allowed_user_id)
+    return db.find_model('allowed_users', {'id': allowed_user_id})
 
 
 def switch_active(allowed_user_id: int) -> bool | None:

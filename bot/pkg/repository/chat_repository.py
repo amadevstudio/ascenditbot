@@ -7,7 +7,7 @@ db = Database()
 
 
 def find(chat_id: int) -> ChatInterface:
-    return db.find('moderated_chats', chat_id)
+    return db.find_model('moderated_chats', {'id': chat_id})
 
 
 class CreateErrorInterface(ErrorDictInterface, total=False):

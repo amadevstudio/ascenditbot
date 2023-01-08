@@ -25,13 +25,20 @@ class Database(metaclass=Singleton):
     def _build_cursor(self):
         return self.connection.cursor(cursor_factory=RealDictCursor)
 
-    def find(self, model: str, id: int):
-        query = "SELECT * FROM {model} WHERE id = %s".format(model=model)
-        return self.fetchone(query, (id,))
 
-    def delete(self, model: str, id: int):
-        query = "DELETE FROM {model} WHERE id = %s".format(model=model)
-        return self._execute_model(query, (id,))
+    @staticmethod
+    def _preset_key_fields(key_fields: list[str] | None):
+        if key_fields is None:
+            return ['id']
+
+        return key_fields
+
+    @staticmethod
+    def _key_fields_values(filled_key_fields: list[str], model_data: dict[str, Any]):
+        key_fields_values = []
+        for key_field in filled_key_fields:
+            key_fields_values.append(model_data[key_field])
+        return key_fields_values
 
     @staticmethod
     def inject_updated_at(model):
@@ -75,11 +82,12 @@ class Database(metaclass=Singleton):
     @staticmethod
     def cursor_creator(func):
         def _wrap(self, *args, **kwargs):
+            cursor = None
             try:
                 cursor = self._build_cursor()
                 return func(self, *args, **kwargs, cursor=cursor)
             finally:
-                if cursor:
+                if cursor is not None:
                     cursor.close()
 
         return _wrap
@@ -93,6 +101,18 @@ class Database(metaclass=Singleton):
     def fetchone(self, query: str, params: tuple, cursor):
         cursor.execute(query, params)
         return cursor.fetchone()
+
+    def find_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None):
+        filled_key_fields = Database._preset_key_fields(key_fields)
+
+        query = "SELECT * FROM {model_name} WHERE {key_fields}".format(
+            model_name=model_name,
+            key_fields=(' AND '.join([f"{c} = %s" for c in filled_key_fields]))
+        )
+
+        key_fields_values = Database._key_fields_values(filled_key_fields, model_data)
+
+        return self.fetchone(query, tuple(key_fields_values))
 
     def insert_model(
             self, model_name: str, model_data: dict[str, Any], commit: bool = True,
@@ -118,22 +138,19 @@ class Database(metaclass=Singleton):
 
         return self.execute(query, query_values, commit=commit, cursor=cursor, returning='*')
 
-    def update_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] = None):
+    def update_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None):
         model_data = self.__class__.inject_updated_at(model_data)
 
-        if key_fields is None:
-            key_fields = ['id']
+        filled_key_fields = Database._preset_key_fields(key_fields)
 
         query = """
             UPDATE {model_name} SET {columns_equal_values} WHERE {key_fields}
         """.format(
             model_name=model_name,
             columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])),
-            key_fields=(' AND '.join([f"{c} = %s" for c in key_fields]))
+            key_fields=(' AND '.join([f"{c} = %s" for c in filled_key_fields]))
         )
 
-        key_fields_values = []
-        for key_field in key_fields:
-            key_fields_values.append(model_data[key_field])
+        key_fields_values = Database._key_fields_values(filled_key_fields, model_data)
 
         return self.execute(query, tuple(model_data.values()) + tuple(key_fields_values), returning='*')
