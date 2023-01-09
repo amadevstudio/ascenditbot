@@ -6,6 +6,7 @@ from pkg.repository.tariff_repository import UserTariffInfoInterface, TariffInfo
 from pkg.service.service import Service
 
 from project import constants
+from project.types import UserTariffConnectionInterface
 
 
 class Tariff(Service):
@@ -44,7 +45,7 @@ class Tariff(Service):
             ).days
             info_message += localization.get_numerical_declension_message(
                 ['subscription', 'info_block', 'days_left'], language_code,
-                days_left if days_left >= 0 else 0, days_left=days_left)
+                days_left if days_left >= 0 else 0, days_left=days_left) + "\n"
 
         info_message += "\n" + Tariff.channels_count_text(tariff_info['channels_count'], language_code)
         return info_message
@@ -66,3 +67,23 @@ class Tariff(Service):
     @staticmethod
     def tariffs_info(user_id: int) -> list[TariffInfoInterface]:
         return tariff_repository.tariffs_info(user_id)
+
+    @staticmethod
+    def activate_trial(user_id: int) -> None | UserTariffConnectionInterface:
+        tariff_info = tariff_repository.user_tariff_info(user_id)
+        if tariff_info is not None:
+            return None
+
+        best_tariff = Tariff.tariffs_info(user_id).pop()
+
+        subscription: UserTariffConnectionInterface = {
+            'user_id': user_id,
+            'tariff_id': best_tariff['id'],
+            'balance': 0,
+            'currency_code': best_tariff['currency_code'],
+            'start_date':
+                datetime.datetime.now()
+                - datetime.timedelta(days=(constants.tariff_duration_days - constants.tariff_free_trail_days)),
+        }
+
+        return tariff_repository.update_subscription(subscription)

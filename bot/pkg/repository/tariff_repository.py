@@ -2,7 +2,8 @@ import datetime
 from typing import TypedDict
 
 from pkg.repository.database_connection import Database
-from project.types import TariffInterface, TariffPriceInterface
+from project import constants
+from project.types import TariffInterface, TariffPriceInterface, UserTariffConnectionInterface
 
 db = Database()
 
@@ -62,3 +63,9 @@ def tariffs_info(user_id: int) -> list[TariffInfoInterface]:
         )
         ORDER BY t.id ASC
     """, (user_id,))
+
+
+def update_subscription(subscription: UserTariffConnectionInterface) -> UserTariffConnectionInterface:
+    return db.insert_model(
+        'user_tariff_connections', subscription,
+        conflict_unique_fields=['user_id', 'tariff_id'])

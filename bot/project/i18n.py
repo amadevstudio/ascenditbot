@@ -347,6 +347,10 @@ routed_messages = {
                 'ru': f"{emoji_codes.get('money_with_wings', '')} Пополнить"
             }
         },
+        'free_trial': {
+            'en': "",
+            'ru': "Попробуйте бота бесплатно! Вам включён пробный период, подробнее: /subscription"
+        }
     },
     'tariffs': {
         'index': {
