@@ -13,10 +13,10 @@ Telegram whitelist bot for a chats
 ### Pycharm
 - Set bot folder: RClick on bot -> Mark directory as -> Mark as Sources Root
 - For Community version you can use local packages environment for packages mapping:
-  - `python3 -m venv venv`
-  - In Pycharm set Python Interpreter as existing Virtual Environment
+  - `cd bot && python -m venv venv`
+  - In Pycharm set Python Interpreter as existing Virtual Environment using venv
   - `source venv/bin/activate`
-  - `pip3 install virtualenv`
+  - `python -m pip install virtualenv`
   - `deactivate`
 
 ### Fast developing (deprecated because auto-reload added)
