@@ -55,7 +55,7 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
         'type': 'text',
         'text':
             localization.get_message(['menu', 'menu'], message.from_user.language_code) + "\n\n"
-            + Tariff.build_subscription_info(user_tariff_info, message.from_user.language_code),
+            + Tariff.build_subscription_info_short(user_tariff_info, message.from_user.language_code),
         'reply_markup': markup,
     })
 
