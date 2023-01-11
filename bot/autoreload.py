@@ -10,11 +10,15 @@ def file_filter(name):
     return (not name.startswith(".")) and (not name.endswith(".swp"))
 
 
-def file_times(path):
+def file_times(path, initial=False):
     for top_level in filter(file_filter, os.listdir(path)):
         for root, dirs, files in os.walk(top_level):
             for file in filter(file_filter, files):
-                yield os.stat(os.path.join(root, file)).st_mtime
+                try:
+                    yield os.stat(os.path.join(root, file)).st_mtime
+                except Exception as e:
+                    if initial:
+                        print(f"Can't watch for os.path.join(root, file), {e}")
 
 
 def print_stdout(process):
@@ -36,7 +40,7 @@ wait = 1
 process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid)
 
 # The current maximum file modified time under the watched directory
-last_mtime = max(file_times(path))
+last_mtime = max(file_times(path, initial=True))
 
 
 while True:
