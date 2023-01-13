@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -24,7 +24,6 @@ class Database(metaclass=Singleton):
 
     def _build_cursor(self):
         return self.connection.cursor(cursor_factory=RealDictCursor)
-
 
     @staticmethod
     def _preset_key_fields(key_fields: list[str] | None):
@@ -53,7 +52,7 @@ class Database(metaclass=Singleton):
         return model
 
     def execute(
-            self, query: str, params: tuple, commit=True, cursor: psycopg2.extensions.cursor = None,
+            self, query: str, params: tuple, commit=True, cursor=None,
             returning=None) -> dict | None:
         if cursor is None:
             cursor = self._build_cursor()
@@ -79,28 +78,30 @@ class Database(metaclass=Singleton):
         finally:
             cursor.close()
 
-    @staticmethod
-    def cursor_creator(func):
-        def _wrap(self, *args, **kwargs):
-            cursor = None
-            try:
-                cursor = self._build_cursor()
-                return func(self, *args, **kwargs, cursor=cursor)
-            finally:
-                if cursor is not None:
-                    cursor.close()
+    def _cursor_executor(self, cursor_method: Literal['fetchone', 'fetchall'], query: str, params: tuple):
+        cursor = None
+        try:
+            cursor = self._build_cursor()
+            cursor.execute(query, params)
+            if cursor_method == 'fetchone':
+                return cursor.fetchone()
+            elif cursor_method == 'fetchall':
+                return cursor.fetchall()
+        except Exception as e:
+            logger.err(e)
+            cursor.rollback()
+            return None
+        finally:
+            if cursor is not None:
+                cursor.close()
 
-        return _wrap
+    def fetchall(self, query: str, params: tuple):
+        result = self._cursor_executor('fetchall', query, params)
+        return result if result is not None else []
 
-    @cursor_creator
-    def fetchall(self, query: str, params: tuple, cursor):
-        cursor.execute(query, params)
-        return cursor.fetchall()
-
-    @cursor_creator
-    def fetchone(self, query: str, params: tuple, cursor):
-        cursor.execute(query, params)
-        return cursor.fetchone()
+    def fetchone(self, query: str, params: tuple):
+        result = self._cursor_executor('fetchone', query, params)
+        return result
 
     def find_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None):
         filled_key_fields = Database._preset_key_fields(key_fields)
@@ -114,9 +115,9 @@ class Database(metaclass=Singleton):
 
         return self.fetchone(query, tuple(key_fields_values))
 
-    def insert_model(
+    def insert_model(  # or update on conflict
             self, model_name: str, model_data: dict[str, Any], commit: bool = True,
-            cursor: psycopg2.extensions.cursor = None, conflict_unique_fields: list[str] = None):
+            cursor=None, conflict_unique_fields: list[str] | None = None):
 
         model_data = self.__class__.inject_timestamps(model_data)
 
