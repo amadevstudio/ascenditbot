@@ -4,11 +4,12 @@ from aiogram import types
 
 from framework.controller.message_tools import notify, message_sender, call_or_command, go_back_inline_markup, \
     go_back_inline_button
-from framework.controller.state_data import get_current_state_data
+from framework.controller import state_data
 from lib.language import localization
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
 from pkg.controller.user_controllers.chats_controller import _PER_PAGE
+from pkg.controller.user_controllers.common_controller import raise_error
 from pkg.service.allowed_user import AllowedUser
 from pkg.service.chat import Chat
 from pkg.service.user_storage import UserStorage
@@ -128,7 +129,7 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
 
 # Show allowed user
 async def show(call: types.CallbackQuery, message: types.message, change_user_state=True):
-    allowed_user_state_data = get_current_state_data(call, message, routes.RouteMap.type('allowed_user'))
+    allowed_user_state_data = state_data.get_current_state_data(call, message, routes.RouteMap.type('allowed_user'))
     chat_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('chat'))
 
     if not len(allowed_user_state_data) or not len(chat_state_data):
@@ -182,8 +183,7 @@ async def show(call: types.CallbackQuery, message: types.message, change_user_st
 async def switch_active(call: types.CallbackQuery, message: types.Message):
     allowed_user_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('allowed_user'))
     if allowed_user_state_data is None:
-        await notify(
-            None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
+        await raise_error(None, message, 'state_data_none')
         return
 
     new_active_values = AllowedUser.switch_active(allowed_user_state_data['id'])
@@ -202,8 +202,7 @@ async def switch_active(call: types.CallbackQuery, message: types.Message):
 async def delete(call: types.CallbackQuery, message: types.Message):
     allowed_user_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('allowed_user'))
     if allowed_user_state_data is None:
-        await notify(
-            call, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
+        await raise_error(None, message, 'state_data_none')
         return
 
     # Already deleting

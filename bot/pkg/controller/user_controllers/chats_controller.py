@@ -2,13 +2,13 @@ import json
 
 from aiogram import types
 
-from framework.controller.state_data import get_current_state_data
+from framework.controller import state_data
 from lib.language import localization
 from framework.controller.message_tools import message_sender, go_back_inline_markup, call_or_command, \
     image_link_or_object, notify, go_back_inline_button
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
-from pkg.controller.user_controllers.common_controller import chat_access_denied
+from pkg.controller.user_controllers.common_controller import chat_access_denied, raise_error
 from pkg.service.user_storage import UserStorage
 from pkg.service.chat import Chat
 
@@ -132,11 +132,10 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
 
 
 async def show(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    chat_income_data = get_current_state_data(call, message, 'chat')
+    chat_income_data = state_data.get_current_state_data(call, message, 'chat')
 
     if not len(chat_income_data):
-        await notify(
-            None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
+        await raise_error(None, message, 'state_data_none')
         return
 
     chat_data = Chat.find(chat_income_data['id'])
