@@ -9,6 +9,8 @@ from framework.controller.message_tools import message_sender, go_back_inline_ma
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
 from pkg.controller.user_controllers.common_controller import chat_access_denied, raise_error
+from pkg.service.tariff import Tariff
+from pkg.service.user import User
 from pkg.service.user_storage import UserStorage
 from pkg.service.chat import Chat
 
@@ -34,6 +36,11 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
     # ---
     # Chat adding
 
+    if not Tariff.chats_number_satisfactory(message.chat.id):
+        await notify(call, message, localization.get_message(
+            ['add_chat', 'subscription_limit_violation'], message.from_user.language_code), alert=True)
+        return
+
     if message.forward_from_chat is not None:
         chat_service_id = message.forward_from_chat.id
     else:
@@ -44,7 +51,6 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
     if 'error' in result_connection:
         if result_connection['error'] == 'connection_exists':
             result_connection = result_connection['connection']
-
         else:
             await chat_access_denied(call, message, result_connection)
             return

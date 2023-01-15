@@ -120,3 +120,7 @@ class Tariff(Service):
         }
 
         return tariff_repository.update_subscription(new_subscription)
+
+    @staticmethod
+    def chats_number_satisfactory(chat_id: int) -> bool:
+        return tariff_repository.chats_number_satisfactory(str(chat_id))

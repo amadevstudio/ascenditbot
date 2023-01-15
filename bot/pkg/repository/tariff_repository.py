@@ -106,3 +106,30 @@ def get_currency_code_for_user(user_id: int) -> str:
         return default_currency
 
     return currency_code_row.get('currency_code', default_currency)
+
+
+def chats_number_satisfactory(chat_id: str) -> bool:
+    x = db.fetchone("""
+        SELECT
+            CASE WHEN t.channels_count IS NULL
+            THEN TRUE
+            ELSE (
+                    CASE WHEN user_chats_stat.chats_count IS NULL THEN 0 ELSE user_chats_stat.chats_count END
+                ) < t.channels_count
+            END AS satisfies
+
+            -- , CASE WHEN user_chats_stat.chats_count IS NULL THEN 0 ELSE user_chats_stat.chats_count END
+            -- , t.channels_count
+
+        FROM users AS u
+        LEFT JOIN (
+            SELECT COUNT(*) AS chats_count, umcc.user_id AS user_id
+            FROM user_moderated_chat_connections AS umcc
+            GROUP BY umcc.user_id
+        ) AS user_chats_stat ON (user_chats_stat.user_id = u.id)
+        INNER JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
+        INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
+        WHERE u.service_id = %s;
+    """, (chat_id,))['satisfies']
+    print("HERE", x)
+    return x
