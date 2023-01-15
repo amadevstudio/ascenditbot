@@ -118,8 +118,8 @@ class RouteMap:
         'tariffs': {
             'method': subscription_controller.tariffs,
             'actions': {
-                'set_tariff': {
-                    'method': None
+                'change_tariff': {
+                    'method': subscription_controller.change_tariff
                 }
             }
         },

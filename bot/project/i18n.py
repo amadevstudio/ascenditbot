@@ -333,9 +333,6 @@ routed_messages = {
                     "Описание подписки...\n\n"
                     "<b>Ваши текущие условия</b>\n"
             },
-            'button': {
-
-            }
         },
         'buttons': {
             'choose_tariff': {
@@ -350,6 +347,20 @@ routed_messages = {
         'free_trial': {
             'en': "",
             'ru': "Попробуйте бота бесплатно! Вам включён пробный период, подробнее: /subscription"
+        },
+        'updated': {
+            'en': "",
+            'ru': "Подписка обновлена!"
+        },
+        'errors': {
+            'not_enough_balance': {
+                'en': "",
+                'ru': "Недостаточно средств на балансе для перехода на лучший тариф"
+            },
+            'already_chosen': {
+                'en': "",
+                'ru': "Тариф уже выбран"
+            }
         }
     },
     'tariffs': {
@@ -380,10 +391,6 @@ routed_messages = {
                 'en': "",
                 'ru': emoji_codes.get('gold_medal', '') + " Профессиональный"
             },
-        },
-        'disable': {
-            'en': "",
-            'ru': 'Отключить'
         },
         'info': {
             'selected': {

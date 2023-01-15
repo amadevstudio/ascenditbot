@@ -9,7 +9,7 @@ create table tariffs(
 
 create table tariff_prices(
     tariff_id bigint not null,
-    currency_code varchar(3) not null,
+    currency_code varchar(3),
     price integer not null,
     created_at timestamp not null,
     updated_at timestamp not null,
@@ -31,12 +31,12 @@ create table user_tariff_connections(
     tariff_id bigint not null,
     balance integer not null default 0,
     currency_code varchar(3) not null,
-    start_date timestamp not null,
+    start_date timestamp,
     created_at timestamp not null,
     updated_at timestamp not null,
     constraint fk_user foreign key(user_id) references users(id),
     constraint fk_tariff foreign key(tariff_id) references tariffs(id),
-    unique (user_id, tariff_id)
+    unique (user_id)
 );
 
 create table payments_history(
@@ -52,11 +52,13 @@ create table payments_history(
 );
 
 insert into tariffs (id, channels_count, created_at, updated_at) values
+(0, 0, now(), now()),
 (1, 1, now(), now()),
 (2, 10, now(), now()),
 (3, null, now(), now());
 
 insert into tariff_prices (tariff_id, currency_code, price, created_at, updated_at) values
+(0, Null, 0, now(), now()),
 (1, 'rub', 30000, now(), now()),
 (1, 'usd', 450, now(), now()),
 (2, 'rub', 100000, now(), now()),
@@ -67,9 +69,6 @@ insert into tariff_prices (tariff_id, currency_code, price, created_at, updated_
 insert into lang_country_curr_codes (language_code, country_code, currency_code, created_at, updated_at) values
 ('ru', 'rus', 'rub', now(), now()),
 ('en', 'usa', 'usd', now(), now());
-
---insert into user_tariff_connections (user_id, tariff_id, balance, currency_code, start_date, created_at, updated_at)
---values (1, 1, 500000, 'rub', '2023-01-05 12:30:00', now(), now());
 
 -- migrate:down
 

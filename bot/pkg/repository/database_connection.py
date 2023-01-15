@@ -78,7 +78,7 @@ class Database(metaclass=Singleton):
         finally:
             cursor.close()
 
-    def _cursor_executor(self, cursor_method: Literal['fetchone', 'fetchall'], query: str, params: tuple):
+    def _query_executor(self, cursor_method: Literal['fetchone', 'fetchall'], query: str, params: tuple):
         cursor = None
         try:
             cursor = self._build_cursor()
@@ -89,18 +89,18 @@ class Database(metaclass=Singleton):
                 return cursor.fetchall()
         except Exception as e:
             logger.err(e)
-            cursor.rollback()
+            self.connection.rollback()
             return None
         finally:
             if cursor is not None:
                 cursor.close()
 
     def fetchall(self, query: str, params: tuple):
-        result = self._cursor_executor('fetchall', query, params)
+        result = self._query_executor('fetchall', query, params)
         return result if result is not None else []
 
     def fetchone(self, query: str, params: tuple):
-        result = self._cursor_executor('fetchone', query, params)
+        result = self._query_executor('fetchone', query, params)
         return result
 
     def find_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None):

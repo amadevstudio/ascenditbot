@@ -2,6 +2,7 @@ import json
 
 from aiogram import types
 
+from pkg.template.tariff.common import build_subscription_info_short
 from lib.language import localization
 from framework.controller.message_tools import message_sender
 from pkg.service.tariff import Tariff
@@ -55,7 +56,7 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
         'type': 'text',
         'text':
             localization.get_message(['menu', 'menu'], message.from_user.language_code) + "\n\n"
-            + Tariff.build_subscription_info_short(user_tariff_info, message.from_user.language_code),
+            + build_subscription_info_short(user_tariff_info, message.from_user.language_code),
         'reply_markup': markup,
     })
 

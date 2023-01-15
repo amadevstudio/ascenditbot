@@ -12,7 +12,7 @@ async def raise_error(
         raised_type: Literal['user_none', 'unexpected', 'state_data_none'],
         alert: bool = True, button_text: Literal['back', 'cancel'] = 'back'
 ):
-    error_trace = ['error', raised_type]
+    error_trace = ['errors', raised_type]
 
     await notify(
         call, message, localization.get_message(error_trace, message.from_user.language_code),

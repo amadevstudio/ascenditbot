@@ -42,23 +42,27 @@ class AllowedUserInterface(TypedDict, total=False):
 
 
 class TariffInterface(TypedDict, total=False):
-    id: int
+    id: int | None
     channels_count: int
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
 
 class TariffPriceInterface(TypedDict, total=False):
-    tariff_id: int
+    tariff_id: int | None
     currency_code: str
     price: int
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
 
+class TariffInfoInterface(TariffInterface, TariffPriceInterface):
+    pass
+
+
 class UserTariffConnectionInterface(TypedDict, total=False):
     user_id: int
-    tariff_id: int
+    tariff_id: int | None
     balance: int
     currency_code: str
     start_date: datetime.datetime | None
