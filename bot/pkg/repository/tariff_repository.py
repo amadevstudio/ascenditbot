@@ -109,7 +109,7 @@ def get_currency_code_for_user(user_id: int) -> str:
 
 
 def chats_number_satisfactory(chat_id: str) -> bool:
-    x = db.fetchone("""
+    return db.fetchone("""
         SELECT
             CASE WHEN t.channels_count IS NULL
             THEN TRUE
@@ -131,5 +131,3 @@ def chats_number_satisfactory(chat_id: str) -> bool:
         INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
         WHERE u.service_id = %s;
     """, (chat_id,))['satisfies']
-    print("HERE", x)
-    return x

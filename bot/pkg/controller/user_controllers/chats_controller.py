@@ -36,6 +36,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
     # ---
     # Chat adding
 
+    # Subscription validation
     if not Tariff.chats_number_satisfactory(message.chat.id):
         await notify(call, message, localization.get_message(
             ['add_chat', 'subscription_limit_violation'], message.from_user.language_code), alert=True)
