@@ -109,7 +109,7 @@ class Tariff(Service):
         else:
             new_subscription_start_date = \
                 user_subscription['start_date'] if user_subscription['start_date'] is not None \
-                else datetime.datetime.now()
+                    else datetime.datetime.now()
 
         new_subscription: UserTariffConnectionInterface = {
             'user_id': user_id,
@@ -122,5 +122,15 @@ class Tariff(Service):
         return tariff_repository.update_subscription(new_subscription)
 
     @staticmethod
-    def chats_number_satisfactory(chat_id: int) -> bool:
-        return tariff_repository.chats_number_satisfactory(str(chat_id))
+    def chats_number_satisfactory(user_chat_id: int) -> bool:
+        return tariff_repository.chats_number_satisfactory(str(user_chat_id))
+
+    @staticmethod
+    def process_all_subscription_validity():
+        # TODO: process all users
+        pass
+
+    @staticmethod
+    def process_subscription_validity(user_chat_id: int):
+        # TODO: process user
+        pass

@@ -1,5 +1,6 @@
 from lib.language import localization
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
+from pkg.background.async_tasks.main_handler import on_bot_startup
 from pkg.config.config import environment
 
 from pkg.controller.router import init_routes
@@ -30,5 +31,6 @@ NavigationBuilder(localization.get_message, ["navigation_builder"])
 
 executor, dp = init_routes(environment)
 
+
 if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=False)
+    executor.start_polling(dp, skip_updates=False, on_startup=on_bot_startup)
