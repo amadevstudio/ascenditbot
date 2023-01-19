@@ -78,7 +78,9 @@ class Database(metaclass=Singleton):
         finally:
             cursor.close()
 
-    def _query_executor(self, cursor_method: Literal['fetchone', 'fetchall'], query: str, params: tuple):
+    def _query_executor(
+            self, cursor_method: Literal['fetchone', 'fetchall', 'fetchmany'], query: str, params: tuple
+    ) -> Any:  # List[Dict], Dict, Cursor, None,
         cursor = None
         try:
             cursor = self._build_cursor()
@@ -87,6 +89,8 @@ class Database(metaclass=Singleton):
                 return cursor.fetchone()
             elif cursor_method == 'fetchall':
                 return cursor.fetchall()
+            elif cursor_method == 'fetchmany':
+                return cursor
         except Exception as e:
             logger.err(e)
             self.connection.rollback()
@@ -95,13 +99,21 @@ class Database(metaclass=Singleton):
             if cursor is not None:
                 cursor.close()
 
-    def fetchall(self, query: str, params: tuple):
+    def fetchall(self, query: str, params: tuple = None):
         result = self._query_executor('fetchall', query, params)
         return result if result is not None else []
 
-    def fetchone(self, query: str, params: tuple):
+    def fetchone(self, query: str, params: tuple = None):
         result = self._query_executor('fetchone', query, params)
         return result
+
+    def fetchmany(self, query: str, per: int, params: tuple = None):
+        cursor = self._query_executor('fetchmany', query, params)
+        while True:
+            result = cursor.fetchmany(per)
+            yield result
+            if not result:
+                break
 
     def find_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None):
         filled_key_fields = Database._preset_key_fields(key_fields)

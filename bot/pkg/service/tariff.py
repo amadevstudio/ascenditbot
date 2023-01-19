@@ -1,8 +1,9 @@
 import datetime
+from typing import Generator
 
 from lib.language import localization
 from pkg.repository import tariff_repository
-from pkg.repository.tariff_repository import UserTariffInfoInterface, TariffInfoInterface
+from pkg.repository.tariff_repository import UserTariffInfoInterface, TariffInfoInterface, ProcessSubscriptionInterface
 from pkg.service.service import Service
 from pkg.system.logger import logger
 
@@ -85,8 +86,10 @@ class Tariff(Service):
         user_tariff = Tariff.tariff_info(user_subscription['tariff_id'], user_id)
 
         # How many the user must pay
-        if user_subscription['start_date'] is None:
+        if user_subscription['tariff_id'] == 0:
             change_sum = chosen_tariff['price']
+            new_subscription_start_date = datetime.datetime.now()
+
         else:
             # Do not take into account the current day, since part of it has passed, charge again
             days_left = constants.tariff_duration_days \
@@ -100,16 +103,11 @@ class Tariff(Service):
             else:
                 change_sum = chosen_tariff['price']
 
+            new_subscription_start_date = user_subscription['start_date']
+
         # Can the user pay for the best tariff?
         if change_sum > 0 and user_subscription['balance'] < change_sum:
             return {'error': 'not_enough_balance'}
-
-        if chosen_tariff['id'] == 0:
-            new_subscription_start_date = None
-        else:
-            new_subscription_start_date = \
-                user_subscription['start_date'] if user_subscription['start_date'] is not None \
-                    else datetime.datetime.now()
 
         new_subscription: UserTariffConnectionInterface = {
             'user_id': user_id,
@@ -126,9 +124,14 @@ class Tariff(Service):
         return tariff_repository.chats_number_satisfactory(str(user_chat_id))
 
     @staticmethod
-    def process_all_subscription_validity():
-        # TODO: process all users
-        pass
+    def process_all_subscription_validity() -> Generator[ProcessSubscriptionInterface]:
+        user: ProcessSubscriptionInterface
+
+        for user in tariff_repository.process_renewable_subscription():  # TODO: test this!
+            yield user
+
+        for user in tariff_repository.process_non_renewable_subscription():  # TODO: test this!
+            yield user
 
     @staticmethod
     def process_subscription_validity(user_chat_id: int):
