@@ -1,21 +1,21 @@
 from typing import List
 
 from pkg.repository.database_connection import Database
-from project.types import ChatInterface, ErrorDictInterface, AllowedUserInterface
+from project.types import ModeratedChatInterface, ErrorDictInterface, AllowedUserInterface, \
+    UserModeratedChatConnectionInterface
 
 db = Database()
 
 
-def find(chat_id: int) -> ChatInterface:
+def find(chat_id: int) -> ModeratedChatInterface:
     return db.find_model('moderated_chats', {'id': chat_id})
 
 
 class CreateErrorInterface(ErrorDictInterface, total=False):
-    connection: ChatInterface
+    connection: ModeratedChatInterface
 
 
-def create(chat_service_id: str, user_service_id: str) \
-        -> ChatInterface | CreateErrorInterface:
+def create(chat_service_id: str, user_service_id: str, owner: bool) -> ModeratedChatInterface | CreateErrorInterface:
     user = db.fetchone("""
         SELECT id FROM users WHERE service_id = %s
     """, (user_service_id,))
@@ -29,7 +29,8 @@ def create(chat_service_id: str, user_service_id: str) \
 
     if chat is None:
         chat_data = {'service_id': chat_service_id}
-        chat, cursor = db.insert_model('moderated_chats', chat_data, commit=False)
+        cursor = db.build_cursor()
+        chat = db.insert_model('moderated_chats', chat_data, commit=False, cursor=cursor, keep_cursor=True)
     else:
         user_chat = db.fetchone("""
             SELECT * FROM user_moderated_chat_connections WHERE user_id = %s AND moderated_chat_id = %s
@@ -39,7 +40,8 @@ def create(chat_service_id: str, user_service_id: str) \
 
         cursor = None
 
-    user_chat_data = {'user_id': user["id"], 'moderated_chat_id': chat["id"]}
+    user_chat_data: UserModeratedChatConnectionInterface = \
+        {'user_id': user["id"], 'moderated_chat_id': chat["id"], 'owner': owner}
     user_chat = db.insert_model('user_moderated_chat_connections', user_chat_data, cursor=cursor)
 
     return user_chat
@@ -61,7 +63,7 @@ def user_chats_count_by_service_id(user_chat_id: str) -> int | None:
     """, (user_chat_id,))['count']
 
 
-def user_chats(user_id: str, order_by: str, limit: int, offset: int) -> List[ChatInterface]:
+def user_chats(user_id: str, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
     if order_by == "created_at":
         order_by = "mc.created_at"
 
@@ -73,7 +75,7 @@ def user_chats(user_id: str, order_by: str, limit: int, offset: int) -> List[Cha
     """.format(order_field=order_by), (user_id, limit, offset,))
 
 
-def user_chats_by_service_id(user_chat_id: str, order_by: str, limit: int, offset: int) -> List[ChatInterface]:
+def user_chats_by_service_id(user_chat_id: str, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
     if order_by == "created_at":
         order_by = "mc.created_at"
 
@@ -102,7 +104,7 @@ def switch_active(chat_id: int) -> bool:
     """, (chat_id,), commit=True, returning='active')['active']
 
 
-def add_to_whitelist(chat_id: int, user_nickname: str) -> ChatInterface | None:
+def add_to_whitelist(chat_id: int, user_nickname: str) -> ModeratedChatInterface | None:
     allowed_user = {'moderated_chat_id': chat_id, 'nickname': user_nickname}
     return db.insert_model(
         'allowed_users', allowed_user, conflict_unique_fields=['moderated_chat_id', 'nickname'])

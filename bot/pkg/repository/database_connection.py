@@ -22,8 +22,13 @@ class Database(metaclass=Singleton):
         else:
             self.connection = psycopg2.connect()
 
-    def _build_cursor(self):
+    def build_cursor(self):
         return self.connection.cursor(cursor_factory=RealDictCursor)
+
+    @staticmethod
+    def close_cursor(cursor):
+        if cursor is not None:
+            cursor.close()
 
     @staticmethod
     def _preset_key_fields(key_fields: list[str] | None):
@@ -52,10 +57,10 @@ class Database(metaclass=Singleton):
         return model
 
     def execute(
-            self, query: str, params: tuple, commit=True, cursor=None,
+            self, query: str, params: tuple, commit=True, cursor=None, keep_cursor=False,
             returning=None) -> dict | None:
         if cursor is None:
-            cursor = self._build_cursor()
+            cursor = self.build_cursor()
 
         if returning is not None:
             query += f" RETURNING {returning}"
@@ -76,14 +81,15 @@ class Database(metaclass=Singleton):
             return None
 
         finally:
-            cursor.close()
+            if not keep_cursor:
+                cursor.close()
 
     def _query_executor(
             self, cursor_method: Literal['fetchone', 'fetchall', 'fetchmany'], query: str, params: tuple
     ) -> Any:  # List[Dict], Dict, Cursor, None,
         cursor = None
         try:
-            cursor = self._build_cursor()
+            cursor = self.build_cursor()
             cursor.execute(query, params)
             if cursor_method == 'fetchone':
                 return cursor.fetchone()
@@ -96,7 +102,7 @@ class Database(metaclass=Singleton):
             self.connection.rollback()
             return None
         finally:
-            if cursor is not None:
+            if cursor is not None and cursor_method != 'fetchmany':
                 cursor.close()
 
     def fetchall(self, query: str, params: tuple = None):
@@ -113,6 +119,7 @@ class Database(metaclass=Singleton):
             result = cursor.fetchmany(per)
             yield result
             if not result:
+                cursor.close()
                 break
 
     def find_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None):
@@ -129,7 +136,7 @@ class Database(metaclass=Singleton):
 
     def insert_model(  # or update on conflict
             self, model_name: str, model_data: dict[str, Any], commit: bool = True,
-            cursor=None, conflict_unique_fields: list[str] | None = None):
+            cursor=None, keep_cursor=False, conflict_unique_fields: list[str] | None = None):
 
         model_data = self.__class__.inject_timestamps(model_data)
 
@@ -149,7 +156,7 @@ class Database(metaclass=Singleton):
                 columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])))
             query_values *= 2
 
-        return self.execute(query, query_values, commit=commit, cursor=cursor, returning='*')
+        return self.execute(query, query_values, commit=commit, cursor=cursor, keep_cursor=keep_cursor, returning='*')
 
     def update_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None):
         model_data = self.__class__.inject_updated_at(model_data)

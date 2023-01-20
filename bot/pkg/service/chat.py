@@ -1,3 +1,4 @@
+import typing
 from typing import TypedDict, List, Literal
 
 import aiogram.bot.bot
@@ -9,12 +10,20 @@ import pkg.repository.chat_repository
 from pkg.repository import chat_repository
 from pkg.service.service import Service
 from pkg.system.logger import logger
-from project.types import ChatInterface, ErrorDictInterface
+from project.types import ModeratedChatInterface, ErrorDictInterface
+
+
+class AdminValidationInterface(TypedDict, total=False):
+    administrator: types.ChatMemberAdministrator | types.ChatMemberOwner
+
+
+class AccessValidationInterface(ErrorDictInterface, total=False):
+    creator: bool
 
 
 class Chat(Service):
     @staticmethod
-    def find(chat_id: int) -> ChatInterface | None:
+    def find(chat_id: int) -> ModeratedChatInterface | None:
         return chat_repository.find(chat_id)
 
     @staticmethod
@@ -33,7 +42,7 @@ class Chat(Service):
 
     @staticmethod
     async def _validate_bot_rights(chat_member: types.chat_member) -> ErrorDictInterface:
-        if chat_member.status == "user":
+        if chat_member.status in ['user', 'member'] or 'can_delete_messages' not in chat_member:
             return {'error': 'not_admin'}
 
         # Unresolved attribute reference 'can_delete_messages' for class 'ChatMember'
@@ -46,7 +55,7 @@ class Chat(Service):
 
     @staticmethod
     async def _validate_admin_rights(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
-            -> ErrorDictInterface | TypedDict('_', {'administrator': types.ChatMember}):
+            -> ErrorDictInterface | AdminValidationInterface:
         chat_administrators = await bot.get_chat_administrators(chat_service_id)
         administrator: types.ChatMemberAdministrator | types.ChatMemberOwner | None = None
 
@@ -55,45 +64,49 @@ class Chat(Service):
                 administrator = chat_administrator
 
         if administrator is None:
-            return {"error": "user_not_admin"}
+            return {'error': 'user_not_admin'}
 
         if administrator.can_delete_messages is False:
-            return {"error": "user_cant_edit_messages"}
+            return {'error': 'user_cant_edit_messages'}
 
-        return {"administrator": administrator}
+        return {'administrator': administrator}
 
     @staticmethod
     async def validate_access(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
-            -> ErrorDictInterface:
+            -> AccessValidationInterface:
         # Validate we are admin with deletion rights
         chat_member = await Chat._get_chat_member(bot, chat_service_id, bot.id)
-        if "error" in chat_member:
-            return {"error": chat_member["error"]}
+        if 'error' in chat_member:
+            return {'error': chat_member['error']}
 
-        result = await Chat._validate_bot_rights(chat_member)
-        if "error" in result:
-            return {"error": result["error"]}
+        bot_rights_validation = await Chat._validate_bot_rights(chat_member)
+        if 'error' in bot_rights_validation:
+            return {'error': bot_rights_validation['error']}
 
         # Validate client is an admin with edit rights too
-        result = await Chat._validate_admin_rights(bot, chat_service_id, user_service_id)
-        if "error" in result:
-            return {"error": result["error"]}
+        admin_rights_validation = await Chat._validate_admin_rights(bot, chat_service_id, user_service_id)
+        if 'error' in admin_rights_validation:
+            return {'error': admin_rights_validation['error']}
+
+        administrator = typing.cast(
+            types.ChatMemberAdministrator | types.ChatMemberOwner, admin_rights_validation['administrator'])
 
         # administrator = result["administrator"]
         # TODO: validate administrator.status == 'creator' without premium subscription
 
-        return {}
+        return {'creator': administrator.status == 'creator'}
 
     @staticmethod
     async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
-            -> ChatInterface | ErrorDictInterface:
+            -> ModeratedChatInterface | ErrorDictInterface:
 
         validate_result = await Chat.validate_access(bot, chat_service_id, user_service_id)
         if 'error' in validate_result:
             return validate_result
 
         try:
-            result_connection = chat_repository.create(str(chat_service_id), str(user_service_id))
+            result_connection = chat_repository.create(
+                str(chat_service_id), str(user_service_id), validate_result['creator'])
             if "error" in result_connection:
                 return result_connection
         except Exception as e:
@@ -120,12 +133,12 @@ class Chat(Service):
         return chat_repository.user_chats_count_by_service_id(str(user_chat_id))
 
     @staticmethod
-    def data_provider(user_id: int, order_by: str, limit: int, offset: int) -> List[ChatInterface]:
+    def data_provider(user_id: int, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
         return chat_repository.user_chats(str(user_id), order_by, limit, offset)
 
     @staticmethod
     def data_provider_by_service_id(
-            chat_service_id: int, order_by: str, limit: int, offset: int) -> List[ChatInterface]:
+            chat_service_id: int, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
         return chat_repository.user_chats_by_service_id(str(chat_service_id), order_by, limit, offset)
 
     @staticmethod
@@ -133,7 +146,7 @@ class Chat(Service):
         return chat_repository.switch_active(chat_id)
 
     @staticmethod
-    def add_to_whitelist(chat_id: int, user_nickname: str) -> ChatInterface | None | ErrorDictInterface:
+    def add_to_whitelist(chat_id: int, user_nickname: str) -> ModeratedChatInterface | None | ErrorDictInterface:
         # chat_member = await Chat._get_chat_member(bot, chat_service_id, user_)
         # if "error" in chat_member:
         #     return {"error": chat_member["error"]}

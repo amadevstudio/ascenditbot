@@ -24,6 +24,7 @@ create index "service_id_index_on_moderated_chats" on "moderated_chats" ("servic
 create table user_moderated_chat_connections (
     id bigserial primary key not null,
     user_id bigint not null,
+    owner boolean not null default false,
     moderated_chat_id bigint not null,
     created_at timestamp not null,
     updated_at timestamp not null,

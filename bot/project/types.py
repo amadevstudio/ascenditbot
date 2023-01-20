@@ -15,7 +15,7 @@ class UserInterface(TypedDict, total=False):
     updated_at: datetime.datetime
 
 
-class ChatInterface(TypedDict, total=False):
+class ModeratedChatInterface(TypedDict, total=False):
     id: int
     service_id: str
     active: bool
@@ -24,6 +24,15 @@ class ChatInterface(TypedDict, total=False):
     allowed_keywords: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
+
+
+class UserModeratedChatConnectionInterface(TypedDict, total=False):
+    id: int
+    user_id: int
+    owner: bool
+    moderated_chat_id: int
+    created_at: datetime.date
+    updated_at: datetime.date
 
 
 class AllowedUserInterface(TypedDict, total=False):
