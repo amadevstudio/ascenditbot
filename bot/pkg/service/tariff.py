@@ -124,13 +124,10 @@ class Tariff(Service):
         return tariff_repository.chats_number_satisfactory(str(user_chat_id))
 
     @staticmethod
-    def process_all_subscription_validity() -> Generator[ProcessSubscriptionInterface]:
+    def process_all_subscription_validity() -> Generator[ProcessSubscriptionInterface, None, None]:
         user: ProcessSubscriptionInterface
 
-        for user in tariff_repository.process_renewable_subscription():  # TODO: test this!
-            yield user
-
-        for user in tariff_repository.process_non_renewable_subscription():  # TODO: test this!
+        for user in tariff_repository.process_subscriptions():  # TODO: test this!
             yield user
 
     @staticmethod

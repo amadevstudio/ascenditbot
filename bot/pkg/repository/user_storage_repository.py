@@ -6,7 +6,6 @@ from lib.python.data_helper import get_all_level_values
 from pkg.repository.storage_connection import Storage
 from lib.redis.decorators import convert_bytes_to_strings
 
-
 storage = Storage()
 
 STORAGE_KEYS = {
@@ -88,6 +87,10 @@ def del_user_state_data(chat_id, state):
 @convert_bytes_to_strings
 def get_user_resend_flag(chat_id):
     return Storage().connection.get(STORAGE_KEYS["users"]["tg"]["@id"]["resend_flag"].format(chat_id=chat_id)) == "1"
+
+
+def set_user_resend_flag(chat_id, resend: int):
+    Storage().connection.set(STORAGE_KEYS['users']['tg']['@id']['resend_flag'].format(chat_id=chat_id), resend)
 
 
 # Last message text id

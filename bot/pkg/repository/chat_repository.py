@@ -30,7 +30,7 @@ def create(chat_service_id: str, user_service_id: str, owner: bool) -> Moderated
     if chat is None:
         chat_data = {'service_id': chat_service_id}
         cursor = db.build_cursor()
-        chat = db.insert_model('moderated_chats', chat_data, commit=False, cursor=cursor, keep_cursor=True)
+        chat = db.insert_model('moderated_chats', chat_data, commit=False, cursor=cursor)
     else:
         user_chat = db.fetchone("""
             SELECT * FROM user_moderated_chat_connections WHERE user_id = %s AND moderated_chat_id = %s

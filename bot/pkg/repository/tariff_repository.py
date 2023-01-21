@@ -1,6 +1,7 @@
 import datetime
 from typing import TypedDict, Generator, Literal, List
 
+from pkg.repository import database_helpers
 from pkg.repository.database_connection import Database
 from project import constants
 from project.constants import default_currency
@@ -17,6 +18,11 @@ class UserTariffInfoInterface(TypedDict, total=True):
     start_date: datetime.datetime | None
     user_id: int
     tariff_id: int | None
+
+
+class ProlongableUserWithTariffIdInterface(UserInterface):
+    prolongable: bool
+    tariff_id: int
 
 
 class ProcessSubscriptionInterface(TypedDict):
@@ -71,6 +77,14 @@ def tariffs_info(user_id: int) -> list[TariffInfoInterface | None]:
         )
         ORDER BY t.id ASC
     """, (user_id,))
+
+
+def tariffs_model_hash() -> dict[int, TariffInfoInterface]:
+    return database_helpers.hashed_by_id(db.fetchall(f"""
+        SELECT t.*
+        FROM tariffs AS t
+        ORDER BY t.id ASC
+    """))
 
 
 def update_subscription(subscription: UserTariffConnectionInterface) -> UserTariffConnectionInterface:
@@ -132,6 +146,7 @@ def chats_number_satisfactory(chat_id: str) -> bool:
         LEFT JOIN (
             SELECT COUNT(*) AS chats_count, umcc.user_id AS user_id
             FROM user_moderated_chat_connections AS umcc
+            WHERE umcc.owner IS TRUE
             GROUP BY umcc.user_id
         ) AS user_chats_stat ON (user_chats_stat.user_id = u.id)
         INNER JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
@@ -140,79 +155,95 @@ def chats_number_satisfactory(chat_id: str) -> bool:
     """, (chat_id,))['satisfies']
 
 
-def process_renewable_subscription() -> Generator[ProcessSubscriptionInterface]:
-    class ProlongableUser(UserInterface):
-        prolongable: bool
+def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, None]:
+    users_set: List[ProlongableUserWithTariffIdInterface]
+    tariffs = tariffs_model_hash()
 
-    users_set: List[ProlongableUser]
+    prolongable_conditions = [">=", "<"]
+    update_actions = [
+        "SET start_date = NOW(), balance = balance - subscription_filter.tariff_price",
+        "SET tariff_id = 0, start_date = NOW()"
+    ]
 
-    for users_set in db.fetchmany("""
-        UPDATE user_tariff_connections AS utc
-        SET start_date = NOW(), balance = balance - subscription_filter.tariff_price
-        FROM users AS u
-        INNER JOIN (
-            SELECT utc.user_id, utc.balance >= tp.price * 2 AS prolongable, tp.price AS tariff_price
-            FROM user_tariff_connections AS utc
-                INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
-                INNER JOIN tariff_prices AS tp ON (tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
-            WHERE utc.tariff_id != 0
-                AND utc.balance >= tp.price
-                AND utc.start_date < NOW() - interval '{tariff_duration_days} day'
-        ) AS subscription_filter ON (u.id = subscription_filter.user_id)
-        WHERE
-            utc.user_id = subscription_filter.user_id
-        RETURNING u.id, u.service_id, u.language_code, subscription_filter.prolongable
-    """.format(tariff_duration_days=constants.tariff_duration_days), 100):
-        for user in users_set:
-            yield {
-                'user': {
-                    user['id'],
-                    user['service_id'],
-                    user['language_code']
-                },
-                'action': 'prolonged',
-                'prolongable': user['prolongable']
-            }
-
-
-def process_non_renewable_subscription() -> Generator[ProcessSubscriptionInterface]:
-    users_set: List[UserInterface]
-    for users_set in db.fetchmany("""
-        UPDATE user_tariff_connections AS utc
-        SET tariff_id = 0, start_date = NOW()
-        FROM users AS u
-        WHERE
-            u.id = utc.user_id
-            AND utc.user_id IN (
-                SELECT utc.user_id
+    for i in range(2):
+        for users_set in db.fetchmany("""
+            UPDATE user_tariff_connections AS utc
+            {update_action}
+            FROM users AS u
+            INNER JOIN (
+                SELECT utc.user_id, utc.balance >= tp.price * 2 AS prolongable, tp.price AS tariff_price
                 FROM user_tariff_connections AS utc
-                         INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
-                         INNER JOIN tariff_prices AS tp
-                            ON (tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
+                    INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
+                    INNER JOIN tariff_prices AS tp ON (tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
                 WHERE utc.tariff_id != 0
-                    AND utc.balance < tp.price
+                    AND utc.balance {prolongable_condition} tp.price
                     AND utc.start_date < NOW() - interval '{tariff_duration_days} day'
-            )
-        RETURNING u.id, u.service_id, u.language_code
-    """.format(tariff_duration_days=constants.tariff_duration_days), 100):
-        for user in users_set:
-            db.execute("""
-                UPDATE moderated_chats AS mc
-                SET disabled = TRUE
-                WHERE mc.id IN (
-                    SELECT umcc.moderated_chat_id
-                    FROM user_moderated_chat_connections AS umcc
-                    INNER JOIN user_tariff_connections AS utf ON (utf.user_id = umcc.user_id)
-                    WHERE
-                        umcc.moderated_chat_id = mc.id
-                        AND umcc.user_id = %s
-                    ORDER BY umcc.id
-                    LIMIT utf.channels_count
-                )
-            """, (user['id'],))
+            ) AS subscription_filter ON (u.id = subscription_filter.user_id)
+            WHERE
+                utc.user_id = subscription_filter.user_id
+            RETURNING u.id, u.service_id, u.language_code, subscription_filter.prolongable, utc.tariff_id
+        """.format(
+            update_action=update_actions[i], tariff_duration_days=constants.tariff_duration_days,
+            prolongable_condition=prolongable_conditions[i]
+        ), 100):
 
-            yield {
-                'user': user,
-                'action': 'disabled',
-                'prolongable': False
-            }
+            for user in users_set:
+                update_user_moderated_chats(user['id'], tariffs[user['tariff_id']]['channels_count'])
+
+                yield {
+                    'user': {
+                        'id': user['id'],
+                        'service_id': user['service_id'],
+                        'language_code': user['language_code']
+                    },
+                    'action': 'prolonged',
+                    'prolongable': user['prolongable']
+                }
+
+
+def update_user_moderated_chats(user_id: int, tariff_channels_count: int):
+    # All enabled
+    if tariff_channels_count is None:
+        db.execute("""
+            UPDATE moderated_chats AS mc
+            SET disabled = FALSE
+            FROM user_moderated_chat_connections AS umcc
+            WHERE
+                umcc.moderated_chat_id = mc.id
+                AND umcc.user_id = %s
+                AND umcc.owner IS TRUE
+        """, (user_id,))
+        return
+
+    offset = tariff_channels_count
+    cursor = db.build_cursor()
+
+    # Disable after offset
+    db.execute("""
+        UPDATE moderated_chats AS mc
+        SET disabled = TRUE
+        WHERE mc.id IN (
+            SELECT ummc.moderated_chat_id
+            FROM user_moderated_chat_connections AS ummc
+            WHERE
+                ummc.user_id = %s
+                AND ummc.owner = TRUE
+            ORDER BY id ASC
+            OFFSET %s
+        )
+    """, (user_id, offset,), commit=False, cursor=cursor)
+
+    # Enable before offset
+    db.execute("""
+        UPDATE moderated_chats AS mc
+        SET disabled = FALSE
+        WHERE mc.id IN (
+            SELECT ummc.moderated_chat_id
+            FROM user_moderated_chat_connections AS ummc
+            WHERE
+                ummc.user_id = %s
+                AND ummc.owner = TRUE
+            ORDER BY id ASC
+            LIMIT %s
+        )
+    """, cursor=cursor)

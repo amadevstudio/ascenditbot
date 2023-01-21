@@ -2,10 +2,11 @@ import json
 import time
 from typing import Literal
 
+import aiogram
 from aiogram import types, utils
 
 from lib.language import localization
-from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot
+from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages
 import pkg.config as pkg_config
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg.service.user_storage import UserStorage
@@ -27,6 +28,29 @@ def image_link_or_object(path: str):
         return types.InputFile(path)
 
     return path
+
+
+async def chat_id_sender(bot: aiogram.bot.bot.Bot, chat_id: int, resending=False, message_structures=None):
+    for message_to_send in message_structures:
+        message_structure = message_to_send
+
+        if message_structure['type'] == MasterMessages.text.value:
+            result = await bot.send_message(
+                chat_id=chat_id,
+                text=message_structure.get('text', None),
+                parse_mode=message_structure.get('parse_mode', None),
+                reply_markup=message_structure.get('reply_markup', None),
+                disable_web_page_preview=message_structure.get('disable_web_page_preview', None))
+
+        elif message_structure['type'] == MasterMessages.image.value:
+            result = await bot.send_photo(
+                chat_id=chat_id,
+                photo=message_structure.get('image', None),
+                caption=message_structure.get('text', None),
+                parse_mode=message_structure.get('parse_mode', None),
+                reply_markup=message_structure.get('reply_markup', None))
+
+    UserStorage.set_resend(chat_id, True)
 
 
 async def message_sender(
@@ -59,6 +83,8 @@ async def message_sender(
 
     if new_message_structures is not None:
         UserStorage.set_message_structures(message.chat.id, new_message_structures)
+
+    UserStorage.set_resend(message.chat.id, False)
 
 
 async def notify(

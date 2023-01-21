@@ -57,8 +57,10 @@ class Database(metaclass=Singleton):
         return model
 
     def execute(
-            self, query: str, params: tuple, commit=True, cursor=None, keep_cursor=False,
+            self, query: str, params: tuple = None, commit=True, cursor=None,
             returning=None) -> dict | None:
+        keep_cursor = not commit
+
         if cursor is None:
             cursor = self.build_cursor()
 
@@ -135,8 +137,8 @@ class Database(metaclass=Singleton):
         return self.fetchone(query, tuple(key_fields_values))
 
     def insert_model(  # or update on conflict
-            self, model_name: str, model_data: dict[str, Any], commit: bool = True,
-            cursor=None, keep_cursor=False, conflict_unique_fields: list[str] | None = None):
+            self, model_name: str, model_data: dict[str, Any], commit: bool = True, cursor=None,
+            conflict_unique_fields: list[str] | None = None):
 
         model_data = self.__class__.inject_timestamps(model_data)
 
@@ -156,7 +158,7 @@ class Database(metaclass=Singleton):
                 columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])))
             query_values *= 2
 
-        return self.execute(query, query_values, commit=commit, cursor=cursor, keep_cursor=keep_cursor, returning='*')
+        return self.execute(query, query_values, commit=commit, cursor=cursor, returning='*')
 
     def update_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None):
         model_data = self.__class__.inject_updated_at(model_data)
