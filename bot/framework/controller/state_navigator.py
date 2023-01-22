@@ -1,5 +1,6 @@
 from aiogram import types
 
+from pkg.config import routes
 from pkg.service.user_storage import UserStorage
 
 from pkg.config.routes import RouteMap
@@ -19,6 +20,9 @@ async def go_back(call: types.CallbackQuery):
 
         await method(call, call.message, change_user_state=False)
 
+        if curr is None:
+            curr = routes.RouteMap.main_route()
+
         UserStorage.go_back(call.message.chat.id, curr)
 
         # except Exception as e:
@@ -28,5 +32,8 @@ async def go_back(call: types.CallbackQuery):
 # If status is 'nowhere' and previous waits for text goback to previously and process
 def nowhere_input_processor(message: types.Message):
     prev, curr = UserStorage.prev_curr_states(message.chat.id)
+    if curr is None:
+        curr = routes.RouteMap.main_route()
+
     if prev is not None and RouteMap.get_route_prop(prev, "wait_for_input") and RouteMap.state("nowhere") == curr:
         UserStorage.go_back(message.chat.id)

@@ -1,4 +1,3 @@
-from pkg.config import routes
 from pkg.repository import user_storage_repository
 from pkg.service.service import Service
 
@@ -42,7 +41,7 @@ class UserStorage(Service):
             elif len(states) == 1:
                 return None, states[0]
             else:
-                return None, routes.RouteMap.main_route()
+                return None, None
         else:
             return None, states
 
