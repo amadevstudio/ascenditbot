@@ -70,7 +70,10 @@ class Database(metaclass=Singleton):
         try:
             cursor.execute(query, params)
 
-            row_returning = cursor.fetchone()
+            if returning is not None:
+                row_returning = cursor.fetchone()
+            else:
+                row_returning = None
 
             if commit:
                 self.connection.commit()
