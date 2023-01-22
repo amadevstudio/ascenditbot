@@ -7,10 +7,8 @@ from aiogram import types, utils
 
 from lib.language import localization
 from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages
-import pkg.config as pkg_config
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg.service.user_storage import UserStorage
-from pkg.system.logger import logger
 
 
 def go_back_inline_markup(language_code: str, button_text: Literal['back', 'cancel'] = 'back'):
@@ -30,13 +28,13 @@ def image_link_or_object(path: str):
     return path
 
 
-async def chat_id_sender(bot: aiogram.bot.bot.Bot, chat_id: int, resending=False, message_structures=None):
+async def chat_id_sender(bot: aiogram.bot.bot.Bot, user_chat_id: int, message_structures=None):
     for message_to_send in message_structures:
         message_structure = message_to_send
 
         if message_structure['type'] == MasterMessages.text.value:
             result = await bot.send_message(
-                chat_id=chat_id,
+                chat_id=user_chat_id,
                 text=message_structure.get('text', None),
                 parse_mode=message_structure.get('parse_mode', None),
                 reply_markup=message_structure.get('reply_markup', None),
@@ -44,13 +42,13 @@ async def chat_id_sender(bot: aiogram.bot.bot.Bot, chat_id: int, resending=False
 
         elif message_structure['type'] == MasterMessages.image.value:
             result = await bot.send_photo(
-                chat_id=chat_id,
+                chat_id=user_chat_id,
                 photo=message_structure.get('image', None),
                 caption=message_structure.get('text', None),
                 parse_mode=message_structure.get('parse_mode', None),
                 reply_markup=message_structure.get('reply_markup', None))
 
-    UserStorage.set_resend(chat_id, True)
+    UserStorage.set_resend(user_chat_id, True)
 
 
 async def message_sender(
