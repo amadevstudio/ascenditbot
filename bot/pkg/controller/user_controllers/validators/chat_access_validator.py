@@ -15,7 +15,7 @@ async def chat_access_validator(call: types.CallbackQuery, message: types.Messag
         validate_result = {'error': 'not_found'}
     else:
         validate_result = await Chat.validate_access(
-            message.bot, chat_service_id, message.from_user.id)
+            message.bot, chat_service_id, message.chat.id)
 
     if 'error' in validate_result:
         await chat_access_denied(call, message, validate_result)
