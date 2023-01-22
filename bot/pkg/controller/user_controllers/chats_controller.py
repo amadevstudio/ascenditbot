@@ -112,7 +112,11 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
         chat_info = await Chat.load_info(message.bot, chat_service_id=str(chat_data['service_id']))
 
         button_text = localization.get_message(
-            ['my_chats', 'list', 'chat_button', 'active' if chat_data['active'] else 'inactive'],
+            [
+                'my_chats', 'list', 'chat_button',
+                'active' if (chat_data['active'] and not chat_data['disabled'])
+                else ('disabled' if chat_data['disabled'] else 'inactive')
+            ],
             message.from_user.language_code, chat_name=chat_info['title'])
 
         button_data = {'tp': 'chat', 'id': chat_data['id']}
@@ -156,6 +160,9 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
     message_text = localization.get_message(
         ['chat', 'show', 'text'], message.from_user.language_code, chat_name=chat_info['title'])
 
+    if chat_data['disabled']:
+        message_text += "\n\n" + localization.get_message(['chat', 'show', 'disabled'], message.from_user.language_code)
+
     reply_markup = types.InlineKeyboardMarkup()
     add_to_whitelist_button = types.InlineKeyboardButton(
         localization.get_message(['chat', 'show', 'add_to_whitelist_button'], message.from_user.language_code),
@@ -169,7 +176,9 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
     reply_markup.add(whitelist_button)
     state_button = types.InlineKeyboardButton(
         localization.get_message(
-            ['chat', 'show', 'active_button', 'active' if chat_data['active'] else 'inactive'],
+            [
+                'chat', 'show', 'active_button',
+                'active' if chat_data['active'] else 'inactive'],
             message.from_user.language_code,
         ), callback_data=json.dumps({'tp': 'switch_active'}))
     reply_markup.add(state_button)

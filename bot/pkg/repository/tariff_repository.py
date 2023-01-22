@@ -37,6 +37,7 @@ def find(tariff_id: int) -> TariffInterface | None:
 
 def _tariff_prices_for_user_selection() -> str:
     return """
+        -- Take currency from user if connection not exists only
         AND (
             (tp.currency_code = utc.currency_code
                 OR (tp.currency_code = lccc.currency_code AND utc.currency_code IS NULL)
@@ -47,6 +48,7 @@ def _tariff_prices_for_user_selection() -> str:
     """
 
 
+# Tariff info based on user currency
 def tariff_info(tariff_id: int, user_id: int) -> TariffInfoInterface | None:
     return db.fetchone(f"""
         SELECT t.id, t.channels_count, tp.currency_code, tp.price
@@ -56,11 +58,30 @@ def tariff_info(tariff_id: int, user_id: int) -> TariffInfoInterface | None:
         LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
         INNER JOIN tariff_prices AS tp ON (
             t.id = tp.tariff_id
-            -- Take currency from user if connection not exists only
             {_tariff_prices_for_user_selection()}
         )
         WHERE t.id = %s
     """, (user_id, tariff_id,))
+
+
+# User tariff and connection
+def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
+    return db.fetchone(f"""
+        SELECT t.channels_count,
+            (CASE WHEN utc.currency_code IS NOT NULL THEN utc.currency_code ELSE lccc.currency_code END) 
+                AS currency_code,
+            tp.price,
+            utc.balance, utc.start_date, utc.user_id, utc.tariff_id
+        FROM user_tariff_connections AS utc
+        INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
+        LEFT JOIN users AS u ON (u.id = utc.user_id)
+        LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
+        INNER JOIN tariff_prices AS tp ON (
+            tp.tariff_id = t.id
+            {_tariff_prices_for_user_selection()}
+        )
+        WHERE utc.user_id = %s
+    """, (user_id,))
 
 
 def tariffs_info(user_id: int) -> list[TariffInfoInterface | None]:
@@ -72,7 +93,6 @@ def tariffs_info(user_id: int) -> list[TariffInfoInterface | None]:
         LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
         INNER JOIN tariff_prices AS tp ON (
             t.id = tp.tariff_id
-            -- Take currency from user if connection not exists only
             {_tariff_prices_for_user_selection()}
         )
         ORDER BY t.id ASC
@@ -91,26 +111,6 @@ def update_subscription(subscription: UserTariffConnectionInterface) -> UserTari
     return db.insert_model(
         'user_tariff_connections', subscription,
         conflict_unique_fields=['user_id'])
-
-
-def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
-    return db.fetchone(f"""
-        SELECT t.channels_count,
-            (CASE WHEN utc.currency_code IS NOT NULL THEN utc.currency_code ELSE lccc.currency_code END) 
-                AS currency_code,
-            tp.price,
-            utc.balance, utc.start_date, utc.user_id, utc.tariff_id
-        FROM user_tariff_connections AS utc
-        INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
-        LEFT JOIN users AS u ON (u.id = utc.user_id)
-        LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
-        INNER JOIN tariff_prices AS tp ON (
-            tp.tariff_id = t.id
-            -- Take currency from user if connection not exists only
-            {_tariff_prices_for_user_selection()}
-        )
-        WHERE utc.user_id = %s
-    """, (user_id,))
 
 
 def get_currency_code_for_user(user_id: int) -> str:
@@ -151,7 +151,7 @@ def chats_number_satisfactory(chat_id: str) -> bool:
         ) AS user_chats_stat ON (user_chats_stat.user_id = u.id)
         INNER JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
         INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
-        WHERE u.service_id = %s;
+        WHERE u.service_id = %s
     """, (chat_id,))['satisfies']
 
 
@@ -159,10 +159,10 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
     users_set: List[ProlongableUserWithTariffIdInterface]
     tariffs = tariffs_model_hash()
 
-    prolongable_conditions = [">=", "<"]
+    prolongable_conditions = ["<", ">="]
     update_actions = [
-        "SET start_date = NOW(), balance = balance - subscription_filter.tariff_price",
-        "SET tariff_id = 0, start_date = NOW()"
+        "SET tariff_id = 0, start_date = NOW()",
+        "SET start_date = NOW(), balance = balance - subscription_filter.tariff_price"
     ]
 
     for i in range(2):
@@ -196,14 +196,14 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
                         'service_id': user['service_id'],
                         'language_code': user['language_code']
                     },
-                    'action': 'prolonged',
+                    'action': 'disabled' if i == 0 else 'prolonged',
                     'prolongable': user['prolongable']
                 }
 
 
-def update_user_moderated_chats(user_id: int, tariff_channels_count: int):
+def update_user_moderated_chats(user_id: int, offset: int | None):
     # All enabled
-    if tariff_channels_count is None:
+    if offset is None:
         db.execute("""
             UPDATE moderated_chats AS mc
             SET disabled = FALSE
@@ -215,7 +215,6 @@ def update_user_moderated_chats(user_id: int, tariff_channels_count: int):
         """, (user_id,))
         return
 
-    offset = tariff_channels_count
     cursor = db.build_cursor()
 
     # Disable after offset
@@ -246,4 +245,4 @@ def update_user_moderated_chats(user_id: int, tariff_channels_count: int):
             ORDER BY id ASC
             LIMIT %s
         )
-    """, cursor=cursor)
+    """, (user_id, offset,), cursor=cursor)

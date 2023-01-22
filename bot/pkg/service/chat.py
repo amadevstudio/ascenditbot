@@ -9,6 +9,7 @@ import pkg.repository.allowed_user_repository
 import pkg.repository.chat_repository
 from pkg.repository import chat_repository
 from pkg.service.service import Service
+from pkg.service.tariff import Tariff
 from pkg.system.logger import logger
 from project.types import ModeratedChatInterface, ErrorDictInterface
 
@@ -18,7 +19,7 @@ class AdminValidationInterface(TypedDict, total=False):
 
 
 class AccessValidationInterface(ErrorDictInterface, total=False):
-    creator: bool
+    is_creator: bool
 
 
 class Chat(Service):
@@ -91,10 +92,23 @@ class Chat(Service):
         administrator = typing.cast(
             types.ChatMemberAdministrator | types.ChatMemberOwner, admin_rights_validation['administrator'])
 
-        # administrator = result["administrator"]
-        # TODO: validate administrator.status == 'creator' without premium subscription
+        chat_info = chat_repository.find_by({'service_id': chat_service_id})
+        exists_in_the_bot = chat_info is not None
 
-        return {'creator': administrator.status == 'creator'}
+        if not exists_in_the_bot:
+            if administrator.status != 'creator':
+                return {'error': 'creator_must_add'}
+        else:
+            creator = chat_repository.chat_creator(chat_info['id'])
+            if creator is None:
+                return {'error': 'creator_must_add'}
+
+            if str(user_service_id) != creator['service_id']:
+                creator_tariff_info = Tariff.user_tariff_info(creator['id'])
+                if creator_tariff_info['tariff_id'] == 0:
+                    return {'error': 'creator_dont_subscribed'}
+
+        return {'is_creator': administrator.status == 'creator'}
 
     @staticmethod
     async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
@@ -106,7 +120,7 @@ class Chat(Service):
 
         try:
             result_connection = chat_repository.create(
-                str(chat_service_id), str(user_service_id), validate_result['creator'])
+                str(chat_service_id), str(user_service_id), validate_result['is_creator'])
             if "error" in result_connection:
                 return result_connection
         except Exception as e:

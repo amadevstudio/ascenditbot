@@ -16,6 +16,8 @@ async def incoming_chat_message(message: types.Message):
     nickname: str = message.from_user.username
     chat_service_id: int = message.chat.id
 
+    # TODO: check subscription
+
     allowed: bool = AllowedUser.check_privilege(nickname, str(chat_service_id))
 
     if not allowed:

@@ -55,7 +55,10 @@ class UserStorage(Service):
 
     @staticmethod
     def set_resend(chat_id: int, resend: True):
-        return user_storage_repository.set_user_resend_flag(chat_id, 1 if resend else None)
+        if resend is None:
+            user_storage_repository.del_user_resend_flag(chat_id)
+
+        return user_storage_repository.set_user_resend_flag(chat_id, 1)
 
     @staticmethod
     def get_message_structures(chat_id: int):

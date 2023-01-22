@@ -127,7 +127,7 @@ class Tariff(Service):
     def process_all_subscription_validity() -> Generator[ProcessSubscriptionInterface, None, None]:
         user: ProcessSubscriptionInterface
 
-        for user in tariff_repository.process_subscriptions():  # TODO: test this!
+        for user in tariff_repository.process_subscriptions():
             yield user
 
     @staticmethod

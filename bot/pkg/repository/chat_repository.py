@@ -1,21 +1,36 @@
-from typing import List
+from typing import List, Any
 
 from pkg.repository.database_connection import Database
 from project.types import ModeratedChatInterface, ErrorDictInterface, AllowedUserInterface, \
-    UserModeratedChatConnectionInterface
+    UserModeratedChatConnectionInterface, UserInterface
 
 db = Database()
-
-
-def find(chat_id: int) -> ModeratedChatInterface:
-    return db.find_model('moderated_chats', {'id': chat_id})
 
 
 class CreateErrorInterface(ErrorDictInterface, total=False):
     connection: ModeratedChatInterface
 
 
-def create(chat_service_id: str, user_service_id: str, owner: bool) -> ModeratedChatInterface | CreateErrorInterface:
+def find(chat_id: int) -> ModeratedChatInterface:
+    return db.find_model('moderated_chats', {'id': chat_id})
+
+
+def find_by(fields_value: dict[str, Any]) -> ModeratedChatInterface:
+    return db.find_model('moderated_chats', fields_value)
+
+
+def chat_creator(chat_id: int) -> UserInterface:
+    return db.fetchone("""
+        SELECT u.*
+        FROM users AS u
+        INNER JOIN user_moderated_chat_connections AS umcc ON (umcc.user_id = u.id)
+        WHERE
+            umcc.moderated_chat_id = %s
+            AND umcc.owner IS TRUE
+    """, (chat_id,))
+
+
+def create(chat_service_id: str, user_service_id: str, is_owner: bool) -> ModeratedChatInterface | CreateErrorInterface:
     user = db.fetchone("""
         SELECT id FROM users WHERE service_id = %s
     """, (user_service_id,))
@@ -41,7 +56,7 @@ def create(chat_service_id: str, user_service_id: str, owner: bool) -> Moderated
         cursor = None
 
     user_chat_data: UserModeratedChatConnectionInterface = \
-        {'user_id': user["id"], 'moderated_chat_id': chat["id"], 'owner': owner}
+        {'user_id': user["id"], 'moderated_chat_id': chat["id"], 'owner': is_owner}
     user_chat = db.insert_model('user_moderated_chat_connections', user_chat_data, cursor=cursor)
 
     return user_chat

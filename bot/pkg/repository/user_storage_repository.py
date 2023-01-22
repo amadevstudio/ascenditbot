@@ -93,6 +93,10 @@ def set_user_resend_flag(chat_id, resend: int):
     Storage().connection.set(STORAGE_KEYS['users']['tg']['@id']['resend_flag'].format(chat_id=chat_id), resend)
 
 
+def del_user_resend_flag(chat_id):
+    Storage().connection.delete(STORAGE_KEYS['users']['tg']['@id']['resend_flag'].format(chat_id=chat_id))
+
+
 # Last message text id
 
 @convert_bytes_to_strings
