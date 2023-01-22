@@ -1,5 +1,4 @@
 import enum
-import logging
 import re
 from typing import *
 from urllib.parse import unquote
@@ -7,7 +6,6 @@ from urllib.parse import unquote
 from aiogram import types
 
 from lib.python.dict_interface import validate_structure
-from pkg.config.config import empty_photo_link
 
 
 def get_timeout_from_error_bot(error):
