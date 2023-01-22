@@ -124,7 +124,9 @@ class Database(metaclass=Singleton):
                 cursor.close()
                 break
 
-    def find_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None):
+    def find_model(self, model_name: str, model_data: dict[str, Any]):
+        key_fields = list(model_data.keys())
+
         filled_key_fields = Database._preset_key_fields(key_fields)
 
         query = "SELECT * FROM {model_name} WHERE {key_fields}".format(
