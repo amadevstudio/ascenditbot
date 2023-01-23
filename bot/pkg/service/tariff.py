@@ -2,7 +2,7 @@ import datetime
 from typing import Generator
 
 from lib.language import localization
-from pkg.repository import tariff_repository
+from pkg.repository import tariff_repository, chat_repository
 from pkg.repository.tariff_repository import UserTariffInfoInterface, TariffInfoInterface, ProcessSubscriptionInterface
 from pkg.service.service import Service
 from pkg.system.logger import logger
@@ -131,6 +131,16 @@ class Tariff(Service):
             yield user
 
     @staticmethod
-    def process_subscription_validity(user_chat_id: int):
-        # TODO: process user
-        pass
+    def validity_for_moderation(chat_service_id: int):
+        # TODO: add caching, set here and on tariff update
+
+        creator = chat_repository.chat_creator_by_service_id(str(chat_service_id))
+
+        if creator is None:
+            return False
+
+        creator_tariff_info = Tariff.user_tariff_info(creator['id'])
+        if creator_tariff_info['tariff_id'] == 0:
+            return False
+
+        return True

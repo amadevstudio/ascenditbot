@@ -30,6 +30,18 @@ def chat_creator(chat_id: int) -> UserInterface:
     """, (chat_id,))
 
 
+def chat_creator_by_service_id(chat_service_id: str) -> UserInterface:
+    return db.fetchone("""
+        SELECT u.*
+        FROM users AS u
+        INNER JOIN user_moderated_chat_connections AS umcc ON (umcc.user_id = u.id)
+        INNER JOIN moderated_chats AS mc ON (mc.id = umcc.moderated_chat_id)
+        WHERE
+            mc.service_id = %s
+            AND umcc.owner IS TRUE
+    """, (chat_service_id,))
+
+
 def create(chat_service_id: str, user_service_id: str, is_owner: bool) -> ModeratedChatInterface | CreateErrorInterface:
     user = db.fetchone("""
         SELECT id FROM users WHERE service_id = %s
