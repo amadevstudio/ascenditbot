@@ -40,8 +40,8 @@ def _tariff_prices_for_user_selection() -> str:
         -- Take currency from user if connection not exists only
         AND (
             (tp.currency_code = utc.currency_code
-                OR (tp.currency_code = lccc.currency_code AND utc.currency_code IS NULL)
-                OR (tp.currency_code = 'usd' AND utc.currency_code IS NULL AND lccc.currency_code IS NULL)
+                -- OR (tp.currency_code = lccc.currency_code AND utc.currency_code IS NULL)
+                -- OR (tp.currency_code = 'usd' AND utc.currency_code IS NULL AND lccc.currency_code IS NULL)
             )
             OR tp.currency_code IS NULL
         )
@@ -53,8 +53,8 @@ def tariff_info(tariff_id: int, user_id: int) -> TariffInfoInterface | None:
     return db.fetchone(f"""
         SELECT t.id, t.channels_count, tp.currency_code, tp.price
         FROM tariffs AS t
-        LEFT JOIN user_tariff_connections AS utc ON (utc.tariff_id = t.id)
         LEFT JOIN users AS u ON (u.id = %s)
+        LEFT JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
         LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
         INNER JOIN tariff_prices AS tp ON (
             t.id = tp.tariff_id
@@ -88,8 +88,8 @@ def tariffs_info(user_id: int) -> list[TariffInfoInterface | None]:
     return db.fetchall(f"""
         SELECT t.id, t.channels_count, tp.currency_code, tp.price
         FROM tariffs AS t
-        LEFT JOIN user_tariff_connections AS utc ON (utc.tariff_id = t.id)
         LEFT JOIN users AS u ON (u.id = %s)
+        LEFT JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
         LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
         INNER JOIN tariff_prices AS tp ON (
             t.id = tp.tariff_id
