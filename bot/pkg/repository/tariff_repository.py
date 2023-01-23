@@ -108,9 +108,16 @@ def tariffs_model_hash() -> dict[int, TariffInfoInterface]:
 
 
 def update_subscription(subscription: UserTariffConnectionInterface) -> UserTariffConnectionInterface:
-    return db.insert_model(
+    result = db.insert_model(
         'user_tariff_connections', subscription,
         conflict_unique_fields=['user_id'])
+
+    tariff = db.find_model('tariffs', {'id': result['tariff_id']})
+
+    if tariff is not None:
+        update_user_moderated_chats(subscription['user_id'], tariff['channels_count'])
+
+    return result
 
 
 def get_currency_code_for_user(user_id: int) -> str:
