@@ -114,3 +114,9 @@ def user_router(dispatcher):
         chat_type=types.ChatType.PRIVATE)
     async def change_tariff(call: types.CallbackQuery):
         await event_action_wrapper(RouteMap.type('tariffs'), RouteMap.action_type('tariffs', 'change_tariff'), call)
+
+    # open fund page
+    @dispatcher.callback_query_handler(
+        lambda call: (get_type(call) == RouteMap.type('fund')), chat_type=types.ChatType.PRIVATE)
+    async def fund(call: types.CallbackQuery):
+        await event_wrapper(RouteMap.type('fund'), call)

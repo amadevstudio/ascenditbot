@@ -28,6 +28,10 @@ class Tariff(Service):
         return tariff_info
 
     @staticmethod
+    def user_amount(price: int, accuracy: int = 0, ndigits: int = 0) -> float:
+        return round((int(price) + int(accuracy)) / 100, ndigits)
+
+    @staticmethod
     def user_tariff_info(user_id: int) -> UserTariffInfoInterface:
         tariff_info = tariff_repository.user_tariff_info(user_id)
         if tariff_info is None:
@@ -144,3 +148,7 @@ class Tariff(Service):
             return False
 
         return True
+
+    @staticmethod
+    def currency_code_for_user(user_id: int):
+        return tariff_repository.currency_code_for_user(user_id)

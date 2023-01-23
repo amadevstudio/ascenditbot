@@ -16,6 +16,7 @@ async def page(call: types.CallbackQuery, message: types.Message, change_user_st
     user_id = User.get_id_by_service_id(message.chat.id)
 
     tariff_message = localization.get_message(['subscription', 'show', 'text'], message.from_user.language_code)
+    tariff_message += localization.get_message(['tariffs', 'current'], message.from_user.language_code) + "\n\n"
 
     user_tariff_info = Tariff.user_tariff_info(user_id)
     tariff_message += build_subscription_info(user_tariff_info, message.from_user.language_code)
@@ -27,8 +28,8 @@ async def page(call: types.CallbackQuery, message: types.Message, change_user_st
     )
     reply_markup.add(choose_tariff_button)
     replenish_button = types.InlineKeyboardButton(
-        localization.get_message(['subscription', 'buttons', 'replenish'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'replenish'})
+        localization.get_message(['subscription', 'buttons', 'fund'], message.from_user.language_code),
+        callback_data=json.dumps({'tp': 'fund'})
     )
     reply_markup.add(replenish_button)
     reply_markup.add(go_back_inline_button(message.from_user.language_code))
@@ -57,7 +58,7 @@ async def tariffs(_, message: types.Message, change_user_state=True):
         if tariff['id'] != 0:
             tariff_info = localization.get_message(
                 ['tariffs', 'list', tariff['id']], message.from_user.language_code) + "\n"
-            tariff_info += f"{float(tariff['price']) / 100} {tariff['currency_code']}\n"
+            tariff_info += f"{Tariff.user_amount(tariff['price'])} {tariff['currency_code']}\n"
             tariff_info += channels_count_text(tariff['channels_count'], message.from_user.language_code)
             tariffs_message += tariff_info + "\n\n"
 
@@ -108,3 +109,41 @@ async def change_tariff(call: types.CallbackQuery, message: types.Message):
 
     await notify(call, message, localization.get_message(['subscription', 'updated'], message.from_user.language_code))
     await tariffs(call, message, change_user_state=False)
+
+
+async def fund_balance_page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+    user_id = User.get_id_by_service_id(message.chat.id)
+
+    user_currency_code = Tariff.currency_code_for_user(user_id)
+    available_tariffs = Tariff.tariffs_info(user_id)
+
+    message_text = localization.get_message(
+        ['subscription', 'fund', 'page'], message.from_user.language_code, user_currency_code=user_currency_code)
+
+    reply_markup = types.InlineKeyboardMarkup()
+    reply_markup_row_buffer = []
+
+    for tariff in available_tariffs:
+        if tariff['price'] == 0:
+            continue
+
+        reply_markup_row_buffer.append(types.InlineKeyboardButton(
+            f"{Tariff.user_amount(tariff['price'])} {user_currency_code}",
+            callback_data=json.dumps({'tp': 'fund_amount', 'value': tariff['price'], 'currency': user_currency_code})))
+
+        if len(reply_markup_row_buffer) == 3:
+            reply_markup.row(*reply_markup_row_buffer)
+            reply_markup_row_buffer = []
+
+    reply_markup.row(*reply_markup_row_buffer)
+
+    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+
+    await message_sender(message, message_structures=[{
+        'type': 'text',
+        'text': message_text,
+        'reply_markup': reply_markup
+    }])
+
+    if change_user_state:
+        UserStorage.change_page(message.chat.id, 'fund')

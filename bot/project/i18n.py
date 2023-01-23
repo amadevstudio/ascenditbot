@@ -359,7 +359,6 @@ routed_messages = {
                 'ru':
                     f"{emoji_codes.get('credit_card', '')} Подписка\n\n"
                     "Описание подписки...\n\n"
-                    "<b>Ваши текущие условия</b>\n"
             },
         },
         'buttons': {
@@ -367,7 +366,7 @@ routed_messages = {
                 'en': "",
                 'ru': f"{emoji_codes.get('bar_chart', '')} Выбрать тариф"
             },
-            'replenish': {
+            'fund': {
                 'en': "",
                 'ru': f"{emoji_codes.get('money_with_wings', '')} Пополнить"
             }

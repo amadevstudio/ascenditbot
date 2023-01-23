@@ -38,7 +38,7 @@ def find(tariff_id: int) -> TariffInterface | None:
 def _tariff_prices_for_user_selection() -> str:
     return """
         -- Take currency from user if connection not exists only
-        AND (
+        (
             (tp.currency_code = utc.currency_code
                 -- OR (tp.currency_code = lccc.currency_code AND utc.currency_code IS NULL)
                 -- OR (tp.currency_code = 'usd' AND utc.currency_code IS NULL AND lccc.currency_code IS NULL)
@@ -46,6 +46,23 @@ def _tariff_prices_for_user_selection() -> str:
             OR tp.currency_code IS NULL
         )
     """
+
+
+def currency_code_for_user(user_id: int) -> str:
+    result = db.fetchone(f"""
+        SELECT tp.currency_code
+        FROM tariff_prices AS tp
+        INNER JOIN users AS u ON (u.id = 3)
+        LEFT JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
+        LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
+        WHERE {_tariff_prices_for_user_selection()}
+        ORDER BY CASE WHEN tp.currency_code IS NOT NULL THEN 0 ELSE 1 END ASC
+        LIMIT 1
+    """, (user_id,))
+    if result is None:
+        return constants.default_currency
+
+    return result['currency_code']
 
 
 # Tariff info based on user currency
@@ -58,7 +75,7 @@ def tariff_info(tariff_id: int, user_id: int) -> TariffInfoInterface | None:
         LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
         INNER JOIN tariff_prices AS tp ON (
             t.id = tp.tariff_id
-            {_tariff_prices_for_user_selection()}
+            AND {_tariff_prices_for_user_selection()}
         )
         WHERE t.id = %s
     """, (user_id, tariff_id,))
@@ -78,7 +95,7 @@ def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
         LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
         INNER JOIN tariff_prices AS tp ON (
             tp.tariff_id = t.id
-            {_tariff_prices_for_user_selection()}
+            AND {_tariff_prices_for_user_selection()}
         )
         WHERE utc.user_id = %s
     """, (user_id,))
@@ -93,7 +110,7 @@ def tariffs_info(user_id: int) -> list[TariffInfoInterface | None]:
         LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
         INNER JOIN tariff_prices AS tp ON (
             t.id = tp.tariff_id
-            {_tariff_prices_for_user_selection()}
+            AND {_tariff_prices_for_user_selection()}
         )
         ORDER BY t.id ASC
     """, (user_id,))

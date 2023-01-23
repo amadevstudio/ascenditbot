@@ -8,7 +8,7 @@ AvailableCommands = Literal['start', 'menu', 'add_chat', 'my_chats', 'subscripti
 AvailableRoutes = Literal[
     'start', 'menu', 'add_chat', 'my_chats', 'chat',
     'add_to_chat_whitelist', 'chat_whitelist', 'allowed_user',
-    'subscription',
+    'subscription', 'tariffs', 'fund',
     'nowhere']
 
 
@@ -112,7 +112,7 @@ class RouteMap:
             'commands': ['subscription'],
             'routes': [
                 'tariffs',
-                'replenish'
+                'fund'
             ]
         },
         'tariffs': {
@@ -122,6 +122,9 @@ class RouteMap:
                     'method': subscription_controller.change_tariff
                 }
             }
+        },
+        'fund': {
+            'method': subscription_controller.fund_balance_page
         },
 
         'nowhere': {}

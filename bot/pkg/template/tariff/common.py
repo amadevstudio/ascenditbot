@@ -2,6 +2,7 @@ import datetime
 
 from lib.language import localization
 from pkg.repository.tariff_repository import UserTariffInfoInterface
+from pkg.service.tariff import Tariff
 from project import constants
 
 
@@ -15,7 +16,8 @@ def build_subscription_info(user_tariff_info: UserTariffInfoInterface | None, la
     tariff_name = localization.get_message(['tariffs', 'list', user_tariff_info['tariff_id']], language_code)
     info_message = f"{tariff_name}"
 
-    balance = float(user_tariff_info['balance']) / 100
+    balance = Tariff.user_amount(user_tariff_info['balance'])
+
     info_message += f"\n{localization.get_message(['subscription', 'info_block', 'balance'], language_code)} " \
                     f"{balance} {user_tariff_info['currency_code']}"
 
