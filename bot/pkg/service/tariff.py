@@ -103,7 +103,7 @@ class Tariff(Service):
             else:
                 change_sum = chosen_tariff['price']
 
-            new_subscription_start_date = user_subscription['start_date']
+            new_subscription_start_date = (None if chosen_tariff['id'] == 0 else user_subscription['start_date'])
 
         # Can the user pay for the best tariff?
         if change_sum > 0 and user_subscription['balance'] < change_sum:

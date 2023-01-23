@@ -161,7 +161,7 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
 
     prolongable_conditions = ["<", ">="]
     update_actions = [
-        "SET tariff_id = 0, start_date = NOW()",
+        "SET tariff_id = 0, start_date = NULL",
         "SET start_date = NOW(), balance = balance - subscription_filter.tariff_price"
     ]
 
