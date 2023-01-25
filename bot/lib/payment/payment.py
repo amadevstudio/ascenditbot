@@ -42,7 +42,7 @@ class PaymentServer:
         decoded_package = self.decode_package(package)
         for payment_processor in self.payment_processors:
             if payment_processor.validate_package(decoded_package):
-                payment_processor.validate_package(decoded_package)
+                payment_processor.process_package(decoded_package)
                 break
 
     @staticmethod
