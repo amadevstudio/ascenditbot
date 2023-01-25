@@ -1,7 +1,8 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Callable, NoReturn
+from typing import Callable, NoReturn, Literal
 
+from project import constants
 from project.types import ErrorDictInterface
 
 
@@ -10,8 +11,9 @@ class CallableInterface(ErrorDictInterface, total=False):
 
 
 class PaymentProcessor(ABC):
-    def __init__(self, token: str, port: int, callback: Callable[[CallableInterface], NoReturn]):
-        self.token = token
+    def __init__(
+            self, credentials: dict, port: int, callback: Callable[[CallableInterface], NoReturn]):
+        self.credentials = credentials
         self.port = port
         self.callback = callback
 
@@ -24,7 +26,9 @@ class PaymentProcessor(ABC):
     def process_package(self, package: dict): pass
 
     @abstractmethod
-    def generate_payment_link(self, amount) -> str: pass
+    def generate_payment_link(
+            self, amount: int, user_id: int, currency: str,
+            culture: str = constants.default_currency, test: bool = False) -> str: pass
 
 
 class PaymentServer:
