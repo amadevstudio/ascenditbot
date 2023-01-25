@@ -16,6 +16,10 @@ class User(Service):
     # def in_message(chat_id: int):
     #     pass
     @staticmethod
-    def get_id_by_service_id(chat_id: int) -> int | None:
-        return user_repository.get_id_by_service_id(str(chat_id))
+    def get_id_by_service_id(user_chat_id: int) -> int | None:
+        return user_repository.get_id_by_service_id(str(user_chat_id))
+
+    @staticmethod
+    def find_by_service_id(user_chat_id: int) -> UserInterface | None:
+        return user_repository.find_by({'service_id': str(user_chat_id)})
 

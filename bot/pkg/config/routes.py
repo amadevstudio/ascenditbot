@@ -8,7 +8,7 @@ AvailableCommands = Literal['start', 'menu', 'add_chat', 'my_chats', 'subscripti
 AvailableRoutes = Literal[
     'start', 'menu', 'add_chat', 'my_chats', 'chat',
     'add_to_chat_whitelist', 'chat_whitelist', 'allowed_user',
-    'subscription', 'tariffs', 'fund',
+    'subscription', 'tariffs', 'fund', 'fund_amount',
     'nowhere']
 
 
@@ -124,7 +124,12 @@ class RouteMap:
             }
         },
         'fund': {
-            'method': subscription_controller.fund_balance_page
+            'method': subscription_controller.fund_balance_page,
+            'wait_for_input': True
+        },
+        'fund_amount': {
+            'method': subscription_controller.fund_link_page,
+            'wait_for_input': True
         },
 
         'nowhere': {}

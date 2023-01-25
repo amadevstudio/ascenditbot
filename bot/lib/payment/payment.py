@@ -12,9 +12,8 @@ class CallableInterface(ErrorDictInterface, total=False):
 
 class PaymentProcessor(ABC):
     def __init__(
-            self, credentials: dict, port: int, callback: Callable[[CallableInterface], NoReturn]):
+            self, credentials: dict, callback: Callable[[CallableInterface], NoReturn]):
         self.credentials = credentials
-        self.port = port
         self.callback = callback
 
     # Validate package belongs to service
@@ -27,7 +26,7 @@ class PaymentProcessor(ABC):
 
     @abstractmethod
     def generate_payment_link(
-            self, amount: int, user_id: int, currency: str,
+            self, amount: float, user_id: int, currency: str,
             culture: str = constants.default_currency, test: bool = False) -> str: pass
 
 

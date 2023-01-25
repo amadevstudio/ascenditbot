@@ -1,0 +1,39 @@
+from lib.payment.payment import CallableInterface, PaymentProcessor
+from lib.payment.services.robokassa import RobokassaPaymentProcessor
+from pkg.service.service import Service
+from project.types import UserInterface
+
+
+class IncomingPayment(Service):
+    @staticmethod
+    def incoming_subscription(result: CallableInterface):
+        # TODO
+        pass
+
+
+payment_processors: dict[str, PaymentProcessor] = {
+    'robokassa.ru': RobokassaPaymentProcessor({
+        'login': 'abc',
+        'password_1': '123',
+        'password_1_test': '321'
+    }, IncomingPayment.incoming_subscription)
+}
+
+
+class Payment(Service):
+    @staticmethod
+    def is_test(text: str) -> [float, str]:
+        if len(text) > 0 and text[0] == 't':
+            return True, text[1:]
+        else:
+            return False, text
+
+    @staticmethod
+    def get_fund_service() -> str:
+        return 'robokassa.ru'
+
+    @staticmethod
+    def generate_payment_link(
+            amount: float, user: UserInterface, currency_code: str, fund_service: str, is_test: bool):
+        return payment_processors[fund_service].generate_payment_link(
+            amount, user['id'], currency_code, user['language_code'], is_test)

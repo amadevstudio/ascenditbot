@@ -2,10 +2,12 @@ import json
 
 from aiogram import types
 
-from framework.controller.message_tools import message_sender, go_back_inline_button, notify
+from framework.controller.message_tools import message_sender, go_back_inline_button, notify, go_back_inline_markup
 from framework.controller import state_data
 from lib.language import localization
+from lib.payment.services.robokassa import RobokassaPaymentProcessor
 from pkg.controller.user_controllers.common_controller import raise_error
+from pkg.service.payment import Payment
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
 from pkg.service.user_storage import UserStorage
@@ -129,7 +131,9 @@ async def fund_balance_page(call: types.CallbackQuery, message: types.Message, c
 
         reply_markup_row_buffer.append(types.InlineKeyboardButton(
             f"{Tariff.user_amount(tariff['price'])} {user_currency_code}",
-            callback_data=json.dumps({'tp': 'fund_amount', 'value': tariff['price'], 'currency': user_currency_code})))
+            callback_data=json.dumps({
+                'tp': 'fund_amount', 'value': Tariff.user_amount(tariff['price'])  # , 'currency': user_currency_code
+            })))
 
         if len(reply_markup_row_buffer) == 3:
             reply_markup.row(*reply_markup_row_buffer)
@@ -147,3 +151,37 @@ async def fund_balance_page(call: types.CallbackQuery, message: types.Message, c
 
     if change_user_state:
         UserStorage.change_page(message.chat.id, 'fund')
+
+
+async def fund_link_page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+    fund_service = Payment.get_fund_service()
+
+    if call is not None:
+        is_test = False
+        summa = state_data.decode_call_data(call).get('value', 0)
+    else:
+        is_test, summa = Payment.is_test(message.text)
+
+    try:
+        amount = float(summa)
+    except Exception:
+        await notify(call, message, localization.get_message(
+            ['subscription', 'fund', 'errors', 'wrong_amount'], message.from_user.language_code))
+        return
+
+    user = User.find_by_service_id(message.chat.id)
+    user_currency_code = Tariff.currency_code_for_user(user['id'])
+
+    fund_link = Payment.generate_payment_link(amount, user, user_currency_code, fund_service, is_test)
+
+    message_text = localization.get_message(
+            ['subscription', 'fund', 'fund_link_message'], message.from_user.language_code, link=fund_link)
+
+    await message_sender(message, message_structures=[{
+        'type': 'text',
+        'text': message_text,
+        'reply_markup': go_back_inline_markup(message.from_user.language_code)
+    }], resending=call is None)
+
+    if change_user_state:
+        UserStorage.change_page(message.chat.id, 'fund_amount')

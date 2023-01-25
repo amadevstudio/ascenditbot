@@ -24,7 +24,7 @@ def user_router(dispatcher):
         chat_type=types.ChatType.PRIVATE)
     @dispatcher.callback_query_handler(
         lambda call: get_type(call) == RouteMap.type('add_chat'), chat_type=types.ChatType.PRIVATE)
-    async def add_group(entity: types.Message | types.CallbackQuery, *args, **kwargs):
+    async def add_group(entity: types.Message | types.CallbackQuery):
         await event_wrapper(RouteMap.type('add_chat'), entity)
 
     # /my_chats
@@ -120,3 +120,12 @@ def user_router(dispatcher):
         lambda call: (get_type(call) == RouteMap.type('fund')), chat_type=types.ChatType.PRIVATE)
     async def fund(call: types.CallbackQuery):
         await event_wrapper(RouteMap.type('fund'), call)
+
+    # on fund amount input
+    @dispatcher.message_handler(
+        lambda message: user_state(message) in [RouteMap.state('fund'), RouteMap.state('fund_amount')],
+        chat_type=types.ChatType.PRIVATE)
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.type('fund_amount'), chat_type=types.ChatType.PRIVATE)
+    async def my_chats(entity: types.Message | types.CallbackQuery):
+        await event_wrapper(RouteMap.type('fund_amount'), entity)

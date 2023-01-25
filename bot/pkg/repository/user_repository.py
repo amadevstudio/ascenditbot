@@ -1,3 +1,5 @@
+from typing import Any
+
 from pkg.repository.database_connection import Database
 from project.types import UserInterface
 
@@ -17,6 +19,10 @@ def register_or_update_by_service_id(user_data: UserInterface) -> int:
     user = db.update_model('users', user_data)
 
     return user['id']
+
+
+def find_by(fields_value: dict[str, Any]) -> UserInterface:
+    return db.find_model('users', fields_value)
 
 
 def get_id_by_service_id(service_id: str) -> int | None:
