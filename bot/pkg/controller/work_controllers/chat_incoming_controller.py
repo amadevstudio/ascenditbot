@@ -30,3 +30,5 @@ async def incoming_chat_message(message: types.Message):
         await message.delete()
     except utils.exceptions.MessageToDeleteNotFound:
         pass
+    except utils.exceptions.MessageCantBeDeleted:
+        pass
