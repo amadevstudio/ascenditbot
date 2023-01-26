@@ -10,6 +10,8 @@ services:
     networks:
       - data-db-network
       - storage-network
+    ports:
+      - "3000:3000"
     env_file:
       - env/.env
       - env/.env.dev

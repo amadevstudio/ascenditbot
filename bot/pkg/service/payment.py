@@ -1,4 +1,4 @@
-from lib.payment.payment import CallableInterface, PaymentProcessor
+from lib.payment.payment import CallableInterface, PaymentProcessor, PaymentServer
 from lib.payment.services.robokassa import RobokassaPaymentProcessor
 from pkg.config.config import environment
 from pkg.service.service import Service
@@ -18,6 +18,9 @@ payment_processors: dict[str, PaymentProcessor] = {
         'password_1': environment['ROBOKASSA_PAYMENT_P1'],
     }, IncomingPayment.incoming_subscription)
 }
+
+
+server = PaymentServer(3000, list(payment_processors.values()))
 
 
 class Payment(Service):

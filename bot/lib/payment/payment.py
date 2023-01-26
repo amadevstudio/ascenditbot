@@ -1,6 +1,10 @@
+import asyncio
+import concurrent
 import json
 from abc import ABC, abstractmethod
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Callable, NoReturn, Literal
+from aiohttp import web
 
 from project import constants
 from project.types import ErrorDictInterface
@@ -35,11 +39,23 @@ class PaymentServer:
         self.port = port
         self.payment_processors = payment_processors
 
-        self.start_server()
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.start_server())
 
-    def start_server(self):
-        # TODO
-        pass
+    async def handle(self, request):
+        name = request.match_info.get('name', "Anonymous")
+        text = "Hello, " + name
+        print('Request served!')
+        return web.Response(text=text)
+
+    async def start_server(self):
+        app = web.Application()
+        app.add_routes([web.get('/', self.handle),
+                        web.get('/{name}', self.handle)])
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, '0.0.0.0', self.port)
+        await site.start()
 
     def incoming_package(self, package: str):
         decoded_package = self.decode_package(package)
