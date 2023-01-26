@@ -23,7 +23,8 @@ class RobokassaPaymentProcessor(PaymentProcessor):
             self, sum: int, user_id: int, currency: str, culture: str = None, test: bool = False) -> str:
         inv_id = 0  # max 2^31 - 1
 
-        payment_password = (self.credentials['password_1'] if not test else self.credentials['password_1_test'])
+        # payment_password = (self.credentials['password_1'] if not test else self.credentials['password_1_test'])
+        payment_password = self.credentials['password_1']
 
         secure_seed = f"{self.credentials['login']}" \
                       f":{sum}" \
