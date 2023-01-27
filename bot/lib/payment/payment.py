@@ -3,11 +3,12 @@ import concurrent
 import json
 from abc import ABC, abstractmethod
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from typing import Callable, NoReturn, Literal
+from typing import Callable, NoReturn, Literal, TypedDict
 from aiohttp import web
 
-from project import constants
-from project.types import ErrorDictInterface
+
+class ErrorDictInterface(TypedDict, total=False):
+    error: str
 
 
 class CallableInterface(ErrorDictInterface, total=False):
@@ -30,8 +31,7 @@ class PaymentProcessor(ABC):
 
     @abstractmethod
     def generate_payment_link(
-            self, amount: float, user_id: int, currency: str,
-            culture: str = constants.default_currency, test: bool = False) -> str: pass
+            self, amount: float, user_id: int, currency: str, culture: str) -> str | ErrorDictInterface: pass
 
 
 class PaymentServer:

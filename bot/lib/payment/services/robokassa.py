@@ -1,7 +1,7 @@
 import hashlib
 from typing import Literal
 
-from lib.payment.payment import PaymentProcessor
+from lib.payment.payment import PaymentProcessor, ErrorDictInterface
 
 
 class RobokassaPaymentProcessor(PaymentProcessor):
