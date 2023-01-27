@@ -5,6 +5,7 @@ services:
       context: ./bot
       dockerfile: Dockerfile
       # target: dev
+    restart: on-failure
     volumes:
       - ./bot:/usr/src/bot
     networks:
@@ -25,6 +26,7 @@ services:
 
   db:
     image: postgres:15.1-alpine
+    restart: on-failure
     volumes:
       - ./database/postgresql/data:/var/lib/postgresql/data
     networks:
@@ -67,6 +69,7 @@ services:
       context: ./redis
       dockerfile: Dockerfile
       target: base
+    restart: on-failure
     volumes:
       - ./redis/redis-data:/var/lib/redis
 #      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
