@@ -26,13 +26,17 @@ class RobokassaPaymentProcessor(PaymentProcessor):
         # payment_password = (self.credentials['password_1'] if not test else self.credentials['password_1_test'])
         payment_password = self.credentials['password_1']
 
+        is_test = self.credentials['test']
+
+        use_currency = currency != 'rub'
+
         secure_seed = f"{self.credentials['login']}" \
                       f":{sum}" \
                       f":{inv_id}" \
-                      f":{currency}" \
-                      f":{payment_password}" \
-                      f":Shp_Sum={sum}" \
+                      + (f":{currency}" if use_currency else '') \
+                      + f":{payment_password}" \
                       f":Shp_Currency={currency}" \
+                      f":Shp_Sum={sum}" \
                       f":Shp_UserId={user_id}"
         signature = hashlib.md5(secure_seed.encode()).hexdigest()
 
@@ -43,9 +47,9 @@ class RobokassaPaymentProcessor(PaymentProcessor):
                f"Encoding=utf-8&" \
                f"Description={user_id}&" \
                f"OutSum={sum}&" \
-               f"OutSumCurrency={currency}&" \
+               + (f"OutSumCurrency={currency}&" if use_currency else '') \
+               + f"Shp_Currency={currency}&" \
                f"Shp_Sum={sum}&" \
-               f"Shp_Currency={currency}&" \
                f"Shp_UserId={user_id}&" \
                f"SignatureValue={signature}&" \
-            + ("&IsTest=1" if test else "")
+            + ("&IsTest=1" if is_test else "")
