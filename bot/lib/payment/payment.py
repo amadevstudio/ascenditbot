@@ -16,6 +16,8 @@ class CallableInterface(ErrorDictInterface, total=False):
 
 
 class PaymentProcessor(ABC):
+    AVAILABLE_CURRENCIES = []
+
     def __init__(
             self, credentials: dict, callback: Callable[[CallableInterface], NoReturn]):
         self.credentials = credentials

@@ -5,17 +5,24 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class EnvironmentInterface(TypedDict):
+    ENVIRONMENT: str
+
     TELEGRAM_BOT_TOKEN: str
+
     REDIS_PASSWORD: str
+
     POSTGRES_DB: str
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
+
     ROBOKASSA_LOGIN: str
     ROBOKASSA_PAYMENT_P1: str
     ROBOKASSA_PAYMENT_P2: str
 
 
 environment: EnvironmentInterface = {
+    'ENVIRONMENT': os.environ['ENVIRONMENT'],
+
     'TELEGRAM_BOT_TOKEN': os.environ['TELEGRAM_BOT_TOKEN'],
 
     'REDIS_PASSWORD': os.environ['REDIS_PASSWORD'],

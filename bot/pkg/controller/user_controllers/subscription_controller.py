@@ -11,6 +11,7 @@ from pkg.service.payment import Payment
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
 from pkg.service.user_storage import UserStorage
+from pkg.system.logger import logger
 from pkg.template.tariff.common import build_subscription_info, channels_count_text
 
 
@@ -157,13 +158,14 @@ async def fund_link_page(call: types.CallbackQuery, message: types.Message, chan
     fund_service = Payment.get_fund_service()
 
     if call is not None:
-        is_test = False
         summa = state_data.decode_call_data(call).get('value', 0)
     else:
-        is_test, summa = Payment.is_test(message.text)
+        summa = message.text  # Payment.is_test
 
     try:
         amount = float(summa)
+        if amount <= 0:
+            raise ValueError("The amount must be greater than zero")
     except Exception:
         await notify(call, message, localization.get_message(
             ['subscription', 'fund', 'errors', 'wrong_amount'], message.from_user.language_code))
@@ -172,7 +174,12 @@ async def fund_link_page(call: types.CallbackQuery, message: types.Message, chan
     user = User.find_by_service_id(message.chat.id)
     user_currency_code = Tariff.currency_code_for_user(user['id'])
 
-    fund_link = Payment.generate_payment_link(amount, user, user_currency_code, fund_service, is_test)
+    fund_link = Payment.generate_payment_link(amount, user, user_currency_code, fund_service)
+    if isinstance(fund_link, dict) and 'error' in fund_link:
+        await notify(call, message, localization.get_message(
+            ['subscription', 'fund', 'errors', 'wrong_currency'], message.from_user.language_code))
+        logger.warn(f"Wrong currency for user with id #{user['id']}, #{user_currency_code}")
+        return
 
     message_text = localization.get_message(
             ['subscription', 'fund', 'fund_link_message'], message.from_user.language_code, link=fund_link)

@@ -5,6 +5,8 @@ from lib.payment.payment import PaymentProcessor, ErrorDictInterface
 
 
 class RobokassaPaymentProcessor(PaymentProcessor):
+    AVAILABLE_CURRENCIES = ['rub', 'usd', 'eur', 'kzt']
+
     def validate_package(self, package: dict) -> bool:
         # TODO
         return True
@@ -20,8 +22,11 @@ class RobokassaPaymentProcessor(PaymentProcessor):
             self.callback({'error': 'error'})
 
     def generate_payment_link(
-            self, sum: int, user_id: int, currency: str, culture: str = None, test: bool = False) -> str:
+            self, sum: int, user_id: int, currency: str, culture: str = None) -> str | ErrorDictInterface:
         inv_id = 0  # max 2^31 - 1
+
+        if currency not in self.AVAILABLE_CURRENCIES:
+            return {'error': 'currency_not_available'}
 
         # payment_password = (self.credentials['password_1'] if not test else self.credentials['password_1_test'])
         payment_password = self.credentials['password_1']
