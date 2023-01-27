@@ -1,6 +1,4 @@
 -- migrate:up
-create database ascenditbot;
-
 create table users (
     id bigserial primary key not null,
     service_id varchar(255) not null,
