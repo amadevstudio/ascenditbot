@@ -3,7 +3,7 @@ import concurrent
 import json
 from abc import ABC, abstractmethod
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from typing import Callable, NoReturn, Literal, TypedDict
+from typing import Callable, NoReturn, Literal, TypedDict, Awaitable
 from aiohttp import web
 
 from lib.python.logger import Logger
@@ -23,7 +23,7 @@ class PaymentProcessor(ABC):
     AVAILABLE_CURRENCIES = []
 
     def __init__(
-            self, credentials: dict, incoming_payment_callback: Callable[[CallableInterface], NoReturn],
+            self, credentials: dict, incoming_payment_callback: Callable[[CallableInterface], Awaitable[NoReturn]],
             logger: Logger = None):
         self.credentials = credentials
         self.incoming_payment_callback = incoming_payment_callback
