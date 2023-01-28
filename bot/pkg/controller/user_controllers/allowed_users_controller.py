@@ -145,6 +145,10 @@ async def show(call: types.CallbackQuery, message: types.message, change_user_st
 
     chat_info = await Chat.load_info(call.bot, str(chat_state_data['service_id']))
 
+    if 'error' in chat_info:
+        await notify(call, message, localization.get_message(
+            ['chat', 'errors', 'not_found_tg'], message.from_user.language_code))
+
     message_text = localization.get_message(
         ['allowed_user', 'show', 'text'], message.from_user.language_code,
         chat_name=chat_info['title'], nickname=allowed_user_data['nickname'])

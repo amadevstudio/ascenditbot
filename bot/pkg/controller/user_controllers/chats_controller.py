@@ -57,6 +57,9 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
             return
 
     chat_info = await Chat.load_info(message.bot, chat_service_id=str(chat_service_id))
+    if 'error' in chat_info:
+        await notify(call, message, localization.get_message(
+            ['chat', 'errors', 'not_found_tg'], message.from_user.language_code))
 
     button = types.InlineKeyboardButton(
         localization.get_message(['buttons', 'go_to_settings'], message.from_user.language_code),
@@ -111,13 +114,17 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     for chat_data in user_chat_page_data['data']:
         chat_info = await Chat.load_info(message.bot, chat_service_id=str(chat_data['service_id']))
 
-        button_text = localization.get_message(
-            [
-                'my_chats', 'list', 'chat_button',
-                'active' if (chat_data['active'] and not chat_data['disabled'])
-                else ('disabled' if chat_data['disabled'] else 'inactive')
-            ],
-            message.from_user.language_code, chat_name=chat_info['title'])
+        if 'error' not in chat_info:
+            button_text = localization.get_message(
+                [
+                    'my_chats', 'list', 'chat_button',
+                    'active' if (chat_data['active'] and not chat_data['disabled'])
+                    else ('disabled' if chat_data['disabled'] else 'inactive')
+                ],
+                message.from_user.language_code, chat_name=chat_info['title'])
+        else:
+            button_text = localization.get_message(
+                ['my_chats', 'list', 'chat_button', 'not_found_tg'], message.from_user.language_code)
 
         button_data = {'tp': 'chat', 'id': chat_data['id']}
 
@@ -156,6 +163,10 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
         return
 
     chat_info = await Chat.load_info(call.bot, str(chat_data['service_id']))
+
+    if 'error' in chat_info:
+        await notify(call, message, localization.get_message(
+            ['chat', 'errors', 'not_found_tg'], message.from_user.language_code))
 
     message_text = localization.get_message(
         ['chat', 'show', 'text'], message.from_user.language_code, chat_name=chat_info['title'])

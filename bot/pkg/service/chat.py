@@ -131,8 +131,12 @@ class Chat(Service):
 
     @staticmethod
     async def load_info(bot: aiogram.bot.bot.Bot, chat_service_id: str) \
-            -> TypedDict('_', {'service_id': str, 'title': str}):
-        chat_info: types.Chat = await bot.get_chat(chat_service_id)
+            -> TypedDict('_', {'service_id': str, 'title': str}) | ErrorDictInterface:
+        try:
+            chat_info: types.Chat = await bot.get_chat(chat_service_id)
+        except aiogram.utils.exceptions.ChatNotFound:
+            return {'error': "chat_not_found"}
+
         return {
             'service_id': str(chat_info['id']),
             'title': chat_info['title']
