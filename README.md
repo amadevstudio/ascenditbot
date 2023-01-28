@@ -5,9 +5,9 @@ Telegram whitelist bot for a chats
 
 - `touch env/.env.local` and set variables:
   - *TELEGRAM_BOT_TOKEN*
-- `docker-compose build`
-- `docker-compose up`
-- `docker-compose run migrator -e POSTGRES_URL up`
+- `docker compose build`
+- `docker compose up`
+- `docker compose run migrator -e POSTGRES_URL up`
 - `sudo chmod u+x scripts/own_project.sh && ./scripts/own_project.sh`
 
 ### Pycharm
@@ -21,9 +21,9 @@ Telegram whitelist bot for a chats
 
 ### Fast developing (deprecated because auto-reload added)
 Run compose and stop the bot container  
-`docker-compose up`  
+`docker compose up`  
 Then in new terminal run  
-`docker-compose stop bot && docker-compose run --rm bot`  
+`docker compose stop bot && docker compose run --rm bot`  
 works like a ⚡️
 
 ### After generate files using Docker
@@ -39,10 +39,10 @@ as migration engine.
 __TODO: Production migrations runs automatically.__
 
 Create new migration with  
-`docker-compose run migrator -e POSTGRES_URL new create_users_table`  
+`docker compose run migrator -e POSTGRES_URL new create_users_table`  
 Migrate with  
-`docker-compose run migrator -e POSTGRES_URL migrate`  
+`docker compose run migrator -e POSTGRES_URL migrate`  
 View help and rest of the commands with  
-`docker-compose run migrator --help`
+`docker compose run migrator --help`
 
 Don't forget to own the project.
