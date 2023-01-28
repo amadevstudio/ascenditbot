@@ -51,6 +51,7 @@ payment_processors: dict[str, PaymentProcessor] = {
     'robokassa.ru': robokassa.RobokassaPaymentProcessor({
         'login': environment['ROBOKASSA_LOGIN'],
         'password_1': environment['ROBOKASSA_PAYMENT_P1'],
+        'password_2': environment['ROBOKASSA_PAYMENT_P2'],
         'test': False if environment['ENVIRONMENT'] == 'production' else True
     }, IncomingPayment.incoming_subscription)
 }
