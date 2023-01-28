@@ -40,8 +40,8 @@ def _tariff_prices_for_user_selection() -> str:
         -- Take currency from user if connection not exists only
         (
             (tp.currency_code = utc.currency_code
-                -- OR (tp.currency_code = lccc.currency_code AND utc.currency_code IS NULL)
-                -- OR (tp.currency_code = 'usd' AND utc.currency_code IS NULL AND lccc.currency_code IS NULL)
+                OR (tp.currency_code = lccc.currency_code AND utc.currency_code IS NULL)
+                OR (tp.currency_code = 'usd' AND utc.currency_code IS NULL AND lccc.currency_code IS NULL)
             )
             OR tp.currency_code IS NULL
         )
