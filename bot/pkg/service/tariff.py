@@ -28,7 +28,7 @@ class Tariff(Service):
         return tariff_info
 
     @staticmethod
-    def user_amount(price: int, accuracy: int = 0, ndigits: int = 0) -> float:
+    def user_amount(price: int, accuracy: int = 0, ndigits: int = 2) -> float:
         return round((int(price) + int(accuracy)) / 100, ndigits)
 
     @staticmethod
