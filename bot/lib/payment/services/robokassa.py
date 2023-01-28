@@ -28,7 +28,7 @@ class RobokassaPaymentProcessor(PaymentProcessor):
     def validate_package(self, package: dict, service: str) -> bool:
         return service == 'robokassa'
 
-    def process_package(self, package_params: PackageParams) -> str:
+    async def process_package(self, package_params: PackageParams) -> str:
         out_sum = package_params.get('OutSum', '')
         inv_id = package_params.get('InvId', '')
         currency = package_params.get('Shp_Currency', '')
@@ -50,10 +50,10 @@ class RobokassaPaymentProcessor(PaymentProcessor):
 
         if result:
             result_text = f"OK{inv_id}"
-            self.incoming_payment_callback({'amount': result_summ, 'currency': currency, 'user_id': int(user_id)})
+            await self.incoming_payment_callback({'amount': result_summ, 'currency': currency, 'user_id': int(user_id)})
         else:
             result_text = 'BAD'
-            self.incoming_payment_callback({'error': 'wrong_signature', 'user_id': int(user_id)})
+            await self.incoming_payment_callback({'error': 'wrong_signature', 'user_id': int(user_id)})
             self.log('wrong_signature', package_params, signature)
 
         return result_text

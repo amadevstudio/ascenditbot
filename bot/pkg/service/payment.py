@@ -15,20 +15,20 @@ class IncomingPayment(Service):
     BOT = bot.bot
 
     @staticmethod
-    def incoming_subscription(result: CallableInterface):
+    async def incoming_subscription(result: CallableInterface):
         user: UserInterface = User.get_by_id(result['user_id'])
         language_code = user['language_code']
 
         if 'error' in result:
-            IncomingPayment.BOT.send_message(user['service_id'], localization.get_message(
+            await IncomingPayment.BOT.send_message(user['service_id'], localization.get_message(
                 ['subscription', 'fund', 'errors', 'wrong_signature'], language_code))
             logger.warn('Error wrong_signature', result, user, result['error'])
             return
 
         user_tariff_info = Tariff.user_tariff_info(user['id'])
 
-        if user_tariff_info is None or user_tariff_info != result['currency']:
-            IncomingPayment.BOT.send_message(user['service_id'], localization.get_message(
+        if user_tariff_info is None or user_tariff_info['currency_code'] != result['currency']:
+            await IncomingPayment.BOT.send_message(user['service_id'], localization.get_message(
                 ['subscription', 'fund', 'errors', 'wrong_currency_income'], language_code))
             logger.warn('Error wrong_currency_income', result, user, user_tariff_info)
             return
@@ -44,7 +44,7 @@ class IncomingPayment(Service):
         success_message += "\n\n" + localization.get_message(['tariffs', 'current'], language_code) \
                            + "\n" + build_subscription_info(new_user_tariff_info, language_code)
 
-        IncomingPayment.BOT.send_message(user['service_id'], success_message)
+        await IncomingPayment.BOT.send_message(user['service_id'], success_message)
 
 
 payment_processors: dict[str, PaymentProcessor] = {

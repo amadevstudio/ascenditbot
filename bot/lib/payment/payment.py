@@ -42,7 +42,8 @@ class PaymentProcessor(ABC):
     def validate_package(self, package: dict, service: str) -> bool: pass
 
     # Ensure sign validity, notify user
-    def process_package(self, package_params: dict) -> str: pass
+    @abstractmethod
+    async def process_package(self, package_params: dict) -> str: pass
 
     @abstractmethod
     def generate_payment_link(
@@ -75,7 +76,7 @@ class PaymentServer:
         decoded_package_params = self.decode_package(package)
         for payment_processor in self.payment_processors:
             if payment_processor.validate_package(decoded_package_params, service):
-                return payment_processor.process_package(decoded_package_params)
+                return await payment_processor.process_package(decoded_package_params)
 
         return None
 
