@@ -49,22 +49,25 @@ class PaymentServer:
         loop = asyncio.get_event_loop()
         loop.create_task(self.start_server())
 
-    async def handle(self, request):
-        # result_url = request.match_info.get('result', "fail")
-        result_text = self.incoming_package(request)
-        if result_text is not None:
-            return web.Response(text=result_text)
+    async def handle(self, request: web.BaseRequest):
+        # result_url = request.match_info.get('result', "fail")  # web.get('/payment/{result}', self.handle)
+        answer_text = await self.incoming_package(request)
+        if answer_text is not None:
+            return web.Response(text=answer_text)
 
     async def start_server(self):
         app = web.Application()
-        app.add_routes([web.get('/payment/{result}', self.handle)])
+        app.add_routes([web.get('/payment/result', self.handle)])
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', self.port)
         await site.start()
 
-    def incoming_package(self, package: str) -> str | None:
-        decoded_package = self.decode_package(package)
+    async def incoming_package(self, package: web.BaseRequest) -> str | None:
+        print("\n\n\n\n\n\n")
+        print(package.rel_url.query)
+        print(await package.text())
+        decoded_package = await self.decode_package(package)
         for payment_processor in self.payment_processors:
             if payment_processor.validate_package(decoded_package):
                 return payment_processor.process_package(decoded_package)
@@ -72,5 +75,5 @@ class PaymentServer:
         return None
 
     @staticmethod
-    def decode_package(package: str) -> dict:
-        return json.loads(package)
+    async def decode_package(package: web.BaseRequest) -> dict:
+        return await package.json()
