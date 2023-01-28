@@ -270,3 +270,11 @@ def update_user_moderated_chats(user_id: int, offset: int | None):
             LIMIT %s
         )
     """, (user_id, offset,), cursor=cursor)
+
+
+def increase_amount(user_id: int, amount: int) -> int:
+    return db.execute("""
+        UPDATE user_tariff_connections
+        SET balance = balance + %s
+        WHERE user_id = %s
+    """, (amount, user_id,), returning='balance')['balance']

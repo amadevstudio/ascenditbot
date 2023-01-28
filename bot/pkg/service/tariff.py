@@ -124,6 +124,10 @@ class Tariff(Service):
         return tariff_repository.update_subscription(new_subscription)
 
     @staticmethod
+    def add_amount(user_id: int, amount: int) -> int:
+        return tariff_repository.increase_amount(user_id, amount)
+
+    @staticmethod
     def chats_number_satisfactory(user_chat_id: int) -> bool:
         return tariff_repository.chats_number_satisfactory(str(user_chat_id))
 

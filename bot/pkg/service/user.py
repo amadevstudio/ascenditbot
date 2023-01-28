@@ -15,6 +15,11 @@ class User(Service):
     # TODO: Analytics on every income message
     # def in_message(chat_id: int):
     #     pass
+
+    @staticmethod
+    def get_by_id(user_id: int) -> UserInterface | None:
+        return user_repository.find_by({'id': user_id})
+
     @staticmethod
     def get_id_by_service_id(user_chat_id: int) -> int | None:
         return user_repository.get_id_by_service_id(str(user_chat_id))

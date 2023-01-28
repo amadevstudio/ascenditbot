@@ -15,6 +15,8 @@ class ErrorDictInterface(TypedDict, total=False):
 
 class CallableInterface(ErrorDictInterface, total=False):
     amount: int
+    currency: str
+    user_id: int
 
 
 class PaymentProcessor(ABC):
@@ -31,10 +33,10 @@ class PaymentProcessor(ABC):
 
     # Validate package belongs to service
     @abstractmethod
-    def validate_package(self, package: dict) -> bool: pass
+    def validate_package(self, package: dict, service: str) -> bool: pass
 
     # Ensure sign validity, notify user
-    def process_package(self, package: dict) -> str: pass
+    def process_package(self, package_params: dict) -> str: pass
 
     @abstractmethod
     def generate_payment_link(
@@ -50,31 +52,27 @@ class PaymentServer:
         loop.create_task(self.start_server())
 
     async def handle(self, request: web.BaseRequest):
-        # result_url = request.match_info.get('result', "fail")  # web.get('/payment/{result}', self.handle)
-        answer_text = await self.incoming_package(request)
+        service = request.match_info.get('service', "")
+        answer_text = await self.incoming_package(request, service)
         if answer_text is not None:
             return web.Response(text=answer_text)
 
     async def start_server(self):
         app = web.Application()
-        app.add_routes([web.get('/payment/result', self.handle)])
+        app.add_routes([web.get('/payment/{service}/result/', self.handle)])
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', self.port)
         await site.start()
 
-    async def incoming_package(self, package: web.BaseRequest) -> str | None:
-        print("\n\n\n\n\n\n")
-        print("!!!!!!!!!!!!!!!")
-        print(package.rel_url.query)
-        print(await package.text())
-        decoded_package = await self.decode_package(package)
+    async def incoming_package(self, package: web.BaseRequest, service: str) -> str | None:
+        decoded_package_params = self.decode_package(package)
         for payment_processor in self.payment_processors:
-            if payment_processor.validate_package(decoded_package):
-                return payment_processor.process_package(decoded_package)
+            if payment_processor.validate_package(decoded_package_params, service):
+                return payment_processor.process_package(decoded_package_params)
 
         return None
 
     @staticmethod
-    async def decode_package(package: web.BaseRequest) -> dict:
-        return await package.json()
+    def decode_package(package: web.BaseRequest) -> dict:
+        return dict(package.rel_url.query)

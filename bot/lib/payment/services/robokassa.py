@@ -1,32 +1,64 @@
 import hashlib
+from typing import TypedDict
 
 from lib.payment.payment import PaymentProcessor, ErrorDictInterface
+
+
+class PackageParams(TypedDict, total=False):
+    out_summ: str  # '930.73' Always in rubbles
+    OutSum: str  # '930.73' Always in rubbles
+    inv_id: str  # '3'
+    InvId: str  # '3'
+    crc: str  # 'BBAFFB...'
+    SignatureValue: str  # 'BBAFFB...'
+    PaymentMethod: str  # 'Qiwi'
+    IncSum: str  # '970.73' Always in rubbles
+    IncCurrLabel: str  # Payment currency, 'Qiwi40PS'
+    IsTest: str  # '1'
+    EMail: str  # ''
+    Fee: str  # '0.0'
+    Shp_Currency: str  # 'usd' Currency set by the project
+    Shp_Sum: str  # '14.0'
+    Shp_UserId: str  # '3'
 
 
 class RobokassaPaymentProcessor(PaymentProcessor):
     AVAILABLE_CURRENCIES = ['rub', 'usd', 'eur', 'kzt']
 
-    def validate_package(self, package: dict) -> bool:
-        print("Incoming package")
-        print(package)
-        return True
+    def validate_package(self, package: dict, service: str) -> bool:
+        return service == 'robokassa'
 
-    def process_package(self, package: dict) -> str:
-        # TODO validate
-        result_text = '...'  # TODO
+    def process_package(self, package_params: PackageParams) -> str:
+        out_sum = package_params.get('OutSum', '')
+        inv_id = package_params.get('InvId', '')
+        currency = package_params.get('Shp_Currency', '')
+        summ = package_params.get('Shp_Sum', '')
+        user_id = package_params.get('Shp_UserId', '')
 
-        result = True
-        amount = 100
+        secure_seed = f"{out_sum}" \
+                      f":{inv_id}" \
+                      f":{self.credentials['password_2']}" \
+                      f":Shp_Currency={currency}" \
+                      f":Shp_Sum={summ}" \
+                      f":Shp_UserId={user_id}"
+
+        signature = hashlib.md5(secure_seed.encode()).hexdigest()
+
+        result = signature == package_params.get('SignatureValue', '')
+
+        result_summ = int(float(summ) * 100)
 
         if result:
-            self.incoming_payment_callback({'amount': amount})
+            result_text = f"OK{inv_id}"
+            self.incoming_payment_callback({'amount': result_summ, 'currency': currency, 'user_id': int(user_id)})
         else:
-            self.incoming_payment_callback({'error': 'error'})
+            result_text = 'BAD'
+            self.incoming_payment_callback({'error': 'wrong_signature'})
 
         return result_text
 
     def generate_payment_link(
-            self, sum: int, user_id: int, currency: str, culture: str = None) -> str | ErrorDictInterface:
+            self, summ: int, user_id: int, currency: str, culture: str = None) -> str | ErrorDictInterface:
         inv_id = 0  # max 2^31 - 1
 
         if currency not in self.AVAILABLE_CURRENCIES:
@@ -40,12 +72,12 @@ class RobokassaPaymentProcessor(PaymentProcessor):
         use_currency = currency != 'rub'
 
         secure_seed = f"{self.credentials['login']}" \
-                      f":{sum}" \
+                      f":{summ}" \
                       f":{inv_id}" \
                       + (f":{currency}" if use_currency else '') \
                       + f":{payment_password}" \
                       f":Shp_Currency={currency}" \
-                      f":Shp_Sum={sum}" \
+                      f":Shp_Sum={summ}" \
                       f":Shp_UserId={user_id}"
         signature = hashlib.md5(secure_seed.encode()).hexdigest()
 
@@ -55,10 +87,10 @@ class RobokassaPaymentProcessor(PaymentProcessor):
                f"Culture={culture}&" \
                f"Encoding=utf-8&" \
                f"Description={user_id}&" \
-               f"OutSum={sum}&" \
+               f"OutSum={summ}&" \
                + (f"OutSumCurrency={currency}&" if use_currency else '') \
                + f"Shp_Currency={currency}&" \
-               f"Shp_Sum={sum}&" \
+               f"Shp_Sum={summ}&" \
                f"Shp_UserId={user_id}&" \
                f"SignatureValue={signature}&" \
             + ("&IsTest=1" if is_test else "")
