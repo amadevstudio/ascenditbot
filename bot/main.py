@@ -2,6 +2,7 @@ from lib.language import localization
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.background.async_tasks.main_handler import on_bot_startup
 from pkg.config.config import environment
+from pkg.controller import bot
 
 from pkg.controller.router import init_routes
 
@@ -26,10 +27,11 @@ database_configuration = {
 }
 database_connection = Database().connect(database_configuration)
 
-
 NavigationBuilder(localization.get_message, ["navigation_builder"])
 
-executor, dp = init_routes(environment)
+
+dp = bot.dispatcher
+executor, dp = init_routes(dp)
 
 
 if __name__ == "__main__":

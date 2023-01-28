@@ -1,11 +1,13 @@
 from lib.payment.payment import CallableInterface, PaymentProcessor, PaymentServer
 from lib.payment.services import robokassa
 from pkg.config.config import environment
+from pkg.controller import bot
 from pkg.service.service import Service
 from project.types import UserInterface
 
 
 class IncomingPayment(Service):
+    BOT = bot.bot
     @staticmethod
     def incoming_subscription(result: CallableInterface):
         # TODO

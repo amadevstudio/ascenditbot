@@ -1,18 +1,13 @@
-from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import Update
+from aiogram import executor, types
 
-from framework.controller.router_tools import get_type, user_state, event_wrapper, event_action_wrapper
+from framework.controller.router_tools import get_type
 from framework.controller import state_navigator
-from pkg.config.routes import RouteMap
 from pkg.controller.middlewares import NoWhereInputProcessorMiddleware
 from pkg.controller.routers.user_router import user_router
 from pkg.controller.routers.work_router import work_router
 
 
-def init_routes(environment):
-    bot = Bot(token=environment['TELEGRAM_BOT_TOKEN'])
-    dispatcher = Dispatcher(bot)
-
+def init_routes(dispatcher):
     dispatcher.middleware.setup(NoWhereInputProcessorMiddleware())
 
     # !!!

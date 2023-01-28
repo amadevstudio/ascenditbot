@@ -6,6 +6,8 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Callable, NoReturn, Literal, TypedDict
 from aiohttp import web
 
+from lib.python.logger import Logger
+
 
 class ErrorDictInterface(TypedDict, total=False):
     error: str
@@ -19,17 +21,20 @@ class PaymentProcessor(ABC):
     AVAILABLE_CURRENCIES = []
 
     def __init__(
-            self, credentials: dict, callback: Callable[[CallableInterface], NoReturn]):
+            self, credentials: dict, incoming_payment_callback: Callable[[CallableInterface], NoReturn],
+            logger: Logger = None):
         self.credentials = credentials
-        self.callback = callback
+        self.incoming_payment_callback = incoming_payment_callback
+
+        # self.logger = logger if logger is not None else Logger()
+        # TODO: logger initiation
 
     # Validate package belongs to service
     @abstractmethod
     def validate_package(self, package: dict) -> bool: pass
 
     # Ensure sign validity, notify user
-    @staticmethod
-    def process_package(self, package: dict): pass
+    def process_package(self, package: dict) -> str: pass
 
     @abstractmethod
     def generate_payment_link(
@@ -45,26 +50,26 @@ class PaymentServer:
         loop.create_task(self.start_server())
 
     async def handle(self, request):
-        name = request.match_info.get('name', "Anonymous")
-        text = "Hello, " + name
-        print('Request served!')
-        return web.Response(text=text)
+        # result_url = request.match_info.get('result', "fail")
+        result_text = self.incoming_package(request)
+        if result_text is not None:
+            return web.Response(text=result_text)
 
     async def start_server(self):
         app = web.Application()
-        app.add_routes([web.get('/', self.handle),
-                        web.get('/{name}', self.handle)])
+        app.add_routes([web.get('/payment/{result}', self.handle)])
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', self.port)
         await site.start()
 
-    def incoming_package(self, package: str):
+    def incoming_package(self, package: str) -> str | None:
         decoded_package = self.decode_package(package)
         for payment_processor in self.payment_processors:
             if payment_processor.validate_package(decoded_package):
-                payment_processor.process_package(decoded_package)
-                break
+                return payment_processor.process_package(decoded_package)
+
+        return None
 
     @staticmethod
     def decode_package(package: str) -> dict:

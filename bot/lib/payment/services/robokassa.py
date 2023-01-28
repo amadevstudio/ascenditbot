@@ -1,5 +1,4 @@
 import hashlib
-from typing import Literal
 
 from lib.payment.payment import PaymentProcessor, ErrorDictInterface
 
@@ -8,18 +7,23 @@ class RobokassaPaymentProcessor(PaymentProcessor):
     AVAILABLE_CURRENCIES = ['rub', 'usd', 'eur', 'kzt']
 
     def validate_package(self, package: dict) -> bool:
-        # TODO
+        print("Incoming package")
+        print(package)
         return True
 
-    def process_package(self, package: dict):
-        # TODO
+    def process_package(self, package: dict) -> str:
+        # TODO validate
+        result_text = '...'  # TODO
+
         result = True
         amount = 100
 
         if result:
-            self.callback({'amount': amount})
+            self.incoming_payment_callback({'amount': amount})
         else:
-            self.callback({'error': 'error'})
+            self.incoming_payment_callback({'error': 'error'})
+
+        return result_text
 
     def generate_payment_link(
             self, sum: int, user_id: int, currency: str, culture: str = None) -> str | ErrorDictInterface:
