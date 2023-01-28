@@ -65,6 +65,7 @@ class PaymentServer:
 
     async def incoming_package(self, package: web.BaseRequest) -> str | None:
         print("\n\n\n\n\n\n")
+        print("!!!!!!!!!!!!!!!")
         print(package.rel_url.query)
         print(await package.text())
         decoded_package = await self.decode_package(package)
