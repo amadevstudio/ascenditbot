@@ -42,9 +42,9 @@ class RobokassaPaymentProcessor(PaymentProcessor):
                       f":Shp_Sum={summ}" \
                       f":Shp_UserId={user_id}"
 
-        signature = hashlib.md5(secure_seed.encode()).hexdigest()
+        signature = hashlib.md5(secure_seed.encode()).hexdigest().upper()
 
-        result = signature == package_params.get('SignatureValue', '')
+        result = (signature == package_params.get('SignatureValue', ''))
 
         result_summ = int(float(summ) * 100)
 
@@ -53,7 +53,8 @@ class RobokassaPaymentProcessor(PaymentProcessor):
             self.incoming_payment_callback({'amount': result_summ, 'currency': currency, 'user_id': int(user_id)})
         else:
             result_text = 'BAD'
-            self.incoming_payment_callback({'error': 'wrong_signature'})
+            self.incoming_payment_callback({'error': 'wrong_signature', 'user_id': int(user_id)})
+            self.log('wrong_signature', package_params, signature)
 
         return result_text
 

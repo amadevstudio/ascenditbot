@@ -28,8 +28,14 @@ class PaymentProcessor(ABC):
         self.credentials = credentials
         self.incoming_payment_callback = incoming_payment_callback
 
-        # self.logger = logger if logger is not None else Logger()
+        self.logger = logger
         # TODO: logger initiation
+
+    def log(self, *args):
+        if self.logger is not None:
+            self.logger.warn(str(self.__class__), *args)
+        else:
+            print(str(self.__class__), *args)
 
     # Validate package belongs to service
     @abstractmethod

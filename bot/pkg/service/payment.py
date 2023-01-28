@@ -53,7 +53,7 @@ payment_processors: dict[str, PaymentProcessor] = {
         'password_1': environment['ROBOKASSA_PAYMENT_P1'],
         'password_2': environment['ROBOKASSA_PAYMENT_P2'],
         'test': False if environment['ENVIRONMENT'] == 'production' else True
-    }, IncomingPayment.incoming_subscription)
+    }, IncomingPayment.incoming_subscription, logger=logger)
 }
 
 
