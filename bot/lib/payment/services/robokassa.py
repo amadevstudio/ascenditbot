@@ -82,15 +82,15 @@ class RobokassaPaymentProcessor(PaymentProcessor):
         signature = hashlib.md5(secure_seed.encode()).hexdigest()
 
         return f"https://auth.robokassa.ru/Merchant/Index.aspx?" \
-               f"MerchantLogin={self.credentials['login']}&" \
-               f"InvId={inv_id}&" \
-               f"Culture={culture}&" \
-               f"Encoding=utf-8&" \
-               f"Description={user_id}&" \
-               f"OutSum={summ}&" \
-               + (f"OutSumCurrency={currency}&" if use_currency else '') \
-               + f"Shp_Currency={currency}&" \
-               f"Shp_Sum={summ}&" \
-               f"Shp_UserId={user_id}&" \
-               f"SignatureValue={signature}&" \
+               f"MerchantLogin={self.credentials['login']}" \
+               f"&InvId={inv_id}" \
+               f"&Culture={culture}" \
+               f"&Encoding=utf-8" \
+               f"&Description={user_id}" \
+               f"&OutSum={summ}" \
+               + (f"&OutSumCurrency={currency}" if use_currency else '') \
+               + f"&Shp_Currency={currency}" \
+               f"&Shp_Sum={summ}" \
+               f"&Shp_UserId={user_id}" \
+               f"&SignatureValue={signature}" \
             + ("&IsTest=1" if is_test else "")
