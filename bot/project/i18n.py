@@ -41,6 +41,10 @@ routed_messages = {
             'en': "",
             'ru': "Перейти к настройкам"
         },
+        'menu': {
+            'en': "",
+            'ru': "Меню",
+        },
         'my_chats': {
             'en': "",
             'ru': f"{emoji_codes.get('chat', '')} Мои группы"

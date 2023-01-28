@@ -1,3 +1,8 @@
+import json
+
+from aiogram import types
+
+from framework.controller.message_tools import chat_id_sender
 from lib.language import localization
 from lib.payment.payment import CallableInterface, PaymentProcessor, PaymentServer
 from lib.payment.services import robokassa
@@ -19,17 +24,33 @@ class IncomingPayment(Service):
         user: UserInterface = User.get_by_id(result['user_id'])
         language_code = user['language_code']
 
+        button = types.InlineKeyboardButton(localization.get_message(
+            ['buttons', 'menu'], language_code), callback_data=json.dumps({'tp': 'menu'}))
+        markup = types.InlineKeyboardMarkup().add(button)
+
         if 'error' in result:
-            await IncomingPayment.BOT.send_message(user['service_id'], localization.get_message(
-                ['subscription', 'fund', 'errors', 'wrong_signature'], language_code))
+            await chat_id_sender(
+                IncomingPayment.BOT.send_message, int(user['service_id']), message_structures=[{
+                    'type': 'text',
+                    'text': localization.get_message(
+                        ['subscription', 'fund', 'errors', 'wrong_signature'], language_code),
+                    'parse_mode': 'HTML',
+                    'reply_markup': markup
+                }])
             logger.warn('Error wrong_signature', result, user, result['error'])
             return
 
         user_tariff_info = Tariff.user_tariff_info(user['id'])
 
         if user_tariff_info is None or user_tariff_info['currency_code'] != result['currency']:
-            await IncomingPayment.BOT.send_message(user['service_id'], localization.get_message(
-                ['subscription', 'fund', 'errors', 'wrong_currency_income'], language_code))
+            await chat_id_sender(
+                IncomingPayment.BOT.send_message, int(user['service_id']), message_structures=[{
+                    'type': 'text',
+                    'text': localization.get_message(
+                        ['subscription', 'fund', 'errors', 'wrong_currency_income'], language_code),
+                    'parse_mode': 'HTML',
+                    'reply_markup': markup
+                }])
             logger.warn('Error wrong_currency_income', result, user, user_tariff_info)
             return
 
@@ -44,7 +65,14 @@ class IncomingPayment(Service):
         success_message += "\n\n" + localization.get_message(['tariffs', 'current'], language_code) \
                            + "\n" + build_subscription_info(new_user_tariff_info, language_code)
 
-        await IncomingPayment.BOT.send_message(user['service_id'], success_message)
+        message_structures = [{
+            'type': 'text',
+            'text': success_message,
+            'parse_mode': 'HTML',
+            'reply_markup': markup
+        }]
+        await chat_id_sender(
+            IncomingPayment.BOT.send_message, int(user['service_id']), message_structures=message_structures)
 
 
 payment_processors: dict[str, PaymentProcessor] = {
