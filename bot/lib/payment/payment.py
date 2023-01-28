@@ -59,7 +59,7 @@ class PaymentServer:
 
     async def start_server(self):
         app = web.Application()
-        app.add_routes([web.get('/payment/{service}/result/', self.handle)])
+        app.add_routes([web.get('/payment/{service}/result', self.handle)])
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', self.port)
