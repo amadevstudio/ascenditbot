@@ -52,7 +52,7 @@ def currency_code_for_user(user_id: int) -> str:
     result = db.fetchone(f"""
         SELECT tp.currency_code
         FROM tariff_prices AS tp
-        INNER JOIN users AS u ON (u.id = 3)
+        INNER JOIN users AS u ON (u.id = %s)
         LEFT JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
         LEFT JOIN lang_country_curr_codes AS lccc ON (lccc.language_code = u.language_code)
         WHERE {_tariff_prices_for_user_selection()}
