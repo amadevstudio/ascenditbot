@@ -13,16 +13,19 @@ from pkg.service.user import User
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 from pkg.template.tariff.common import build_subscription_info, channels_count_text
+from project import constants
 
 
 async def page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
     user_id = User.get_id_by_service_id(message.chat.id)
 
     tariff_message = localization.get_message(['subscription', 'show', 'text'], message.from_user.language_code)
-    tariff_message += localization.get_message(['tariffs', 'current'], message.from_user.language_code) + "\n\n"
+    tariff_message += "\n\n" + localization.get_message(
+        ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
+    tariff_message += "\n\n" + localization.get_message(['tariffs', 'current'], message.from_user.language_code)
 
     user_tariff_info = Tariff.user_tariff_info(user_id)
-    tariff_message += build_subscription_info(user_tariff_info, message.from_user.language_code)
+    tariff_message += "\n\n" + build_subscription_info(user_tariff_info, message.from_user.language_code)
 
     reply_markup = types.InlineKeyboardMarkup()
     choose_tariff_button = types.InlineKeyboardButton(
@@ -57,13 +60,21 @@ async def tariffs(_, message: types.Message, change_user_state=True):
     tariffs_message = localization.get_message(['tariffs', 'index'], message.from_user.language_code)
     reply_markup = types.InlineKeyboardMarkup()
 
+    tariffs_message += "\n\n" + localization.get_message(
+        ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
+
     for tariff in available_tariffs:
         if tariff['id'] != 0:
             tariff_info = localization.get_message(
-                ['tariffs', 'list', tariff['id']], message.from_user.language_code) + "\n"
-            tariff_info += f"{Tariff.user_amount(tariff['price'])} {tariff['currency_code']}\n"
-            tariff_info += channels_count_text(tariff['channels_count'], message.from_user.language_code)
-            tariffs_message += tariff_info + "\n\n"
+                ['tariffs', 'list', tariff['id']], message.from_user.language_code) + ", "
+
+            per_days_message = f"/ {constants.tariff_duration_days} " + localization.get_numerical_declension_message(
+                ['subscription', 'info_block', 'days_countable'], message.from_user.language_code,
+                constants.tariff_duration_days)
+
+            tariff_info += f"{Tariff.user_amount(tariff['price'])} {tariff['currency_code']} {per_days_message}, "
+            tariff_info += channels_count_text(tariff['channels_count'], message.from_user.language_code).lower()
+            tariffs_message += "\n\n" + tariff_info
 
         tariff_button_text = localization.get_message(
             ['tariffs', 'list', tariff['id']], message.from_user.language_code)
@@ -73,8 +84,8 @@ async def tariffs(_, message: types.Message, change_user_state=True):
         reply_markup.add(types.InlineKeyboardButton(
             tariff_button_text, callback_data=json.dumps({'tp': 'change_tariff', 'id': tariff['id']})))
 
-    tariffs_message += localization.get_message(['tariffs', 'current'], message.from_user.language_code) + "\n"
-    tariffs_message += build_subscription_info(user_tariff_info, message.from_user.language_code)
+    tariffs_message += "\n\n" + localization.get_message(['tariffs', 'current'], message.from_user.language_code)
+    tariffs_message += "\n" + build_subscription_info(user_tariff_info, message.from_user.language_code)
 
     reply_markup.add(go_back_inline_button(message.from_user.language_code))
 
