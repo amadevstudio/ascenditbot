@@ -30,7 +30,7 @@ class IncomingPayment(Service):
 
         if 'error' in result:
             await chat_id_sender(
-                IncomingPayment.BOT.send_message, int(user['service_id']), message_structures=[{
+                IncomingPayment.BOT, int(user['service_id']), message_structures=[{
                     'type': 'text',
                     'text': localization.get_message(
                         ['subscription', 'fund', 'errors', 'wrong_signature'], language_code),
@@ -44,7 +44,7 @@ class IncomingPayment(Service):
 
         if user_tariff_info is None or user_tariff_info['currency_code'] != result['currency']:
             await chat_id_sender(
-                IncomingPayment.BOT.send_message, int(user['service_id']), message_structures=[{
+                IncomingPayment.BOT, int(user['service_id']), message_structures=[{
                     'type': 'text',
                     'text': localization.get_message(
                         ['subscription', 'fund', 'errors', 'wrong_currency_income'], language_code),
