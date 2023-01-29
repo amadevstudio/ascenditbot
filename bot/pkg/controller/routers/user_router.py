@@ -1,6 +1,9 @@
+from functools import partial
+
 from aiogram import types
 
-from framework.controller.router_tools import event_wrapper, get_type, user_state, event_action_wrapper
+from framework.controller.router_tools import event_wrapper, get_type, user_state, event_action_wrapper, \
+    message_route_validator
 from pkg.config.routes import RouteMap
 
 
@@ -20,7 +23,7 @@ def user_router(dispatcher):
     # /add_chat
     @dispatcher.message_handler(commands=RouteMap.get_route_commands('add_chat'), chat_type=types.ChatType.PRIVATE)
     @dispatcher.message_handler(
-        lambda message: user_state(message) == RouteMap.state('add_chat'), content_types=types.ContentType.ANY,
+        partial(message_route_validator, ['add_chat']), content_types=types.ContentType.ANY,
         chat_type=types.ChatType.PRIVATE)
     @dispatcher.callback_query_handler(
         lambda call: get_type(call) == RouteMap.type('add_chat'), chat_type=types.ChatType.PRIVATE)
@@ -30,7 +33,7 @@ def user_router(dispatcher):
     # /my_chats
     @dispatcher.message_handler(commands=RouteMap.get_route_commands('my_chats'), chat_type=types.ChatType.PRIVATE)
     @dispatcher.message_handler(
-        lambda message: user_state(message) == RouteMap.state('my_chats'), chat_type=types.ChatType.PRIVATE)
+        partial(message_route_validator, ['my_chats']), chat_type=types.ChatType.PRIVATE)
     @dispatcher.callback_query_handler(
         lambda call: get_type(call) == RouteMap.type('my_chats'), chat_type=types.ChatType.PRIVATE)
     async def my_chats(entity: types.Message | types.CallbackQuery, *args, **kwargs):
@@ -55,8 +58,7 @@ def user_router(dispatcher):
     @dispatcher.callback_query_handler(
         lambda call: get_type(call) == RouteMap.type('add_to_chat_whitelist'), chat_type=types.ChatType.PRIVATE)
     @dispatcher.message_handler(
-        lambda message: user_state(message) == RouteMap.state('add_to_chat_whitelist'),
-        chat_type=types.ChatType.PRIVATE)
+        partial(message_route_validator, ['add_to_chat_whitelist']), chat_type=types.ChatType.PRIVATE)
     async def chat_switch_active(entity: types.Message | types.CallbackQuery):
         await event_wrapper(RouteMap.type('add_to_chat_whitelist'), entity)
 
@@ -64,7 +66,7 @@ def user_router(dispatcher):
     @dispatcher.callback_query_handler(
         lambda call: get_type(call) == RouteMap.type('chat_whitelist'), chat_type=types.ChatType.PRIVATE)
     @dispatcher.message_handler(
-        lambda message: user_state(message) == RouteMap.state('chat_whitelist'), chat_type=types.ChatType.PRIVATE)
+        partial(message_route_validator, ['chat_whitelist']), chat_type=types.ChatType.PRIVATE)
     async def chat_whitelist(entity: types.Message | types.CallbackQuery):
         await event_wrapper(RouteMap.type('chat_whitelist'), entity)
 
@@ -123,8 +125,7 @@ def user_router(dispatcher):
 
     # on fund amount input
     @dispatcher.message_handler(
-        lambda message: user_state(message) in [RouteMap.state('fund'), RouteMap.state('fund_amount')],
-        chat_type=types.ChatType.PRIVATE)
+        partial(message_route_validator, ['fund', 'fund_amount']), chat_type=types.ChatType.PRIVATE)
     @dispatcher.callback_query_handler(
         lambda call: get_type(call) == RouteMap.type('fund_amount'), chat_type=types.ChatType.PRIVATE)
     async def my_chats(entity: types.Message | types.CallbackQuery):

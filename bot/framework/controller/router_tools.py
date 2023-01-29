@@ -13,6 +13,14 @@ def get_type(call: types.CallbackQuery):
     return json.loads(call.data).get("tp", "")
 
 
+def message_route_validator(state_types: list[str], message: types.Message):
+    if message.text[0] == '/':
+        return False
+
+    route_map_state_types = [RouteMap.state(state_type) for state_type in state_types]
+    return user_state(message) in route_map_state_types
+
+
 def user_state(entity: types.Message | types.CallbackQuery):
     try:
         chat_id = entity.message.chat.id
