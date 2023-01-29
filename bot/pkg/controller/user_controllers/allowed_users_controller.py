@@ -86,7 +86,7 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
     if 'error' in chat_whitelist_page_data:
         if chat_whitelist_page_data['error'] in ['empty']:
             error_message = localization.get_message(
-                ['chat_whitelist', 'errors', chat_whitelist_page_data['error']],
+                ['whitelist', 'errors', chat_whitelist_page_data['error']],
                 message.from_user.language_code,
                 command=routes.RouteMap.get_route_main_command('add_chat'))
         else:
