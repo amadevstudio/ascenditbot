@@ -154,14 +154,14 @@ def get_currency_code_for_user(user_id: int) -> str:
 
 
 # If the user has fewer chats than in his subscription (5 < 6 -> true, 6 < 6 -> false)
-def chats_number_satisfactory(chat_id: str) -> bool:
-    return db.fetchone("""
+def chats_number_satisfactory(chat_id: str, strong: bool = True) -> bool:
+    return db.fetchone(f"""
         SELECT
             CASE WHEN t.channels_count IS NULL
             THEN TRUE
             ELSE (
                     CASE WHEN user_chats_stat.chats_count IS NULL THEN 0 ELSE user_chats_stat.chats_count END
-                ) < t.channels_count
+                ) {('<' if strong else '<=')} t.channels_count
             END AS satisfies
 
             -- , CASE WHEN user_chats_stat.chats_count IS NULL THEN 0 ELSE user_chats_stat.chats_count END

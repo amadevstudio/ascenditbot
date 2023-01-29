@@ -75,9 +75,9 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     current_type = routes.RouteMap.type('my_chats')
 
     # Getting data and full navigation setup
-    state_data = UserStorage.get_user_state_data(message.chat.id, current_type)
+    current_state_data = UserStorage.get_user_state_data(message.chat.id, current_type)
     current_page, user_chat_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
-        call, message, state_data, current_type, message.from_user.language_code,
+        call, message, current_state_data, current_type, message.from_user.language_code,
 
         Chat.data_provider_by_service_id, [message.chat.id],
         Chat.data_count_provider_by_service_id, [message.chat.id],

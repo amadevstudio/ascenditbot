@@ -128,8 +128,8 @@ class Tariff(Service):
         return tariff_repository.increase_amount(user_id, amount)
 
     @staticmethod
-    def chats_number_satisfactory(user_chat_id: int) -> bool:
-        return tariff_repository.chats_number_satisfactory(str(user_chat_id))
+    def chats_number_satisfactory(user_chat_id: int, strong: bool = True) -> bool:
+        return tariff_repository.chats_number_satisfactory(str(user_chat_id), strong)
 
     @staticmethod
     def process_all_subscription_validity() -> Generator[ProcessSubscriptionInterface, None, None]:

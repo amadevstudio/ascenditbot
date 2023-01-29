@@ -20,7 +20,8 @@ class AdminValidationInterface(TypedDict, total=False):
 
 
 class AccessValidationInterface(ErrorDictInterface, total=False):
-    is_creator: bool
+    administrator: types.ChatMemberAdministrator | types.ChatMemberOwner
+    chat_info: ModeratedChatInterface
 
 
 class Chat(Service):
@@ -100,6 +101,16 @@ class Chat(Service):
             if administrator.status != 'creator':
                 return {'error': 'creator_must_add'}
 
+        return {'administrator': administrator, 'chat_info': chat_info}
+
+    @staticmethod
+    def validate_subscription(
+            administrator: types.ChatMemberAdministrator | types.ChatMemberOwner,
+            user_service_id: int,
+            chat_info: ModeratedChatInterface) -> ErrorDictInterface:
+
+        exists_in_the_bot = chat_info is not None
+
         if exists_in_the_bot:
             creator = None
 
@@ -113,26 +124,43 @@ class Chat(Service):
             if creator is None:
                 return {'error': 'creator_must_add'}
 
-            # Owner subscription validation
-            if not Tariff.chats_number_satisfactory(int(creator['service_id'])):
-                if str(user_service_id) != creator['service_id']:
-                    return {'error': 'creator_dont_subscribed'}
-                else:
-                    return {'error': 'subscription_limit_violation'}
+        # Not exists in the bot
+        else:
+            creator = User.find_by_service_id(user_service_id)
+            if creator is None:
+                return {'error': 'creator_must_add'}
 
-        return {'is_creator': administrator.status == 'creator'}
+        # Creator is another, check if the chat is active, chat exists
+        if str(user_service_id) != creator['service_id']:
+            if chat_info['disabled']:
+                return {'error': 'creator_dont_subscribed'}
+
+        # Creator is the user, check subscription limitation, chat not exists or not due a possible random error
+        else:
+            already_added = chat_info is not None
+            if not already_added and not Tariff.chats_number_satisfactory(int(creator['service_id'])):
+                return {'error': 'subscription_limit_violation'}
+
+        return {}
 
     @staticmethod
     async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
             -> ModeratedChatInterface | ErrorDictInterface:
 
-        validate_result = await Chat.validate_access(bot, chat_service_id, user_service_id)
-        if 'error' in validate_result:
-            return validate_result
+        validate_access_result = await Chat.validate_access(bot, chat_service_id, user_service_id)
+        if 'error' in validate_access_result:
+            return validate_access_result
+
+        validate_subscription_result = Chat.validate_subscription(
+            validate_access_result['administrator'], user_service_id, validate_access_result['chat_info'])
+        if 'error' in validate_subscription_result:
+            return validate_subscription_result
+
+        is_creator = validate_access_result['administrator'].status == 'creator'
 
         try:
             result_connection = chat_repository.create(
-                str(chat_service_id), str(user_service_id), validate_result['is_creator'])
+                str(chat_service_id), str(user_service_id), is_creator)
             if "error" in result_connection:
                 return result_connection
         except Exception as e:
@@ -168,8 +196,8 @@ class Chat(Service):
 
     @staticmethod
     def data_provider_by_service_id(
-            chat_service_id: int, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
-        return chat_repository.user_chats_by_service_id(str(chat_service_id), order_by, limit, offset)
+            user_chat_id: int, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
+        return chat_repository.user_chats_by_service_id(str(user_chat_id), order_by, limit, offset)
 
     @staticmethod
     def switch_active(chat_id: int) -> bool:
