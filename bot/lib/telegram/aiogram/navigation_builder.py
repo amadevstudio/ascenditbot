@@ -105,7 +105,7 @@ class NavigationBuilder(metaclass=Singleton):
     def get_routing_helper_message(
             self, curr_page, page_count, language_code, with_tip=True, divider=None
     ):
-        if curr_page == page_count:
+        if page_count == 1:
             return ""
 
         else:
