@@ -118,7 +118,8 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
                 message.from_user.language_code, chat_name=chat_info['title'])
         else:
             button_text = localization.get_message(
-                ['my_chats', 'list', 'chat_button', 'not_found_tg'], message.from_user.language_code)
+                ['my_chats', 'list', 'chat_button', 'not_found_tg'], message.from_user.language_code) \
+                          + f" {chat_data['service_id']}"
 
         button_data = {'tp': 'chat', 'id': chat_data['id']}
 
