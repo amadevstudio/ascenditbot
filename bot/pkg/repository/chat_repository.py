@@ -15,7 +15,7 @@ def find(chat_id: int) -> ModeratedChatInterface:
     return db.find_model('moderated_chats', {'id': chat_id})
 
 
-def find_by(fields_value: dict[str, Any]) -> ModeratedChatInterface:
+def find_by(fields_value: ModeratedChatInterface) -> ModeratedChatInterface:
     return db.find_model('moderated_chats', fields_value)
 
 

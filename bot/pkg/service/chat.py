@@ -92,21 +92,26 @@ class Chat(Service):
         administrator = typing.cast(
             types.ChatMemberAdministrator | types.ChatMemberOwner, admin_rights_validation['administrator'])
 
-        chat_info = chat_repository.find_by({'service_id': chat_service_id})
+        chat_info = chat_repository.find_by({'service_id': str(chat_service_id)})
         exists_in_the_bot = chat_info is not None
 
         if not exists_in_the_bot:
             if administrator.status != 'creator':
                 return {'error': 'creator_must_add'}
-        else:
+
+        if exists_in_the_bot:
             creator = chat_repository.chat_creator(chat_info['id'])
+
+            # Due to a random error, the chat may not have a creator
             if creator is None:
                 return {'error': 'creator_must_add'}
 
-            if str(user_service_id) != creator['service_id']:
-                creator_tariff_info = Tariff.user_tariff_info(creator['id'])
-                if creator_tariff_info['tariff_id'] == 0:
+            # Owner subscription validation
+            if not Tariff.chats_number_satisfactory(int(creator['service_id'])):
+                if str(user_service_id) != creator['service_id']:
                     return {'error': 'creator_dont_subscribed'}
+                else:
+                    return {'error': 'subscription_limit_violation'}
 
         return {'is_creator': administrator.status == 'creator'}
 

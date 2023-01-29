@@ -153,6 +153,7 @@ def get_currency_code_for_user(user_id: int) -> str:
     return currency_code_row.get('currency_code', default_currency)
 
 
+# If the user has fewer chats than in his subscription (5 < 6 -> true, 6 < 6 -> false)
 def chats_number_satisfactory(chat_id: str) -> bool:
     return db.fetchone("""
         SELECT
