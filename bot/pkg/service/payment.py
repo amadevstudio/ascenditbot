@@ -72,7 +72,7 @@ class IncomingPayment(Service):
             'reply_markup': markup
         }]
         await chat_id_sender(
-            IncomingPayment.BOT.send_message, int(user['service_id']), message_structures=message_structures)
+            IncomingPayment.BOT, int(user['service_id']), message_structures=message_structures)
 
 
 payment_processors: dict[str, PaymentProcessor] = {
