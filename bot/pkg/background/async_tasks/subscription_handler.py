@@ -3,7 +3,7 @@ import datetime
 
 from aiogram import Dispatcher
 
-from framework.controller.message_tools import chat_id_sender
+from framework import controller
 from pkg.service.tariff import Tariff
 from pkg.template.tariff import auto_update
 
@@ -21,8 +21,8 @@ async def subscription_handler(dispatcher: Dispatcher):
         await asyncio.sleep(1)  # Ensure unique per interval
 
         # await asyncio.sleep(5)
-        # print('---')
-        # print(datetime.datetime.now())
+        print('---')
+        print(datetime.datetime.now())
 
         for process_subscription_data in Tariff.process_all_subscription_validity():
             print(process_subscription_data)
@@ -45,8 +45,9 @@ async def subscription_handler(dispatcher: Dispatcher):
                     'text': message_text,
                     'parse_mode': 'HTML'
                 }]
-                await chat_id_sender(bot, int(user['service_id']), message_structures=message_structures)
+                await controller.message_tools.chat_id_sender(
+                    bot, int(user['service_id']), message_structures=message_structures)
 
-        # print('===\n')
+        print('===\n')
 
-# TODO: notify about 1 day left
+# TODO: notify about 1 day left, maybe using redis to cache notified today users
