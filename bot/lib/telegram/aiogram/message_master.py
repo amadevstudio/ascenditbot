@@ -43,7 +43,24 @@ previous_message_structures_interface = {
 }
 
 
-def build_new_prev_message_structure(message_id: int, message_type: str):
+message_types = Literal['text', 'image']
+
+
+class MessageStructuresInterface(TypedDict, total=False):
+    type: message_types
+    text: str
+    reply_markup: types.InlineKeyboardMarkup
+    parse_mode: Literal['Markdown', 'MarkdownV2', 'HTML'] | None
+    disable_web_page_preview: bool
+    image: str | types.InputFile
+
+
+class PreviousMessageStructuresInterface(TypedDict):
+    id: int
+    type: message_types
+
+
+def build_new_prev_message_structure(message_id: int, message_type: message_types) -> PreviousMessageStructuresInterface:
     result = {
         'id': message_id,
         'type': message_type
@@ -58,8 +75,14 @@ def build_new_prev_message_structure(message_id: int, message_type: str):
 # postloading: обработка случаев, когда до это отправляется сообщение "загрузка"
 async def message_master(
         aiogram_message: types.Message, resending=False,
-        message_structures: List[Dict] = [], previous_message_structures: List[Dict] = []
-) -> List[Dict]:
+        message_structures=None,
+        previous_message_structures=None
+) -> List[PreviousMessageStructuresInterface]:
+    if message_structures is None:
+        message_structures = []
+    if previous_message_structures is None:
+        previous_message_structures = []
+
     for previous_message_structure in previous_message_structures:
         # Validate schema
         if not validate_structure(previous_message_structure, previous_message_structures_interface):
@@ -111,7 +134,8 @@ async def message_master(
     for message_to_delete in messages_to_delete:
         await aiogram_message.bot.delete_message(aiogram_message.chat.id, message_to_delete['id'])
 
-    result: types.Message
+    result: types.Message | None
+
     for message_to_edit_id in messages_to_edit:
         message_structure = messages_to_edit[message_to_edit_id]
 
@@ -136,8 +160,12 @@ async def message_master(
                 parse_mode=message_structure.get('parse_mode', None),
                 reply_markup=message_structure.get('reply_markup', None))
 
-        new_message_structures.append(
-            build_new_prev_message_structure(result.message_id, message_structure['type']))
+        else:
+            result = None
+
+        if result is not None:
+            new_message_structures.append(
+                build_new_prev_message_structure(result.message_id, message_structure['type']))
 
     for message_to_send in messages_to_send:
         message_structure = message_to_send
@@ -156,7 +184,11 @@ async def message_master(
                 parse_mode=message_structure.get('parse_mode', None),
                 reply_markup=message_structure.get('reply_markup', None))
 
-        new_message_structures.append(
-            build_new_prev_message_structure(result.message_id, message_structure['type']))
+        else:
+            result = None
+
+        if result is not None:
+            new_message_structures.append(
+                build_new_prev_message_structure(result.message_id, message_structure['type']))
 
     return new_message_structures
