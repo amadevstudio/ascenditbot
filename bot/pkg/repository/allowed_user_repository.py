@@ -15,7 +15,7 @@ def switch_active(allowed_user_id: int) -> bool | None:
 
 
 def delete(allowed_user_id) -> int | None:
-    return db.delete('allowed_users', allowed_user_id)
+    return db.delete_model('allowed_users', {'id': allowed_user_id})
 
 
 def get_privileges(nickname: str, chat_service_id: str) -> AllowedUserInterface | None:

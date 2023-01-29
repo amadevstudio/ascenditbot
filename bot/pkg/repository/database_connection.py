@@ -165,7 +165,9 @@ class Database(metaclass=Singleton):
 
         return self.execute(query, query_values, commit=commit, cursor=cursor, returning='*')
 
-    def update_model(self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None):
+    def update_model(
+            self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None,
+            commit: bool = True, cursor=None):
         model_data = self.__class__.inject_updated_at(model_data)
 
         filled_key_fields = Database._preset_key_fields(key_fields)
@@ -180,4 +182,20 @@ class Database(metaclass=Singleton):
 
         key_fields_values = Database._key_fields_values(filled_key_fields, model_data)
 
-        return self.execute(query, tuple(model_data.values()) + tuple(key_fields_values), returning='*')
+        return self.execute(
+            query, tuple(model_data.values()) + tuple(key_fields_values), commit=commit, cursor=cursor, returning='*')
+
+    def delete_model(self, model_name: str, model_keys_data: dict[str, Any], commit: bool = True, cursor=None):
+        filled_key_fields = Database._preset_key_fields(list(model_keys_data.keys()))
+
+        query = """
+            DELETE FROM {model_name} WHERE {key_fields}
+        """.format(
+            model_name=model_name,
+            key_fields=(' AND '.join([f"{c} = %s" for c in filled_key_fields]))
+        )
+
+        key_fields_values = Database._key_fields_values(filled_key_fields, model_keys_data)
+
+        return self.execute(
+            query, tuple(key_fields_values), commit=commit, cursor=cursor, returning='*')

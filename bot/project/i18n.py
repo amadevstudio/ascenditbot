@@ -306,7 +306,7 @@ routed_messages = {
         'show': {
             'text': {
                 'en': "",
-                'ru': "{chat_name}\nПользователь: {nickname}"
+                'ru': emoji_codes.get('chat', '') + " {chat_name}\nПользователь: @{nickname}"
             },
             'active_button': {
                 'active': {
