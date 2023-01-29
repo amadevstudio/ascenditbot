@@ -27,7 +27,7 @@ async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Messag
         await message_sender(message, resending=call is None, message_structures=message_structures)
 
         if change_user_state:
-            UserStorage.change_page(message.chat.id, 'add_to_chat_whitelist')
+            UserStorage.change_page(message.chat.id, routes.RouteMap.type('add_to_chat_whitelist'))
 
         return
 
@@ -184,7 +184,7 @@ async def show(call: types.CallbackQuery, message: types.message, change_user_st
     await message_sender(message, message_structures=message_structures)
 
     if change_user_state:
-        UserStorage.change_page(message.chat.id, 'allowed_user')
+        UserStorage.change_page(message.chat.id, routes.RouteMap.type('allowed_user'))
         UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_state_data | allowed_user_data)
 
 

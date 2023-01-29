@@ -6,6 +6,7 @@ from framework.controller.message_tools import message_sender, go_back_inline_bu
 from framework.controller import state_data
 from lib.language import localization
 from lib.payment.services.robokassa import RobokassaPaymentProcessor
+from pkg.config import routes
 from pkg.controller.user_controllers.common_controller import raise_error
 from pkg.service.payment import Payment
 from pkg.service.tariff import Tariff
@@ -48,7 +49,7 @@ async def page(call: types.CallbackQuery, message: types.Message, change_user_st
     }]
     await message_sender(message, resending=call is None, message_structures=message_structures)
     if change_user_state:
-        UserStorage.change_page(message.chat.id, 'subscription')
+        UserStorage.change_page(message.chat.id, routes.RouteMap.type('subscription'))
 
 
 async def tariffs(_, message: types.Message, change_user_state=True):
@@ -97,7 +98,7 @@ async def tariffs(_, message: types.Message, change_user_state=True):
     }])
 
     if change_user_state:
-        UserStorage.change_page(message.chat.id, 'tariffs')
+        UserStorage.change_page(message.chat.id, routes.RouteMap.type('tariffs'))
 
 
 async def change_tariff(call: types.CallbackQuery, message: types.Message):
@@ -164,7 +165,7 @@ async def fund_balance_page(call: types.CallbackQuery, message: types.Message, c
     }])
 
     if change_user_state:
-        UserStorage.change_page(message.chat.id, 'fund')
+        UserStorage.change_page(message.chat.id, routes.RouteMap.type('fund'))
 
 
 async def fund_link_page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
@@ -204,4 +205,4 @@ async def fund_link_page(call: types.CallbackQuery, message: types.Message, chan
     }], resending=call is None)
 
     if change_user_state:
-        UserStorage.change_page(message.chat.id, 'fund_amount')
+        UserStorage.change_page(message.chat.id, routes.RouteMap.type('fund_amount'))

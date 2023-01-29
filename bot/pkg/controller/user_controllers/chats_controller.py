@@ -29,7 +29,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
         await message_sender(message, resending=call is None, message_structures=message_structures)
 
         if change_user_state:
-            UserStorage.change_page(message.chat.id, 'add_chat')
+            UserStorage.change_page(message.chat.id, routes.RouteMap.type('add_chat'))
 
         return
 
@@ -203,7 +203,7 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
     await message_sender(message, message_structures=message_structures)
 
     if change_user_state:
-        UserStorage.change_page(message.chat.id, 'chat')
+        UserStorage.change_page(message.chat.id, routes.RouteMap.type('chat'))
         UserStorage.add_user_state_data(message.chat.id, 'chat', chat_data)
 
 

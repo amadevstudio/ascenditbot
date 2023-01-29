@@ -2,9 +2,10 @@ import json
 
 from aiogram import types
 
+from pkg.config import routes
 from pkg.template.tariff.common import build_subscription_info_short
 from lib.language import localization
-from framework.controller.message_tools import message_sender
+from framework.controller.message_tools import message_sender, go_back_inline_markup
 from pkg.service.tariff import Tariff
 
 from pkg.service.user import User
@@ -66,3 +67,15 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
 
     if change_user_state:
         UserStorage.new_navigation_journey(message.chat.id, 'menu')
+
+
+async def help_page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+    await message_sender(message, resending=call is None, message_structures=[{
+        'type': 'text',
+        'text': localization.get_message(['help', 'text'], message.from_user.language_code),
+        'reply_markup': go_back_inline_markup(message.from_user.language_code),
+        'parse_mode': 'Markdown'
+    }])
+
+    if change_user_state:
+        UserStorage.change_page(message.chat.id, routes.RouteMap.type('help'))
