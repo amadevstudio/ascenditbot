@@ -6,7 +6,8 @@ import aiogram
 from aiogram import types, utils
 
 from lib.language import localization
-from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages
+from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages, \
+    MessageStructuresInterface
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg.service.user_storage import UserStorage
 
@@ -28,7 +29,8 @@ def image_link_or_object(path: str):
     return path
 
 
-async def chat_id_sender(bot: aiogram.bot.bot.Bot, user_chat_id: int, message_structures=None):
+async def chat_id_sender(
+        bot: aiogram.bot.bot.Bot, user_chat_id: int, message_structures: list[MessageStructuresInterface] = None):
     for message_to_send in message_structures:
         message_structure = message_to_send
 
@@ -52,7 +54,7 @@ async def chat_id_sender(bot: aiogram.bot.bot.Bot, user_chat_id: int, message_st
 
 
 async def message_sender(
-        message: types.Message, resending=False, message_structures=None):
+        message: types.Message, resending=False, message_structures: list[MessageStructuresInterface] = None):
     if message_structures is None:
         message_structures = []
 
