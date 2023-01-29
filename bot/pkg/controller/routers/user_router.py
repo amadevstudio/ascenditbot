@@ -20,6 +20,13 @@ def user_router(dispatcher):
     async def menu(entity: types.Message | types.CallbackQuery):
         await event_wrapper(RouteMap.type('menu'), entity)
 
+    # /help
+    @dispatcher.message_handler(commands=RouteMap.get_route_commands('help'), chat_type=types.ChatType.PRIVATE)
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.type('help'), chat_type=types.ChatType.PRIVATE)
+    async def menu(entity: types.Message | types.CallbackQuery):
+        await event_wrapper(RouteMap.type('help'), entity)
+
     # /add_chat
     @dispatcher.message_handler(commands=RouteMap.get_route_commands('add_chat'), chat_type=types.ChatType.PRIVATE)
     @dispatcher.message_handler(

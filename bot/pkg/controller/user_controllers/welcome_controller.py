@@ -73,8 +73,7 @@ async def help_page(call: types.CallbackQuery, message: types.Message, change_us
     await message_sender(message, resending=call is None, message_structures=[{
         'type': 'text',
         'text': localization.get_message(['help', 'text'], message.from_user.language_code),
-        'reply_markup': go_back_inline_markup(message.from_user.language_code),
-        'parse_mode': 'Markdown'
+        'reply_markup': go_back_inline_markup(message.from_user.language_code)
     }])
 
     if change_user_state:

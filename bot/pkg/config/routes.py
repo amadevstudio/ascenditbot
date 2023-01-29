@@ -56,6 +56,10 @@ class RouteMap:
                 'subscription'
             ],
         },
+        'help': {
+            'method': welcome_controller.help_page,
+            'commands': ['help']
+        },
 
         'add_chat': {
             'method': chats_controller.add_chat,
