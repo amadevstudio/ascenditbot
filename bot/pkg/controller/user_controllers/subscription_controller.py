@@ -133,6 +133,8 @@ async def fund_balance_page(call: types.CallbackQuery, message: types.Message, c
 
     message_text = localization.get_message(
         ['subscription', 'fund', 'page'], message.from_user.language_code, user_currency_code=user_currency_code)
+    message_text += "\n\n" + localization.get_message(
+        ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
 
     reply_markup = types.InlineKeyboardMarkup()
     reply_markup_row_buffer = []
