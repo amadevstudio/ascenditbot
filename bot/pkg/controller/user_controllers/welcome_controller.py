@@ -48,16 +48,18 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
     if trial_info is not None:
         answer_messages.append({
             'type': 'text',
-            'text': localization.get_message(['subscription', 'free_trial'], message.from_user.language_code)
+            'text': localization.get_message(['subscription', 'free_trial'], message.from_user.language_code),
+            'parse_mode': 'Markdowns'
         })
 
     user_tariff_info = Tariff.user_tariff_info(user_id)
     answer_messages.append({
         'type': 'text',
         'text':
-            localization.get_message(['menu', 'menu'], message.from_user.language_code) + "\n\n"
-            + build_subscription_info_short(user_tariff_info, message.from_user.language_code),
+            build_subscription_info_short(user_tariff_info, message.from_user.language_code)
+            + "\n\n" + localization.get_message(['menu', 'text'], message.from_user.language_code),
         'reply_markup': markup,
+        'parse_mode': 'Markdown'
     })
 
     await message_sender(message, resending=call is None, message_structures=answer_messages)

@@ -7,7 +7,10 @@ from project import constants
 
 
 def build_subscription_info_short(user_tariff_info: UserTariffInfoInterface | None, language_code: str) -> str:
-    info_message = localization.get_message(['tariffs', 'list', user_tariff_info['tariff_id']], language_code)
+    info_message = localization.get_message(
+        ['tariffs', 'list', 'wrapper'], language_code,
+        tariff_text=localization.get_message(['tariffs', 'list', user_tariff_info['tariff_id']], language_code)
+    )
     info_message += cant_renew_message_info_part(user_tariff_info, language_code)
     return info_message
 
