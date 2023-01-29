@@ -72,6 +72,8 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
     channel_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('chat'))
     state_data = UserStorage.get_user_state_data(message.chat.id, current_type)
 
+    chat_info = await Chat.load_info(call.bot, str(channel_state_data['service_id']))
+
     current_page, chat_whitelist_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
         call, message, state_data, current_type, message.from_user.language_code,
 
@@ -96,7 +98,9 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
         return
 
     # Building message
-    message_text = localization.get_message(['chat_whitelist', 'list', 'main'], message.from_user.language_code)
+    message_text = localization.get_message(['whitelist', 'list', 'text'], message.from_user.language_code)
+    message_text += " " + localization.get_message(
+        ['chat', 'show', 'text'], message.from_user.language_code, chat_name=chat_info['title'])
     message_text += '\n' + routing_helper_message
 
     # Chat buttons

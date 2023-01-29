@@ -286,6 +286,10 @@ routed_messages = {
     },
     'whitelist': {
         'list': {
+            'text': {
+                'en': "",
+                'ru': "Белый список группы"
+            },
             'button': {
                 'active': {
                     'en': "",
