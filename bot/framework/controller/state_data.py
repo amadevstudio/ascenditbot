@@ -12,7 +12,6 @@ def decode_call_data(call: types.CallbackQuery) -> dict[str, Any]:
         return json.loads(call.data)
     except Exception as e:
         logger.error(e)
-        pass
 
     return {}
 
@@ -25,6 +24,8 @@ def get_current_state_data(call: types.CallbackQuery, message: types.Message, ro
 
     try:
         call_data = json.loads(call.data)
+        if route != call_data.get('tp', None):
+            call_data = {}
     except Exception:
         call_data = {}
 
