@@ -10,6 +10,7 @@ import pkg.repository.chat_repository
 from pkg.repository import chat_repository
 from pkg.service.service import Service
 from pkg.service.tariff import Tariff
+from pkg.service.user import User
 from pkg.system.logger import logger
 from project.types import ModeratedChatInterface, ErrorDictInterface
 
@@ -100,9 +101,15 @@ class Chat(Service):
                 return {'error': 'creator_must_add'}
 
         if exists_in_the_bot:
-            creator = chat_repository.chat_creator(chat_info['id'])
+            creator = None
 
-            # Due to a random error, the chat may not have a creator
+            if administrator.status == 'creator':
+                creator = User.find_by_service_id(user_service_id)
+
+            if administrator.status != 'creator' or creator is None:
+                creator = chat_repository.chat_creator(chat_info['id'])
+
+            # Due to a possible random error, the chat may not have a creator
             if creator is None:
                 return {'error': 'creator_must_add'}
 
