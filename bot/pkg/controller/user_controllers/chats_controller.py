@@ -24,7 +24,8 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
             'image': image_link_or_object(
                 localization.get_link(['add_chat', 'anon_admin_example'], message.from_user.language_code)),
             'text': localization.get_message(['add_chat', 'instruction'], message.from_user.language_code),
-            'reply_markup': go_back_inline_markup(message.from_user.language_code)
+            'reply_markup': go_back_inline_markup(message.from_user.language_code),
+            'parse_mode': 'HTML'
         }]
         await message_sender(message, resending=call is None, message_structures=message_structures)
 

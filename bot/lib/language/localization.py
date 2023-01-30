@@ -1,5 +1,5 @@
 from pkg.config.config import empty_photo_link
-from project.i18n import routed_messages, links
+from project.i18n import routed_messages, local_lang_based_links
 
 # panic_language = "en"
 panic_language = "ru"
@@ -109,7 +109,7 @@ def get_link(link_route: [str | int], lang_code: str):
         try:
             for r in link_route:
                 if curr_route is None:
-                    curr_route = links.get(r.lower())
+                    curr_route = local_lang_based_links.get(r.lower())
                 else:
                     curr_route = curr_route.get(r.lower())
 
