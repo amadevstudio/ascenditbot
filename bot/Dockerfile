@@ -7,6 +7,8 @@ COPY . /usr/src/bot/
 # install dependencies
 RUN pip install -r requirements.txt
 
+RUN pip-upgrade
+
 # RUN apt update
 
 ## Creates a non-root user with an explicit UID and adds permission to access the /app folder
