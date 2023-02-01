@@ -23,7 +23,7 @@ Telegram whitelist bot for a chats
 Run compose and stop the bot container  
 `docker compose up`  
 Then in new terminal run  
-`docker compose stop bot && docker compose run --rm bot`  
+`docker compose stop -t 1 bot && docker compose run --rm -p 3000:3000 bot`  
 works like a ⚡️
 
 ### After generate files using Docker
