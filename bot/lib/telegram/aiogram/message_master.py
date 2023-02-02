@@ -97,8 +97,8 @@ async def message_master(
         if 'image' in message_structure and isinstance(message_structure['image'], str):
             message_structure['image'] = unquote(message_structure['image'])
 
-    def message_structure_filter(message_structure):
-        return message_structure['type'] in MasterMessages.all_types()
+    def message_structure_filter(filtrating_message_structure):
+        return filtrating_message_structure['type'] in MasterMessages.all_types()
 
     message_structures = list(filter(message_structure_filter, message_structures))
 
