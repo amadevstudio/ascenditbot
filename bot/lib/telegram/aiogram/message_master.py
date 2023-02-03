@@ -132,7 +132,12 @@ async def message_master(
     new_message_structures = []
 
     for message_to_delete in messages_to_delete:
-        await aiogram_message.bot.delete_message(aiogram_message.chat.id, message_to_delete['id'])
+        try:
+            await aiogram_message.bot.delete_message(aiogram_message.chat.id, message_to_delete['id'])
+        except Exception:
+            messages_to_send = message_structures
+            messages_to_edit = []
+            break
 
     result: types.Message | None
 
