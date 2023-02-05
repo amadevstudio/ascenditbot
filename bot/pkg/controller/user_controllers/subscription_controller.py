@@ -127,13 +127,14 @@ async def change_tariff(call: types.CallbackQuery, message: types.Message):
 
 
 async def fund_balance_page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    user_id = User.get_id_by_service_id(message.chat.id)
+    user = User.find_by_service_id(message.chat.id)
+    user_id = user['id']
 
     user_currency_code = Tariff.currency_code_for_user(user_id)
     available_tariffs = Tariff.tariffs_info(user_id)
 
     message_text = localization.get_message(
-        ['subscription', 'fund', 'page'], message.from_user.language_code, user_currency_code=user_currency_code)
+        ['subscription', 'fund', 'page'], message.from_user.language_code, email=user['email'])
     message_text += "\n\n" + localization.get_message(
         ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
 
@@ -161,7 +162,8 @@ async def fund_balance_page(call: types.CallbackQuery, message: types.Message, c
     await message_sender(message, message_structures=[{
         'type': 'text',
         'text': message_text,
-        'reply_markup': reply_markup
+        'reply_markup': reply_markup,
+        'parse_mode': 'Markdown'
     }])
 
     if change_user_state:
