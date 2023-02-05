@@ -51,7 +51,7 @@ async def chat_id_sender(
                 parse_mode=message_structure.get('parse_mode', None),
                 reply_markup=message_structure.get('reply_markup', None))
 
-    UserStorage.set_resend(user_chat_id, True)
+    UserStorage.set_resend(user_chat_id)
 
 
 async def message_sender(

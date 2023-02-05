@@ -89,8 +89,9 @@ def get_user_resend_flag(chat_id):
     return Storage().connection.get(STORAGE_KEYS["users"]["tg"]["@id"]["resend_flag"].format(chat_id=chat_id)) == "1"
 
 
-def set_user_resend_flag(chat_id, resend: int):
-    Storage().connection.set(STORAGE_KEYS['users']['tg']['@id']['resend_flag'].format(chat_id=chat_id), resend)
+def set_user_resend_flag(chat_id, resend: bool):
+    Storage().connection.set(
+        STORAGE_KEYS['users']['tg']['@id']['resend_flag'].format(chat_id=chat_id), 1 if resend is True else 0)
 
 
 def del_user_resend_flag(chat_id):
