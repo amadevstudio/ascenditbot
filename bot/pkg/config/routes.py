@@ -3,6 +3,7 @@ from typing import Any, TypedDict, Callable, List, Dict, Literal
 from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller, \
     subscription_controller
 from pkg.controller.user_controllers.validators.chat_access_validator import chat_access_validator
+from pkg.controller.user_controllers.validators.user_validator import email_presence_validator
 
 AvailableCommands = Literal['start', 'menu', 'add_chat', 'my_chats', 'subscription']
 AvailableRoutes = Literal[
@@ -53,7 +54,9 @@ class RouteMap:
             'routes': [
                 'add_chat',
                 'my_chats',
-                'subscription'
+                'help',
+                'subscription',
+                'settings'
             ],
         },
         'help': {
@@ -129,7 +132,8 @@ class RouteMap:
         },
         'fund': {
             'method': subscription_controller.fund_balance_page,
-            'wait_for_input': True
+            'wait_for_input': True,
+            'validator': email_presence_validator
         },
         'fund_amount': {
             'method': subscription_controller.fund_link_page,

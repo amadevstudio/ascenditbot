@@ -10,7 +10,7 @@ COPY . /usr/src/migrator/
 # ENTRYPOINT ["/bin/bash", "/usr/src/migrator/entrypoint.sh"]
 
 # CMD ["dbmate", "-e", "POSTGRES_URL", "status"]
-CMD ["-e", "POSTGRES_URL", "status"]
+CMD ["-e", "POSTGRES_URL", "up"]
 
 FROM base as prod
 CMD ["-e", "POSTGRES_URL", "up"]

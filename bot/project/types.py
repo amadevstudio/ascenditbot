@@ -13,6 +13,7 @@ class UserInterface(TypedDict, total=False):
     ref_id: int
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    email: str
 
 
 class ModeratedChatInterface(TypedDict, total=False):

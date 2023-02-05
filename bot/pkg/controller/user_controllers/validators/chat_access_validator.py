@@ -5,7 +5,7 @@ from pkg.controller.user_controllers.common_controller import chat_access_denied
 from pkg.service.chat import Chat
 
 
-async def chat_access_validator(call: types.CallbackQuery, message: types.Message):
+async def chat_access_validator(call: types.CallbackQuery, message: types.Message) -> bool:
     channel_state_data = state_data.get_current_state_data(call, message, 'chat')
     chat_service_id = channel_state_data.get(
         'service_id',
