@@ -35,4 +35,4 @@ jobs:
             git pull
             docker compose build
             docker compose restart migrator
-            docker compose restart bot
+            docker compose restart -t 1 bot

@@ -7,7 +7,7 @@ COPY . /usr/src/bot/
 # install dependencies
 RUN pip install -r requirements.txt
 
-RUN pip-upgrade
+RUN pip-upgrade --skip-virtualenv-check
 
 # RUN apt update
 
