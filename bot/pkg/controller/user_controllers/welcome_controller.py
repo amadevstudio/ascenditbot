@@ -29,17 +29,18 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
     await message_sender(message, resending=call is None, message_structures=message_structures)
 
     if change_user_state:
-        UserStorage.new_navigation_journey(message.chat.id, 'start')
+        UserStorage.new_navigation_journey(message.chat.id, routes.RouteMap.type('start'))
 
 
 async def menu(call: types.CallbackQuery, message: types.Message, change_user_state=True):
     buttons = []
-    for button_type in ['add_chat', 'my_chats', 'help', 'subscription']:
+    for button_type in ['add_chat', 'my_chats', 'help', 'subscription', 'settings']:
         buttons.append(types.InlineKeyboardButton(
             localization.get_message(['buttons', button_type], message.from_user.language_code),
             callback_data=json.dumps({'tp': button_type})))
     markup = types.InlineKeyboardMarkup().row(buttons[0], buttons[1])
     markup.row(buttons[2], buttons[3])
+    markup.row(buttons[4])
 
     answer_messages = []
 
@@ -66,7 +67,7 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
     await message_sender(message, resending=call is None, message_structures=answer_messages)
 
     if change_user_state:
-        UserStorage.new_navigation_journey(message.chat.id, 'menu')
+        UserStorage.new_navigation_journey(message.chat.id, routes.RouteMap.type('menu'))
 
 
 async def help_page(call: types.CallbackQuery, message: types.Message, change_user_state=True):

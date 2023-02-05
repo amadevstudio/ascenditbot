@@ -1,7 +1,7 @@
 from typing import Any, TypedDict, Callable, List, Dict, Literal
 
 from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller, \
-    subscription_controller
+    subscription_controller, settings_controller
 from pkg.controller.user_controllers.validators.chat_access_validator import chat_access_validator
 from pkg.controller.user_controllers.validators.user_validator import email_presence_validator
 
@@ -137,6 +137,16 @@ class RouteMap:
         },
         'fund_amount': {
             'method': subscription_controller.fund_link_page,
+            'wait_for_input': True
+        },
+
+        'settings': {
+            'method': settings_controller.page,
+            'commands': ['settings'],
+            'routes': ['settings_email']
+        },
+        'settings_email': {
+            'method': settings_controller.email,
             'wait_for_input': True
         },
 

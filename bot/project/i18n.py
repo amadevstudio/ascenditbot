@@ -15,6 +15,8 @@ emoji_codes = {
     'gold_medal': '🥇',
     'silver_medal': '🥈',
     'bronze_medal': '🥉',
+    'gear': '⚙️',
+    'email': '📧'
 }
 
 local_lang_based_links = {
@@ -68,6 +70,10 @@ routed_messages = {
         'subscription': {
             'en': "",
             'ru': f"{emoji_codes.get('credit_card', '')} Подписка"
+        },
+        'settings': {
+            'en': "",
+            'ru': f"{emoji_codes.get('gear', '')} Настройки"
         }
     },
     'errors': {
@@ -566,6 +572,18 @@ routed_messages = {
             'selected': {
                 'en': "",
                 'ru': "(выбран)"
+            }
+        }
+    },
+    'settings': {
+        'page': {
+            'en': "",
+            'ru': f"{emoji_codes.get('gear', '')} Настройки"
+        },
+        'buttons': {
+            'email': {
+                'en': "",
+                'ru': f"{emoji_codes.get('email', '')} Почта"
             }
         }
     },

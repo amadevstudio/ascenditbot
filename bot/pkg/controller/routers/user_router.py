@@ -137,3 +137,10 @@ def user_router(dispatcher):
         lambda call: get_type(call) == RouteMap.type('fund_amount'), chat_type=types.ChatType.PRIVATE)
     async def my_chats(entity: types.Message | types.CallbackQuery):
         await event_wrapper(RouteMap.type('fund_amount'), entity)
+
+    # /settings
+    @dispatcher.message_handler(commands=RouteMap.get_route_commands('settings'), chat_type=types.ChatType.PRIVATE)
+    @dispatcher.callback_query_handler(
+        lambda call: get_type(call) == RouteMap.type('settings'), chat_type=types.ChatType.PRIVATE)
+    async def my_chats(entity: types.Message | types.CallbackQuery, *args, **kwargs):
+        await event_wrapper(RouteMap.type('settings'), entity)
