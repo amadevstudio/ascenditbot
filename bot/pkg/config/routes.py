@@ -137,7 +137,8 @@ class RouteMap:
         },
         'fund_amount': {
             'method': subscription_controller.fund_link_page,
-            'wait_for_input': True
+            'wait_for_input': True,
+            'validator': email_presence_validator
         },
 
         'settings': {

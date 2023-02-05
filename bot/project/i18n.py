@@ -585,6 +585,19 @@ routed_messages = {
                 'en': "",
                 'ru': f"{emoji_codes.get('email', '')} Почта"
             }
+        },
+        'email': {
+            'page': {
+                'en': "",
+                'ru':
+                    f"{emoji_codes.get('email', '')} Настройка почты\n"
+                    "Текущая почта: {email}\n\n"
+                    "Отправьте почту, чтобы обновить её"
+            },
+            'empty': {
+                'en': "",
+                'ru': "не установлена"
+            }
         }
     },
 

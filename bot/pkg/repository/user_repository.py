@@ -34,3 +34,15 @@ def get_id_by_service_id(service_id: str) -> int | None:
         return None
 
     return user['id']
+
+
+def update(data: UserInterface) -> UserInterface | None:
+    return db.update_model('users', data, ['id'])
+
+
+def update_by_service_id(service_id: str, data: UserInterface) -> UserInterface | None:
+    user_id = get_id_by_service_id(service_id)
+    if user_id is None:
+        return None
+
+    return update({**data, 'id': user_id})

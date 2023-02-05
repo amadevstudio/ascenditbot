@@ -170,20 +170,28 @@ class Database(metaclass=Singleton):
             commit: bool = True, cursor=None):
         model_data = self.__class__.inject_updated_at(model_data)
 
+        # Set keyfields as ['id'] if empty
         filled_key_fields = Database._preset_key_fields(key_fields)
+
+        # Get key fields values
+        key_fields_values = Database._key_fields_values(filled_key_fields, model_data)
+
+        # Remove key fields from update list
+        model_data_without_keyfields = {**model_data}
+        for key_field in key_fields:
+            model_data_without_keyfields.pop(key_field)
 
         query = """
             UPDATE {model_name} SET {columns_equal_values} WHERE {key_fields}
         """.format(
             model_name=model_name,
-            columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])),
+            columns_equal_values=(', '.join([f"{c} = %s" for c in model_data_without_keyfields.keys()])),
             key_fields=(' AND '.join([f"{c} = %s" for c in filled_key_fields]))
         )
 
-        key_fields_values = Database._key_fields_values(filled_key_fields, model_data)
-
         return self.execute(
-            query, tuple(model_data.values()) + tuple(key_fields_values), commit=commit, cursor=cursor, returning='*')
+            query, tuple(model_data_without_keyfields.values()) + tuple(key_fields_values),
+            commit=commit, cursor=cursor, returning='*')
 
     def delete_model(self, model_name: str, model_keys_data: dict[str, Any], commit: bool = True, cursor=None):
         filled_key_fields = Database._preset_key_fields(list(model_keys_data.keys()))
