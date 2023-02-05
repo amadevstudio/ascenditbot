@@ -18,13 +18,17 @@ _PER_PAGE = 5
 
 
 async def add_chat(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+    reply_markup = types.InlineKeyboardMarkup()
+    reply_markup.add(types.KeyboardButtonRequestChat)
+    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+
     if call_or_command(call, message):
         message_structures = [{
             'type': 'image',
             'image': image_link_or_object(
                 localization.get_link(['add_chat', 'anon_admin_example'], message.from_user.language_code)),
             'text': localization.get_message(['add_chat', 'instruction'], message.from_user.language_code),
-            'reply_markup': go_back_inline_markup(message.from_user.language_code),
+            'reply_markup': reply_markup,
             'parse_mode': 'HTML'
         }]
         await message_sender(message, resending=call is None, message_structures=message_structures)
