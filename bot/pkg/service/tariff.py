@@ -8,7 +8,7 @@ from pkg.service.service import Service
 from pkg.system.logger import logger
 
 from project import constants
-from project.types import UserTariffConnectionInterface, ErrorDictInterface
+from project.types import UserTariffConnectionInterface, ErrorDictInterface, PaymentHistoryInterface
 
 
 class Tariff(Service):
@@ -156,3 +156,7 @@ class Tariff(Service):
     @staticmethod
     def currency_code_for_user(user_id: int):
         return tariff_repository.currency_code_for_user(user_id)
+
+    @staticmethod
+    def add_payment_history(payment_history: PaymentHistoryInterface) -> PaymentHistoryInterface:
+        return tariff_repository.add_payment_history(payment_history)

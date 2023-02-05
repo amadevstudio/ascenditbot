@@ -5,7 +5,8 @@ from pkg.repository import database_helpers
 from pkg.repository.database_connection import Database
 from project import constants
 from project.constants import default_currency
-from project.types import TariffInterface, UserTariffConnectionInterface, TariffInfoInterface, UserInterface
+from project.types import TariffInterface, UserTariffConnectionInterface, TariffInfoInterface, UserInterface, \
+    PaymentHistoryInterface
 
 db = Database()
 
@@ -279,3 +280,7 @@ def increase_amount(user_id: int, amount: int) -> int:
         SET balance = balance + %s
         WHERE user_id = %s
     """, (amount, user_id,), returning='balance')['balance']
+
+
+def add_payment_history(payment_history_data: PaymentHistoryInterface) -> PaymentHistoryInterface:
+    return db.insert_model('payments_history', payment_history_data)

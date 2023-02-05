@@ -55,6 +55,11 @@ class IncomingPayment(Service):
             return
 
         new_balance = Tariff.add_amount(user['id'], result['amount'])
+        Tariff.add_payment_history({
+            'user_id': user['id'],
+            'payment_service': result['service'],
+            'amount': result['amount'],
+            'currency_code': result['currency']})
 
         new_user_tariff_info = Tariff.user_tariff_info(user['id'])
 

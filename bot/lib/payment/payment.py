@@ -17,6 +17,7 @@ class CallableInterface(ErrorDictInterface, total=False):
     amount: int
     currency: str
     user_id: int
+    service: str
 
 
 class PaymentProcessor(ABC):

@@ -50,7 +50,8 @@ class RobokassaPaymentProcessor(PaymentProcessor):
 
         if result:
             result_text = f"OK{inv_id}"
-            await self.incoming_payment_callback({'amount': result_summ, 'currency': currency, 'user_id': int(user_id)})
+            await self.incoming_payment_callback({
+                'amount': result_summ, 'currency': currency, 'user_id': int(user_id), 'service': 'robokassa'})
         else:
             result_text = 'BAD'
             await self.incoming_payment_callback({'error': 'wrong_signature', 'user_id': int(user_id)})
