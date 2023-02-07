@@ -15,6 +15,7 @@ emoji_codes = {
     'gold_medal': '🥇',
     'silver_medal': '🥈',
     'bronze_medal': '🥉',
+    'crown': '👑',
     'gear': '⚙️',
     'email': '📧'
 }
@@ -568,6 +569,10 @@ routed_messages = {
                 'en': "",
                 'ru': emoji_codes.get('gold_medal', '') + " Профессиональный"
             },
+            4: {
+                'en': "",
+                'ru': emoji_codes.get('crown', '') + " Корпоративный"
+            }
         },
         'info': {
             'selected': {
