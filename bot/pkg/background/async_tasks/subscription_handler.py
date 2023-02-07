@@ -24,6 +24,7 @@ async def subscription_handler(dispatcher: Dispatcher):
         print('---')
         print(datetime.datetime.now())
 
+        # Prolong or disable users
         for process_subscription_data in Tariff.process_all_subscription_validity():
             print(process_subscription_data)
             user = process_subscription_data['user']
@@ -47,6 +48,18 @@ async def subscription_handler(dispatcher: Dispatcher):
                 }]
                 await controller.message_tools.chat_id_sender(
                     bot, int(user['service_id']), message_structures=message_structures)
+
+        # Notify about days left
+        notify_about_days = 1
+        for user in Tariff.users_with_remaining_days(notify_about_days):
+            await controller.message_tools.chat_id_sender(
+                bot, int(user['service_id']),
+                message_structures=[{
+                    'type': 'text',
+                    'text': auto_update.remaining_days_left_message(
+                        user['id'], user['language_code'], notify_about_days),
+                    'parse_mode': 'HTML'
+                }])
 
         print('===\n')
 

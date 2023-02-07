@@ -8,7 +8,7 @@ from pkg.service.service import Service
 from pkg.system.logger import logger
 
 from project import constants
-from project.types import UserTariffConnectionInterface, ErrorDictInterface, PaymentHistoryInterface
+from project.types import UserTariffConnectionInterface, ErrorDictInterface, PaymentHistoryInterface, UserInterface
 
 
 class Tariff(Service):
@@ -136,6 +136,13 @@ class Tariff(Service):
         user: ProcessSubscriptionInterface
 
         for user in tariff_repository.process_subscriptions():
+            yield user
+
+    @staticmethod
+    def users_with_remaining_days(notify_about_days: int) -> Generator[UserInterface, None, None]:
+        user: ProcessSubscriptionInterface
+
+        for user in tariff_repository.users_with_remaining_days(notify_about_days):
             yield user
 
     @staticmethod

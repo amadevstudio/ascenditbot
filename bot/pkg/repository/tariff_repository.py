@@ -274,6 +274,21 @@ def update_user_moderated_chats(user_id: int, offset: int | None):
     """, (user_id, offset,), cursor=cursor)
 
 
+def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, None]:
+    for users_set in db.fetchmany("""
+        SELECT u.*
+        FROM users AS u
+            INNER JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
+            INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
+            INNER JOIN tariff_prices AS tp ON (tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
+        WHERE utc.tariff_id != 0
+            AND utc.balance < tp.price
+            AND utc.start_date < NOW() - interval '{tariff_duration_days} day' + interval '%s day' + interval '1 hour'
+            AND utc.start_date > NOW() - interval '{tariff_duration_days} day' + interval '%s day'
+    """.format(tariff_duration_days=constants.tariff_duration_days), 100, (days_left, days_left,)):
+        for user in users_set:
+            yield user
+
 def increase_amount(user_id: int, amount: int) -> int:
     return db.execute("""
         UPDATE user_tariff_connections
