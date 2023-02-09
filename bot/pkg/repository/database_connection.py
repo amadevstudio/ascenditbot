@@ -178,7 +178,7 @@ class Database(metaclass=Singleton):
 
         # Remove key fields from update list
         model_data_without_keyfields = {**model_data}
-        for key_field in key_fields:
+        for key_field in filled_key_fields:
             model_data_without_keyfields.pop(key_field)
 
         query = """
