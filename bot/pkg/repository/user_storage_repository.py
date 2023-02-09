@@ -1,7 +1,5 @@
 import json
 
-import redis
-
 from lib.python.data_helper import get_all_level_values
 from pkg.repository.storage_connection import Storage
 from lib.redis.decorators import convert_bytes_to_strings
@@ -12,10 +10,10 @@ STORAGE_KEYS = {
     "users": {
         "tg": {
             "@id": {
-                "states": "users:{chat_id}:states",
-                "state_data": "users:{chat_id}:state_data",
-                "resend_flag": "users:{chat_id}:resend_flag",
-                "message_structures": "users:{chat_id}:message_structures"
+                'states': "users:{chat_id}:states",
+                'state_data': "users:{chat_id}:state_data",
+                'resend_flag': "users:{chat_id}:resend_flag",
+                'message_structures': "users:{chat_id}:message_structures"
             }
         }
     }
@@ -33,28 +31,28 @@ def clear_user_storage(chat_id):
 
 @convert_bytes_to_strings
 def get_user_states(chat_id):
-    return Storage().connection.lrange(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(chat_id=chat_id), 0, -1)
+    return Storage().connection.lrange(STORAGE_KEYS['users']['tg']['@id']['states'].format(chat_id=chat_id), 0, -1)
 
 
 @convert_bytes_to_strings
 def get_user_curr_state(chat_id):
-    return Storage().connection.lindex(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(chat_id=chat_id), -1)
+    return Storage().connection.lindex(STORAGE_KEYS['users']['tg']['@id']['states'].format(chat_id=chat_id), -1)
 
 
 @convert_bytes_to_strings
 def get_user_prev_state(chat_id):
-    return Storage().connection.lindex(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(chat_id=chat_id), -2)
+    return Storage().connection.lindex(STORAGE_KEYS['users']['tg']['@id']['states'].format(chat_id=chat_id), -2)
 
 
 @convert_bytes_to_strings
 def get_user_prev_curr_states(chat_id):
-    return Storage().connection.lrange(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(chat_id=chat_id), -2, -1)
+    return Storage().connection.lrange(STORAGE_KEYS['users']['tg']['@id']['states'].format(chat_id=chat_id), -2, -1)
 
 
 @convert_bytes_to_strings
 def get_user_state_data(chat_id, state):
     state_data = Storage().connection.hget(
-        STORAGE_KEYS["users"]["tg"]["@id"]["state_data"].format(chat_id=chat_id), state)
+        STORAGE_KEYS['users']['tg']['@id']['state_data'].format(chat_id=chat_id), state)
     if state_data is None:
         return {}
 
@@ -62,36 +60,36 @@ def get_user_state_data(chat_id, state):
 
 
 def add_user_state(chat_id, state):
-    return Storage().connection.rpush(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(chat_id=chat_id), state)
+    return Storage().connection.rpush(STORAGE_KEYS['users']['tg']['@id']['states'].format(chat_id=chat_id), state)
 
 
 def add_user_state_data(chat_id, state, data):
     return Storage().connection.hset(
-        STORAGE_KEYS["users"]["tg"]["@id"]["state_data"].format(chat_id=chat_id), state, json.dumps(data, default=str))
+        STORAGE_KEYS['users']['tg']['@id']['state_data'].format(chat_id=chat_id), state, json.dumps(data, default=str))
 
 
 def del_user_curr_state(chat_id):
-    return Storage().connection.rpop(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(chat_id=chat_id))
+    return Storage().connection.rpop(STORAGE_KEYS['users']['tg']['@id']['states'].format(chat_id=chat_id))
 
 
 def del_user_states(chat_id):
-    return Storage().connection.delete(STORAGE_KEYS["users"]["tg"]["@id"]["states"].format(chat_id=chat_id))
+    return Storage().connection.delete(STORAGE_KEYS['users']['tg']['@id']['states'].format(chat_id=chat_id))
 
 
 def del_user_state_data(chat_id, state):
-    return Storage().connection.hdel(STORAGE_KEYS["users"]["tg"]["@id"]["state_data"].format(chat_id=chat_id), state)
+    return Storage().connection.hdel(STORAGE_KEYS['users']['tg']['@id']['state_data'].format(chat_id=chat_id), state)
 
 
 # Resend flag
 
 @convert_bytes_to_strings
 def get_user_resend_flag(chat_id):
-    return Storage().connection.get(STORAGE_KEYS["users"]["tg"]["@id"]["resend_flag"].format(chat_id=chat_id)) == "1"
+    return Storage().connection.get(STORAGE_KEYS['users']['tg']['@id']['resend_flag'].format(chat_id=chat_id))
 
 
-def set_user_resend_flag(chat_id, resend: bool):
+def set_user_resend_flag(chat_id, resend: int):
     Storage().connection.set(
-        STORAGE_KEYS['users']['tg']['@id']['resend_flag'].format(chat_id=chat_id), 1 if resend is True else 0)
+        STORAGE_KEYS['users']['tg']['@id']['resend_flag'].format(chat_id=chat_id), resend)
 
 
 def del_user_resend_flag(chat_id):
@@ -103,7 +101,7 @@ def del_user_resend_flag(chat_id):
 @convert_bytes_to_strings
 def get_user_message_structures(chat_id):
     message_structures = Storage().connection.get(
-        STORAGE_KEYS["users"]["tg"]["@id"]["message_structures"].format(chat_id=chat_id))
+        STORAGE_KEYS['users']['tg']['@id']['message_structures'].format(chat_id=chat_id))
     if message_structures is None:
         return []
 
@@ -116,5 +114,5 @@ def get_user_message_structures(chat_id):
 
 def set_user_message_structures(chat_id: int, message_structures: list[dict]):
     return Storage().connection.set(
-        STORAGE_KEYS["users"]["tg"]["@id"]["message_structures"].format(chat_id=chat_id),
+        STORAGE_KEYS['users']['tg']['@id']['message_structures'].format(chat_id=chat_id),
         json.dumps(message_structures))
