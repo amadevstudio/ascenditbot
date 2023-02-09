@@ -8,6 +8,7 @@ class EnvironmentInterface(TypedDict):
     ENVIRONMENT: str
 
     TELEGRAM_BOT_TOKEN: str
+    TELEGRAM_ADMIN_GROUP_ID: str
 
     REDIS_PASSWORD: str
 
@@ -24,6 +25,7 @@ environment: EnvironmentInterface = {
     'ENVIRONMENT': os.environ['ENVIRONMENT'],
 
     'TELEGRAM_BOT_TOKEN': os.environ['TELEGRAM_BOT_TOKEN'],
+    'TELEGRAM_ADMIN_GROUP_ID': os.environ['TELEGRAM_ADMIN_GROUP_ID'],
 
     'REDIS_PASSWORD': os.environ['REDIS_PASSWORD'],
 

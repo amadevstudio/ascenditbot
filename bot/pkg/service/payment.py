@@ -79,6 +79,15 @@ class IncomingPayment(Service):
         await chat_id_sender(
             IncomingPayment.BOT, int(user['service_id']), message_structures=message_structures)
 
+        telegram_admin_group_id = environment.get('TELEGRAM_ADMIN_GROUP_ID', None)
+        if telegram_admin_group_id is not None:
+            await chat_id_sender(IncomingPayment.BOT, int(telegram_admin_group_id), message_structures=[{
+                'type': 'text',
+                'text':
+                        f"New payment from user {user['id']}, email: {user['email']}, amount {result['amount']},"
+                        f" new balance {new_balance} (bd: {new_user_tariff_info['balance']})"
+            }])
+
 
 payment_processors: dict[str, PaymentProcessor] = {
     'robokassa.ru': robokassa.RobokassaPaymentProcessor({
