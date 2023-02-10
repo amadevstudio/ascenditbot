@@ -15,8 +15,9 @@ class Logger:
         "critical": "CRITICAL"
     }
 
-    def __init__(self, base_dir=None, file="out"):
-        self.__bot_path = base_dir
+    def __init__(self, logs_folder, file="out"):
+        self.__logs_folder = logs_folder
+        self.__last_datetime = None
 
         self.file = file
 
@@ -29,11 +30,17 @@ class Logger:
         # write_thread.start()
 
     def __reinit_logger(self):
-        self.__set_dated_filename()
+        current_time = datetime.datetime.now()
+        if self.__last_datetime is not None and self.__last_datetime.day == current_time.day:
+            return
+
+        self.__last_datetime = current_time
+        self.__set_dated_filename(now=current_time)
+
         if os.environ['ENVIRONMENT'] == "development":
             logging.basicConfig(encoding='utf-8')  # , level=logging.DEBUG)
         else:
-            logging.basicConfig(filename=self.dated_file, encoding='utf-8')
+            logging.basicConfig(filename=self.dated_filepath, encoding='utf-8')
         self.logger = logging.getLogger(self.file)
 
     # def __writer(self):
@@ -47,7 +54,7 @@ class Logger:
         if now is None:
             now = datetime.datetime.now()
         dated_filename = self.file + "_" + now.strftime("%d_%m_%Y")
-        self.dated_file = dated_filename
+        self.dated_filepath = os.path.join(self.__logs_folder, dated_filename)
 
     # [12:49:41 26.06.1998] LEVEL arg1 args2
     def __out_log(self, *args, level="log"):
@@ -93,4 +100,4 @@ class Logger:
             *args, "| Details:", details, "\n", level="err")
 
 
-logger = Logger()
+# logger = Logger()
