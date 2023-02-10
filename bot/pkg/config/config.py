@@ -1,7 +1,9 @@
 import os
+import sys
 from typing import TypedDict
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
+LOGS_FOLDER = os.path.join(BASE_DIR, 'logs')
 
 
 class EnvironmentInterface(TypedDict):

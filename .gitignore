@@ -15,4 +15,4 @@ env/.env.local
 database/postgresql
 
 # Bot logs
-bot/out_*
+bot/logs/out_*
