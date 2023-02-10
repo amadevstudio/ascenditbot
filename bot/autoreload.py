@@ -7,7 +7,7 @@ import time
 
 
 def file_filter(name):
-    return (not name.startswith(".")) and (not name.endswith(".swp"))
+    return (not name.startswith(".")) and (not name.endswith(".swp")) and not (name.endswith("logs"))
 
 
 def file_times(path, initial=False):

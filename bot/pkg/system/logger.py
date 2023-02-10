@@ -1,4 +1,4 @@
 from lib.python.logger import Logger
-from pkg.config.config import BASE_DIR
+from pkg.config.config import LOGS_FOLDER
 
-logger = Logger(base_dir=BASE_DIR)
+logger = Logger(logs_folder=LOGS_FOLDER)

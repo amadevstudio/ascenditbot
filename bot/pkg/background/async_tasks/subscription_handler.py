@@ -5,6 +5,7 @@ from aiogram import Dispatcher
 
 from framework import controller
 from pkg.service.tariff import Tariff
+from pkg.system.logger import logger
 from pkg.template.tariff import auto_update
 
 
@@ -21,12 +22,12 @@ async def subscription_handler(dispatcher: Dispatcher):
         await asyncio.sleep(1)  # Ensure unique per interval
 
         # await asyncio.sleep(5)
-        print('---')
-        print(datetime.datetime.now())
+        logger.log('--- Subscription Handler')
+        logger.log(datetime.datetime.now())
 
         # Prolong or disable users
         for process_subscription_data in Tariff.process_all_subscription_validity():
-            print(process_subscription_data)
+            logger.log(process_subscription_data)
             user = process_subscription_data['user']
 
             if process_subscription_data['action'] == 'prolonged':
@@ -61,6 +62,6 @@ async def subscription_handler(dispatcher: Dispatcher):
                     'parse_mode': 'HTML'
                 }])
 
-        print('===\n')
+        logger.log('===\n')
 
 # TODO: notify about 1 day left, maybe using redis to cache notified today users

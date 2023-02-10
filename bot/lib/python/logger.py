@@ -40,7 +40,7 @@ class Logger:
         if os.environ['ENVIRONMENT'] == "development":
             logging.basicConfig(encoding='utf-8')  # , level=logging.DEBUG)
         else:
-            logging.basicConfig(filename=self.dated_filepath, encoding='utf-8')
+            logging.basicConfig(filename=self.dated_filepath, encoding='utf-8', level='INFO')
         self.logger = logging.getLogger(self.file)
 
     # def __writer(self):
