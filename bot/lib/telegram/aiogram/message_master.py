@@ -91,7 +91,7 @@ async def message_master(
     for message_structure in message_structures:
         # Validate schema
         if not validate_structure(message_structure, message_structures_interface):
-            raise TypeError("Message structure don't match schema")
+            raise TypeError(f"Message structure don't match schema: {message_structure}")
 
         # Unquote url
         if 'image' in message_structure and isinstance(message_structure['image'], str):

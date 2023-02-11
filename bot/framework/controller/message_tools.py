@@ -11,6 +11,7 @@ from lib.telegram.aiogram.message_master import message_master, get_timeout_from
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg.config import routes
 from pkg.service.user_storage import UserStorage
+from pkg.system.logger import logger
 
 
 def go_back_inline_markup(language_code: str, button_text: Literal['back', 'cancel'] = 'back'):
@@ -78,7 +79,7 @@ async def message_sender(
                 message, resending=resending, message_structures=message_structures,
                 previous_message_structures=previous_message_structures)
         else:
-            raise e
+            logger.err(e)
 
         # bot_blocked_reaction(e, chat_id)
 
