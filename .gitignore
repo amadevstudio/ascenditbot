@@ -15,4 +15,5 @@ env/.env.local
 database/postgresql
 
 # Bot logs
-bot/logs/out_*
+bot/logs/
+!bot/logs/.keep
