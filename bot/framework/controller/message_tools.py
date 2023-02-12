@@ -9,7 +9,7 @@ from lib.language import localization
 from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages, \
     MessageStructuresInterface
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
-from pkg.config import routes
+from pkg import config
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 
@@ -104,7 +104,7 @@ async def notify(
         'reply_markup': go_back_inline_markup(message.from_user.language_code, button_text=button_text)
     }]
     await message_sender(message, resending=True, message_structures=message_structures)
-    UserStorage.change_page(message.chat.id, routes.RouteMap.type('nowhere'))
+    UserStorage.change_page(message.chat.id, config.routes.RouteMap.type('nowhere'))
 
 
 def call_or_command(call: types.CallbackQuery = None, message: types.Message = None,
