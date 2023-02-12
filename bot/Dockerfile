@@ -1,5 +1,5 @@
 # FROM python:3.11-alpine
-FROM python:3.11
+FROM python:3.11 as base
 # set work directory
 WORKDIR /usr/src/bot/
 # copy project
@@ -22,4 +22,8 @@ RUN pip-upgrade --skip-virtualenv-check
 # ENTRYPOINT ["entrypoint.sh"]
 
 # run app
+FROM base as dev
 CMD ["python", "autoreload.py", "python", "main.py"]
+
+FROM base as prod
+CMD ["python", "main.py"]

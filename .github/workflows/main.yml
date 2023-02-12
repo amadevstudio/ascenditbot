@@ -34,7 +34,5 @@ jobs:
             cd ${{ secrets.PROJECT_PATH }}
             git pull
             docker compose build
-            # docker compose restart migrator
-            # docker compose restart -t 1 bot
-            docker compose stop -t 1 bot
-            docker compose up -d
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml stop -t 1 bot
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
