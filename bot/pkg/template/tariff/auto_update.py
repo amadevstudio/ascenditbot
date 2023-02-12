@@ -28,7 +28,7 @@ def disabled_message(user_id: int, language_code: str) -> str:
 def remaining_days_left_message(user_id: int, language_code: str, days_left: int) -> str:
     message_text = localization.get_message(['subscription', 'updates', 'non-prolongable'], language_code)
 
-    message_text += "\n" + localization.get_numerical_declension_message(
+    message_text += "\n\n" + localization.get_numerical_declension_message(
             ['subscription', 'info_block', 'days_left'], language_code,
             days_left if days_left >= 0 else 0, days_left=days_left)
 
