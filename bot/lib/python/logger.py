@@ -27,7 +27,6 @@ class Logger:
         else:
             file_path = os.path.join(self.__logs_folder, self.__file)
             file_handler = TimedRotatingFileHandler(file_path, when='D', interval=1)
-            print(file_path, file_handler)
             logging.basicConfig(encoding='utf-8', level='INFO', handlers=[file_handler])
         self.logger = logging.getLogger(self.__file)
 
