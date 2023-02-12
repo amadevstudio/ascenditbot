@@ -23,8 +23,12 @@ async def page(call: types.CallbackQuery, message: types.Message, change_user_st
     tariff_message = localization.get_message(['subscription', 'show', 'text'], message.from_user.language_code)
     tariff_message += "\n\n" + localization.get_message(
         ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
-    tariff_message += "\n\n" + localization.get_message(['tariffs', 'current'], message.from_user.language_code)
 
+    referral_link = User.generate_referral_link(message.chat.id)
+    tariff_message += "\n\n" + localization.get_message(
+        ['subscription', 'referral'], message.from_user.language_code, referral_link=referral_link)
+
+    tariff_message += "\n\n" + localization.get_message(['tariffs', 'current'], message.from_user.language_code)
     user_tariff_info = Tariff.user_tariff_info(user_id)
     tariff_message += "\n\n" + build_subscription_info(user_tariff_info, message.from_user.language_code)
 
@@ -45,7 +49,8 @@ async def page(call: types.CallbackQuery, message: types.Message, change_user_st
         'type': 'text',
         'text': tariff_message,
         'reply_markup': reply_markup,
-        'parse_mode': 'HTML'
+        'parse_mode': 'HTML',
+        'disable_web_page_preview': True
     }]
     await message_sender(message, resending=call is None, message_structures=message_structures)
     if change_user_state:

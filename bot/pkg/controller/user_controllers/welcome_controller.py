@@ -5,17 +5,21 @@ from aiogram import types
 from pkg.config import routes
 from pkg.template.tariff.common import build_subscription_info_short
 from lib.language import localization
-from framework.controller.message_tools import message_sender, go_back_inline_markup
+from framework.controller.message_tools import message_sender, go_back_inline_markup, chat_id_sender
 from pkg.service.tariff import Tariff
 
 from pkg.service.user import User
 from pkg.service.user_storage import UserStorage
+from project.types import UserInterface
 
 
 async def start(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+    registration_result = None
+
     if call is None:
         await message.reply('👋')
-        User.register(message.chat.id, message.from_user.language_code)
+        initial_data = User.analyze_initial_data(message.text)
+        registration_result = User.register(message.chat.id, message.from_user.language_code, initial_data)
 
     button = types.InlineKeyboardButton(localization.get_message(
         ['welcome', 'lets_begin'], message.from_user.language_code), callback_data=json.dumps({'tp': 'menu'}))
@@ -30,6 +34,13 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
 
     if change_user_state:
         UserStorage.new_navigation_journey(message.chat.id, routes.RouteMap.type('start'))
+
+    if registration_result is not None and registration_result.get('refer', None) is not None:
+        refer: UserInterface = registration_result['refer']
+        await chat_id_sender(message.bot, int(refer['service_id']), [{
+            'type': 'text',
+            'text': localization.get_message(['welcome', 'user_referred'], refer['language_code']),
+        }])
 
 
 async def menu(call: types.CallbackQuery, message: types.Message, change_user_state=True):

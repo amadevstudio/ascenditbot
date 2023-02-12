@@ -1,16 +1,35 @@
+from typing import TypedDict
+
 from pkg.repository import user_repository
 from pkg.service.service import Service
+from pkg.system.logger import logger
+from project import constants
 from project.types import UserInterface
+
+
+class RegistrationResultInterface(TypedDict, total=False):
+    user: UserInterface | None
+    refer: UserInterface | None
+
+
+class BeginParamsInterface(TypedDict, total=False):
+    referral: str | None
 
 
 class User(Service):
     @staticmethod
-    def register(chat_id: int, language_code: str) -> None:
+    def register(chat_id: int, language_code: str, initial_data: BeginParamsInterface) -> RegistrationResultInterface:
         user: UserInterface = {"service_id": str(chat_id), "language_code": language_code}
 
-        user_repository.register_or_update_by_service_id(user)
-        # TODO: referral program for user.register
-        # TODO: free subscription for 2 weeks
+        registration_result = user_repository.register_or_update_by_service_id(
+            user, referral_service_id=initial_data['referral'])
+
+        result: RegistrationResultInterface = {'user': registration_result['user']}
+
+        if registration_result['is_new'] and registration_result['user']['ref_id'] is not None:
+            result = {**result, 'refer': User.get_by_id(registration_result['user']['ref_id'])}
+
+        return result
 
     # TODO: Analytics on every income message
     # def in_message(chat_id: int):
@@ -32,3 +51,22 @@ class User(Service):
     def update_email_by_service_id(user_chat_id: int, email: str) -> UserInterface:
         return user_repository.update_by_service_id(str(user_chat_id), {'email': email})
 
+    @staticmethod
+    def generate_referral_link(user_chat_id: int) -> str:
+        return f"t.me/{constants.bot_nickname}?start=referral_{user_chat_id}"
+
+    @staticmethod
+    def analyze_initial_data(initial_text: str) -> BeginParamsInterface:
+        params_string = initial_text[7:]
+        params: BeginParamsInterface = {
+            'referral': None
+        }
+        try:
+            string_params = params_string.split('/')
+            for param_pair in string_params:
+                param_name, param_value = param_pair.split('_')
+                params = {**params, param_name: param_value}
+        except Exception as e:
+            logger.err(e)
+
+        return params
