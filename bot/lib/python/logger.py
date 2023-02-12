@@ -4,6 +4,7 @@ import datetime
 # import queue
 # import threading
 import logging
+from logging.handlers import TimedRotatingFileHandler
 
 
 class Logger:
@@ -17,65 +18,35 @@ class Logger:
 
     def __init__(self, logs_folder, file="out"):
         self.__logs_folder = logs_folder
-        self.__last_datetime = None
+        self.__file = file
+        self.__init_logger()
 
-        self.file = file
-
-        # self.__write_queue = queue.Queue()
-
-        self.__reinit_logger()
-
-        # write_thread = threading.Thread(target=self.__writer)
-        # write_thread.daemon = True
-        # write_thread.start()
-
-    def __reinit_logger(self):
-        current_time = datetime.datetime.now()
-        if self.__last_datetime is not None and self.__last_datetime.day == current_time.day:
-            return
-
-        self.__last_datetime = current_time
-        self.__set_dated_filename(now=current_time)
-
+    def __init_logger(self):
         if os.environ['ENVIRONMENT'] == "development":
             logging.basicConfig(encoding='utf-8')  # , level=logging.DEBUG)
         else:
-            logging.basicConfig(filename=self.dated_filepath, encoding='utf-8', level='INFO')
-        self.logger = logging.getLogger(self.file)
-
-    # def __writer(self):
-    #     while True:
-    #         result = self.__write_queue.get()
-    #         result = result.encode('utf-8')
-    #         with open(f"{self.__bot_path}/log/{self.dated_file}.log", "ab") as f:  # add in binary mode
-    #             f.write(result)
-
-    def __set_dated_filename(self, now=None):
-        if now is None:
-            now = datetime.datetime.now()
-        dated_filename = self.file + "_" + now.strftime("%d_%m_%Y")
-        self.dated_filepath = os.path.join(self.__logs_folder, dated_filename)
+            file_path = os.path.join(self.__logs_folder, self.__file)
+            file_handler = TimedRotatingFileHandler(file_path, when='D', interval=1)
+            print(file_path, file_handler)
+            logging.basicConfig(encoding='utf-8', level='INFO', handlers=[file_handler])
+        self.logger = logging.getLogger(self.__file)
 
     # [12:49:41 26.06.1998] LEVEL arg1 args2
     def __out_log(self, *args, level="log"):
         result = ""
 
-        now = datetime.datetime.now()
-
-        human_now = "[" + now.strftime("%H:%M:%S %d.%m.%Y") + "]"
-        result += human_now + " "
-
-        result += (self.LEVELS[level] if level in self.LEVELS else "EMLVL") + " "
+        # # Logging module add datetime and level automatically
+        # now = datetime.datetime.now()
+        # human_now = "[" + now.strftime("%H:%M:%S %d.%m.%Y") + "]"
+        # result += human_now + " "
+        # result += (self.LEVELS[level] if level in self.LEVELS else "EMLVL") + " "
 
         if len(args) > 0:
             for arg in args:
                 result += str(arg) + " "
             result = result[0:-1]
 
-        if os.environ['ENVIRONMENT'] != "development" and self.file is not None:
-            self.__reinit_logger()
-            # self.__set_dated_filename(now)
-            # self.__write_queue.put(result)
+        if os.environ['ENVIRONMENT'] != "development" and self.__file is not None:
             getattr(self.logger, level)(result)
         else:
             print(result, flush=True)
@@ -98,6 +69,3 @@ class Logger:
 
         self.__out_log(
             *args, "| Details:", details, "\n", level="err")
-
-
-# logger = Logger()
