@@ -2,7 +2,11 @@ import os
 import sys
 from typing import TypedDict
 
-BASE_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
+run_from_path = os.path.abspath(sys.argv[0])
+if os.path.isfile(run_from_path):
+    BASE_DIR = os.path.dirname(run_from_path)
+else:
+    BASE_DIR = run_from_path
 LOGS_FOLDER = os.path.join(BASE_DIR, 'logs')
 
 
