@@ -16,11 +16,11 @@ from pkg.template.tariff.common import build_subscription_info
 from project.types import UserInterface
 
 
-class IncomingPayment(Service):
+class BalanceHandler(Service):
     BOT = bot.bot
 
-    @staticmethod
-    async def incoming_subscription(result: CallableInterface):
+    @classmethod
+    async def increase(cls, result: CallableInterface):
         user: UserInterface = User.get_by_id(result['user_id'])
         language_code = user['language_code']
 
@@ -30,7 +30,7 @@ class IncomingPayment(Service):
 
         if 'error' in result:
             await chat_id_sender(
-                IncomingPayment.BOT, int(user['service_id']), message_structures=[{
+                cls.BOT, int(user['service_id']), message_structures=[{
                     'type': 'text',
                     'text': localization.get_message(
                         ['subscription', 'fund', 'errors', 'wrong_signature'], language_code),
@@ -44,7 +44,7 @@ class IncomingPayment(Service):
 
         if user_tariff_info is None or user_tariff_info['currency_code'] != result['currency']:
             await chat_id_sender(
-                IncomingPayment.BOT, int(user['service_id']), message_structures=[{
+                cls.BOT, int(user['service_id']), message_structures=[{
                     'type': 'text',
                     'text': localization.get_message(
                         ['subscription', 'fund', 'errors', 'wrong_currency_income'], language_code),
@@ -77,11 +77,11 @@ class IncomingPayment(Service):
             'reply_markup': markup
         }]
         await chat_id_sender(
-            IncomingPayment.BOT, int(user['service_id']), message_structures=message_structures)
+            cls.BOT, int(user['service_id']), message_structures=message_structures)
 
         telegram_admin_group_id = environment.get('TELEGRAM_ADMIN_GROUP_ID', None)
         if telegram_admin_group_id is not None:
-            await chat_id_sender(IncomingPayment.BOT, int(telegram_admin_group_id), message_structures=[{
+            await chat_id_sender(cls.BOT, int(telegram_admin_group_id), message_structures=[{
                 'type': 'text',
                 'text':
                         f"New payment from user {user['id']}, email: {user['email']}, amount {result['amount']},"
@@ -95,7 +95,7 @@ payment_processors: dict[str, PaymentProcessor] = {
         'password_1': environment['ROBOKASSA_PAYMENT_P1'],
         'password_2': environment['ROBOKASSA_PAYMENT_P2'],
         'test': False if environment['ENVIRONMENT'] == 'production' else True
-    }, IncomingPayment.incoming_subscription, logger=logger)
+    }, BalanceHandler.increase, logger=logger)
 }
 
 
