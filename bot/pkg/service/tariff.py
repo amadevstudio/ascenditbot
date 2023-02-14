@@ -41,7 +41,7 @@ class Tariff(Service):
                 'currency_code': user_base_currency_code,
                 'price': 0,
                 'balance': 0,
-                'start_date': None,
+                'end_date': None,
                 'user_id': user_id,
                 'tariff_id': 0
             }
@@ -73,9 +73,9 @@ class Tariff(Service):
             'tariff_id': trial_tariff['id'],
             'balance': 0,
             'currency_code': trial_tariff['currency_code'],
-            'start_date':
+            'end_date':
                 datetime.datetime.now()
-                - datetime.timedelta(days=(constants.tariff_duration_days - constants.tariff_free_trail_days)),
+                + datetime.timedelta(days=constants.tariff_free_trail_days),
         }
 
         return tariff_repository.update_subscription(subscription)
@@ -92,12 +92,12 @@ class Tariff(Service):
         # How many the user must pay
         if user_subscription['tariff_id'] == 0:
             change_sum = chosen_tariff['price']
-            new_subscription_start_date = datetime.datetime.now()
+            new_subscription_end_date = datetime.datetime.now() + datetime.timedelta(
+                days=constants.tariff_duration_days)
 
         else:
             # Do not take into account the current day, since part of it has passed, charge again
-            days_left = constants.tariff_duration_days \
-                        - (datetime.datetime.now() - user_subscription['start_date']).days
+            days_left = (user_subscription['end_date'] - datetime.datetime.now()).days
             if days_left > 0:
                 # Change sum is positive when chosen tariff is more expensive
                 change_sum = int(
@@ -107,7 +107,7 @@ class Tariff(Service):
             else:
                 change_sum = chosen_tariff['price']
 
-            new_subscription_start_date = (None if chosen_tariff['id'] == 0 else user_subscription['start_date'])
+            new_subscription_end_date = (None if chosen_tariff['id'] == 0 else user_subscription['end_date'])
 
         # Can the user pay for the best tariff?
         if change_sum > 0 and user_subscription['balance'] < change_sum:
@@ -118,7 +118,7 @@ class Tariff(Service):
             'tariff_id': chosen_tariff['id'],
             'balance': user_subscription['balance'] - change_sum,
             'currency_code': user_subscription['currency_code'],
-            'start_date': new_subscription_start_date,
+            'end_date': new_subscription_end_date,
         }
 
         return tariff_repository.update_subscription(new_subscription)
@@ -126,6 +126,10 @@ class Tariff(Service):
     @staticmethod
     def add_amount(user_id: int, amount: int) -> int:
         return tariff_repository.increase_amount(user_id, amount)
+
+    @staticmethod
+    def prolong(user_id: int, days: int):
+        pass
 
     @staticmethod
     def chats_number_satisfactory(user_chat_id: int, strong: bool = True) -> bool:
