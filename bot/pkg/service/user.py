@@ -64,8 +64,12 @@ class User(Service):
         try:
             string_params = params_string.split('/')
             for param_pair in string_params:
+                if '_' not in param_pair:
+                    continue
+
                 param_name, param_value = param_pair.split('_')
                 params = {**params, param_name: param_value}
+
         except Exception as e:
             logger.err(e)
 
