@@ -51,7 +51,7 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
         answer_messages.append({
             'type': 'text',
             'text': localization.get_message(['subscription', 'free_trial'], message.from_user.language_code),
-            'parse_mode': 'Markdowns'
+            'parse_mode': 'Markdown'
         })
 
     user_tariff_info = Tariff.user_tariff_info(user_id)
