@@ -421,6 +421,10 @@ routed_messages = {
                     5: 'Осталось {days_left} дней'
                 }
             },
+            'less_than_one_day': {
+                'en': "",
+                'ru': "Осталось менее 1 дня"
+            },
             'balance': {
                 'en': {},
                 'ru': 'Баланс'

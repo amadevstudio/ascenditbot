@@ -50,6 +50,11 @@ def build_days_left_message(end_date: datetime.datetime, language_code: str) -> 
                 end_date
                 - datetime.datetime.now()
         ).days + 1
+
+        if days_left == 1:
+            return localization.get_message(
+                ['subscription', 'info_block', 'less_than_one_day'], language_code)
+
         return localization.get_numerical_declension_message(
             ['subscription', 'info_block', 'days_left'], language_code,
             days_left if days_left >= 0 else 0, days_left=days_left)
