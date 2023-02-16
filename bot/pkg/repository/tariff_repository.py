@@ -286,8 +286,8 @@ def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, 
             INNER JOIN tariff_prices AS tp ON (tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
         WHERE utc.tariff_id != 0
             AND utc.balance < tp.price
-            AND utc.end_date > NOW() + interval '%s day'
-            AND utc.end_date < NOW() + interval '%s day' + interval '1 hour'
+            AND utc.end_date > NOW() + interval '%s day' - interval '1 hour'
+            AND utc.end_date < NOW() + interval '%s day'
     """.format(tariff_duration_days=constants.tariff_duration_days), 100, (days_left, days_left,)):
         for user in users_set:
             yield user
