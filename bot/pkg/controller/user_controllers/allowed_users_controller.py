@@ -70,23 +70,31 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
 
     # Getting data and full navigation setup
     channel_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('chat'))
-    state_data = UserStorage.get_user_state_data(message.chat.id, current_type)
+    whitelist_state_data = state_data.get_current_state_data(call, message, current_type)
+
+    if call is None and message.text != '':
+        try:
+            int(message.text)
+        except ValueError:
+            whitelist_state_data['search_query'] = message.text
+    search_query = whitelist_state_data.get('search_query', None)
 
     chat_info = await Chat.load_info(message.bot, str(channel_state_data['service_id']))
 
     current_page, chat_whitelist_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
-        call, message, state_data, current_type, message.from_user.language_code,
+        call, message, whitelist_state_data, current_type, message.from_user.language_code,
 
-        Chat.whitelist_data_provider, [channel_state_data['id']],
-        Chat.whitelist_data_count_provider, [channel_state_data['id']],
-        _PER_PAGE, 'created_at'
+        Chat.whitelist_data_provider, [channel_state_data['id'], search_query],
+        Chat.whitelist_data_count_provider, [channel_state_data['id'], search_query],
+        _PER_PAGE, 'nickname'
     )
 
     # Error processing
     if 'error' in chat_whitelist_page_data:
         if chat_whitelist_page_data['error'] in ['empty']:
+            error = chat_whitelist_page_data['error'] if search_query is None else 'empty_search'
             error_message = localization.get_message(
-                ['whitelist', 'errors', chat_whitelist_page_data['error']],
+                ['whitelist', 'errors', error],
                 message.from_user.language_code,
                 command=routes.RouteMap.get_route_main_command('add_chat'))
         else:
@@ -115,6 +123,11 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
             callback_data=json.dumps({'tp': 'allowed_user', 'id': whitelist_data['id']}))
         reply_markup.add(b)
 
+    if search_query is not None:
+        reply_markup.add(types.InlineKeyboardButton(
+            text=localization.get_message(['buttons', 'clear_search'], message.from_user.language_code),
+            callback_data=json.dumps({'tp': current_type, 'p': 1, 'search_query': None})))
+
     # Navigation markup
     reply_markup.add(*nav_layout)
 
@@ -128,7 +141,7 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
 
     if change_user_state:
         UserStorage.change_page(message.chat.id, current_type)
-        UserStorage.add_user_state_data(message.chat.id, current_type, {'p': current_page})
+        UserStorage.add_user_state_data(message.chat.id, current_type, {**whitelist_state_data, 'p': current_page})
 
 
 # Show allowed user
