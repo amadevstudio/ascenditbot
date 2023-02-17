@@ -76,20 +76,29 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     current_type = routes.RouteMap.type('my_chats')
 
     # Getting data and full navigation setup
-    current_state_data = UserStorage.get_user_state_data(message.chat.id, current_type)
+    current_state_data = state_data.get_current_state_data(call, message, current_type)
+
+    if call is None and message.text != '':
+        try:
+            int(message.text)
+        except ValueError:
+            current_state_data['search_query'] = message.text
+    search_query = current_state_data.get('search_query', None)
+
     current_page, user_chat_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
         call, message, current_state_data, current_type, message.from_user.language_code,
 
-        Chat.data_provider_by_service_id, [message.chat.id, message.text if call is None else None],
-        Chat.data_count_provider_by_service_id, [message.chat.id, message.text if call is None else None],
+        Chat.data_provider_by_service_id, [message.chat.id, search_query],
+        Chat.data_count_provider_by_service_id, [message.chat.id, search_query],
         _PER_PAGE, 'name'
     )
 
     # Error processing
     if 'error' in user_chat_page_data:
         if user_chat_page_data['error'] in ['empty']:
+            error = user_chat_page_data['error'] if search_query is None else 'empty_search'
             error_message = localization.get_message(
-                ['my_chats', 'errors', user_chat_page_data['error']],
+                ['my_chats', 'errors', error],
                 message.from_user.language_code,
                 command=routes.RouteMap.get_route_main_command('add_chat'))
         else:
@@ -120,7 +129,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
         else:
             button_text = localization.get_message(
                 ['my_chats', 'list', 'chat_button', 'not_found_tg'], message.from_user.language_code) \
-                          + f" {chat_data['service_id']}"
+                          + f" {chat_data['name']} {chat_data['service_id']}"
 
         button_data = {'tp': 'chat', 'id': chat_data['id']}
 
@@ -128,6 +137,11 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
             text=button_text,
             callback_data=json.dumps(button_data))
         reply_markup.add(b)
+
+    if search_query is not None:
+        reply_markup.add(types.InlineKeyboardButton(
+            text=localization.get_message(['buttons', 'clear_search'], message.from_user.language_code),
+            callback_data=json.dumps({'tp': current_type, 'p': 1, 'search_query': None})))
 
     # Navigation markup
     reply_markup.add(*nav_layout)
@@ -142,7 +156,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
 
     if change_user_state:
         UserStorage.change_page(message.chat.id, current_type)
-        UserStorage.add_user_state_data(message.chat.id, current_type, {'p': current_page})
+        UserStorage.add_user_state_data(message.chat.id, current_type, {**current_state_data, 'p': current_page})
 
     await Chat.update_names(message.chat.id)
 
