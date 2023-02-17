@@ -33,6 +33,6 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_PATH }}
             git pull
-            docker compose build
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml build
             docker compose -f docker-compose.yml -f docker-compose.prod.yml stop -t 1 bot
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
