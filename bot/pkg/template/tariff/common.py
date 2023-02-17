@@ -11,7 +11,7 @@ def build_subscription_info_short(user_tariff_info: UserTariffInfoInterface | No
         ['tariffs', 'list', 'wrapper'], language_code,
         tariff_text=localization.get_message(['tariffs', 'list', user_tariff_info['tariff_id']], language_code))
 
-    days_left_message = build_days_left_message(user_tariff_info['start_date'], language_code)
+    days_left_message = build_days_left_message(user_tariff_info['end_date'], language_code)
     if days_left_message is not None:
         info_message += ", " + days_left_message.lower()
 
@@ -35,7 +35,7 @@ def build_subscription_info(user_tariff_info: UserTariffInfoInterface | None, la
     if cant_renew_message is not None:
         info_message += "\n" + cant_renew_message
 
-    days_left_message = build_days_left_message(user_tariff_info['start_date'], language_code)
+    days_left_message = build_days_left_message(user_tariff_info['end_date'], language_code)
     if days_left_message is not None:
         info_message += "\n" + days_left_message
 
@@ -44,13 +44,17 @@ def build_subscription_info(user_tariff_info: UserTariffInfoInterface | None, la
     return info_message
 
 
-def build_days_left_message(start_date: datetime.datetime, language_code: str) -> str | None:
-    if start_date is not None:
+def build_days_left_message(end_date: datetime.datetime, language_code: str) -> str | None:
+    if end_date is not None:
         days_left = (
-                start_date
-                + datetime.timedelta(days=constants.tariff_duration_days)
+                end_date
                 - datetime.datetime.now()
         ).days + 1
+
+        if days_left == 1:
+            return localization.get_message(
+                ['subscription', 'info_block', 'less_than_one_day'], language_code)
+
         return localization.get_numerical_declension_message(
             ['subscription', 'info_block', 'days_left'], language_code,
             days_left if days_left >= 0 else 0, days_left=days_left)

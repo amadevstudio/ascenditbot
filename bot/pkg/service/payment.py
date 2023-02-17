@@ -13,14 +13,15 @@ from pkg.service.tariff import Tariff
 from pkg.service.user import User
 from pkg.system.logger import logger
 from pkg.template.tariff.common import build_subscription_info
+from project import constants
 from project.types import UserInterface
 
 
-class IncomingPayment(Service):
+class BalanceHandler(Service):
     BOT = bot.bot
 
-    @staticmethod
-    async def incoming_subscription(result: CallableInterface):
+    @classmethod
+    async def funding(cls, result: CallableInterface):
         user: UserInterface = User.get_by_id(result['user_id'])
         language_code = user['language_code']
 
@@ -28,9 +29,10 @@ class IncomingPayment(Service):
             ['buttons', 'menu'], language_code), callback_data=json.dumps({'tp': 'menu'}))
         markup = types.InlineKeyboardMarkup().add(button)
 
+        # An error occurred
         if 'error' in result:
             await chat_id_sender(
-                IncomingPayment.BOT, int(user['service_id']), message_structures=[{
+                cls.BOT, int(user['service_id']), message_structures=[{
                     'type': 'text',
                     'text': localization.get_message(
                         ['subscription', 'fund', 'errors', 'wrong_signature'], language_code),
@@ -42,9 +44,10 @@ class IncomingPayment(Service):
 
         user_tariff_info = Tariff.user_tariff_info(user['id'])
 
+        # Wrong currency
         if user_tariff_info is None or user_tariff_info['currency_code'] != result['currency']:
             await chat_id_sender(
-                IncomingPayment.BOT, int(user['service_id']), message_structures=[{
+                cls.BOT, int(user['service_id']), message_structures=[{
                     'type': 'text',
                     'text': localization.get_message(
                         ['subscription', 'fund', 'errors', 'wrong_currency_income'], language_code),
@@ -54,6 +57,7 @@ class IncomingPayment(Service):
             logger.warn('Error wrong_currency_income', result, user, user_tariff_info)
             return
 
+        # Funding
         new_balance = Tariff.add_amount(user['id'], result['amount'])
         Tariff.add_payment_history({
             'user_id': user['id'],
@@ -62,13 +66,71 @@ class IncomingPayment(Service):
             'currency_code': result['currency']})
 
         new_user_tariff_info = Tariff.user_tariff_info(user['id'])
-
         if new_user_tariff_info['balance'] != new_balance:
             new_user_tariff_info = {**new_user_tariff_info, 'balance': new_balance}
 
+        # Notify user
         success_message = localization.get_message(['subscription', 'fund', 'success_payment'], language_code)
         success_message += "\n\n" + localization.get_message(['tariffs', 'current'], language_code) \
                            + "\n" + build_subscription_info(new_user_tariff_info, language_code)
+        message_structures = [{
+            'type': 'text',
+            'text': success_message,
+            'parse_mode': 'HTML',
+            'reply_markup': markup
+        }]
+        await chat_id_sender(
+            cls.BOT, int(user['service_id']), message_structures=message_structures)
+
+        # Notify admins
+        telegram_admin_group_id = environment.get('TELEGRAM_ADMIN_GROUP_ID', None)
+        if telegram_admin_group_id is not None:
+            await chat_id_sender(cls.BOT, int(telegram_admin_group_id), message_structures=[{
+                'type': 'text',
+                'text':
+                        f"New payment from user {user['id']}, email: {user['email']}, amount {result['amount']},"
+                        f" new balance {new_balance} (bd: {new_user_tariff_info['balance']})"
+            }])
+
+        # Check referrer
+        await cls.reward_referrer(user, result['amount'])
+
+    @classmethod
+    async def reward_referrer(cls, referral: UserInterface, amount: int):
+        if referral['ref_id'] is None:
+            return
+
+        referrer = User.get_by_id(referral['ref_id'])
+        if referrer is None:
+            return
+
+        referrer_tariff_info = Tariff.user_tariff_info(referrer['id'])
+        tariff_as_referral = Tariff.tariff_info(referrer_tariff_info['tariff_id'], referral['id'])
+
+        # Reward as part of incoming sum
+        reward_days = int(amount * constants.tariff_duration_days / tariff_as_referral['price'])
+        if reward_days > constants.tariff_duration_days:
+            reward_days = constants.tariff_duration_days
+        reward_days = int(reward_days * constants.referred_days_part)
+
+        if reward_days == 0:
+            return
+
+        new_end_date = Tariff.prolong(referrer['id'], reward_days)
+
+        new_user_tariff_info = Tariff.user_tariff_info(referrer['id'])
+        if new_user_tariff_info['end_date'] != new_end_date:
+            new_user_tariff_info = {**new_user_tariff_info, 'end_date': new_end_date}
+
+        # Notify referrer
+        success_message = localization.get_message(
+            ['subscription', 'fund', 'from_referral', 'prolonged'], referrer['language_code'])
+        success_message += "\n\n" + localization.get_message(['tariffs', 'current'], referrer['language_code']) \
+                           + "\n" + build_subscription_info(new_user_tariff_info, referrer['language_code'])
+
+        button = types.InlineKeyboardButton(localization.get_message(
+            ['buttons', 'menu'], referrer['language_code']), callback_data=json.dumps({'tp': 'menu'}))
+        markup = types.InlineKeyboardMarkup().add(button)
 
         message_structures = [{
             'type': 'text',
@@ -77,16 +139,7 @@ class IncomingPayment(Service):
             'reply_markup': markup
         }]
         await chat_id_sender(
-            IncomingPayment.BOT, int(user['service_id']), message_structures=message_structures)
-
-        telegram_admin_group_id = environment.get('TELEGRAM_ADMIN_GROUP_ID', None)
-        if telegram_admin_group_id is not None:
-            await chat_id_sender(IncomingPayment.BOT, int(telegram_admin_group_id), message_structures=[{
-                'type': 'text',
-                'text':
-                        f"New payment from user {user['id']}, email: {user['email']}, amount {result['amount']},"
-                        f" new balance {new_balance} (bd: {new_user_tariff_info['balance']})"
-            }])
+            cls.BOT, int(referrer['service_id']), message_structures=message_structures)
 
 
 payment_processors: dict[str, PaymentProcessor] = {
@@ -95,7 +148,7 @@ payment_processors: dict[str, PaymentProcessor] = {
         'password_1': environment['ROBOKASSA_PAYMENT_P1'],
         'password_2': environment['ROBOKASSA_PAYMENT_P2'],
         'test': False if environment['ENVIRONMENT'] == 'production' else True
-    }, IncomingPayment.incoming_subscription, logger=logger)
+    }, BalanceHandler.funding, logger=logger)
 }
 
 

@@ -16,9 +16,10 @@ class UserTariffInfoInterface(TypedDict, total=True):
     currency_code: str
     price: int
     balance: int
-    start_date: datetime.datetime | None
+    end_date: datetime.datetime | None
     user_id: int
     tariff_id: int | None
+    trial_was_activated: bool
 
 
 class ProlongableUserWithTariffIdInterface(UserInterface):
@@ -89,7 +90,7 @@ def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
             (CASE WHEN utc.currency_code IS NOT NULL THEN utc.currency_code ELSE lccc.currency_code END) 
                 AS currency_code,
             tp.price,
-            utc.balance, utc.start_date, utc.user_id, utc.tariff_id
+            utc.balance, utc.end_date, utc.user_id, utc.tariff_id, utc.trial_was_activated
         FROM user_tariff_connections AS utc
         INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
         LEFT JOIN users AS u ON (u.id = utc.user_id)
@@ -102,6 +103,7 @@ def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
     """, (user_id,))
 
 
+# Get all tariffs with user-based currencies
 def tariffs_info(user_id: int) -> list[TariffInfoInterface | None]:
     return db.fetchall(f"""
         SELECT t.id, t.channels_count, tp.currency_code, tp.price
@@ -123,6 +125,10 @@ def tariffs_model_hash() -> dict[int, TariffInfoInterface]:
         FROM tariffs AS t
         ORDER BY t.id ASC
     """))
+
+
+def user_subscription(user_id: int) -> UserTariffConnectionInterface | None:
+    return db.find_model('user_tariff_connections', {'user_id': user_id})
 
 
 def update_subscription(subscription: UserTariffConnectionInterface) -> UserTariffConnectionInterface:
@@ -187,8 +193,10 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
 
     prolongable_conditions = ["<", ">="]
     update_actions = [
-        "SET tariff_id = 0, start_date = NULL",
-        "SET start_date = NOW(), balance = balance - subscription_filter.tariff_price"
+        "SET tariff_id = 0, end_date = NULL",
+
+        f"SET end_date = NOW() + interval '{constants.tariff_duration_days} day',"
+        + "balance = balance - subscription_filter.tariff_price"
     ]
 
     for i in range(2):
@@ -203,7 +211,7 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
                     INNER JOIN tariff_prices AS tp ON (tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
                 WHERE utc.tariff_id != 0
                     AND utc.balance {prolongable_condition} tp.price
-                    AND utc.start_date < NOW() - interval '{tariff_duration_days} day'
+                    AND utc.end_date < NOW()
             ) AS subscription_filter ON (u.id = subscription_filter.user_id)
             WHERE
                 utc.user_id = subscription_filter.user_id
@@ -283,11 +291,12 @@ def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, 
             INNER JOIN tariff_prices AS tp ON (tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
         WHERE utc.tariff_id != 0
             AND utc.balance < tp.price
-            AND utc.start_date < NOW() - interval '{tariff_duration_days} day' + interval '%s day' + interval '1 hour'
-            AND utc.start_date > NOW() - interval '{tariff_duration_days} day' + interval '%s day'
+            AND utc.end_date > NOW() + interval '%s day' - interval '1 hour'
+            AND utc.end_date < NOW() + interval '%s day'
     """.format(tariff_duration_days=constants.tariff_duration_days), 100, (days_left, days_left,)):
         for user in users_set:
             yield user
+
 
 def increase_amount(user_id: int, amount: int) -> int:
     return db.execute("""
@@ -295,6 +304,14 @@ def increase_amount(user_id: int, amount: int) -> int:
         SET balance = balance + %s
         WHERE user_id = %s
     """, (amount, user_id,), returning='balance')['balance']
+
+
+def move_end_date(user_id: int, days: int) -> datetime:
+    return db.execute("""
+        UPDATE user_tariff_connections
+        SET end_date = end_date + interval '%s day'
+        WHERE user_id = %s
+    """, (days, user_id,), returning='end_date')['end_date']
 
 
 def add_payment_history(payment_history_data: PaymentHistoryInterface) -> PaymentHistoryInterface:
