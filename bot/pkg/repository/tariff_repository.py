@@ -19,6 +19,7 @@ class UserTariffInfoInterface(TypedDict, total=True):
     end_date: datetime.datetime | None
     user_id: int
     tariff_id: int | None
+    trial_was_activated: bool
 
 
 class ProlongableUserWithTariffIdInterface(UserInterface):
@@ -89,7 +90,7 @@ def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
             (CASE WHEN utc.currency_code IS NOT NULL THEN utc.currency_code ELSE lccc.currency_code END) 
                 AS currency_code,
             tp.price,
-            utc.balance, utc.end_date, utc.user_id, utc.tariff_id
+            utc.balance, utc.end_date, utc.user_id, utc.tariff_id, utc.trial_was_activated
         FROM user_tariff_connections AS utc
         INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
         LEFT JOIN users AS u ON (u.id = utc.user_id)
@@ -124,6 +125,10 @@ def tariffs_model_hash() -> dict[int, TariffInfoInterface]:
         FROM tariffs AS t
         ORDER BY t.id ASC
     """))
+
+
+def user_subscription(user_id: int) -> UserTariffConnectionInterface | None:
+    return db.find_model('user_tariff_connections', {'user_id': user_id})
 
 
 def update_subscription(subscription: UserTariffConnectionInterface) -> UserTariffConnectionInterface:

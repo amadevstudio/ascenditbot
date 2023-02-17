@@ -43,7 +43,8 @@ class Tariff(Service):
                 'balance': 0,
                 'end_date': None,
                 'user_id': user_id,
-                'tariff_id': 0
+                'tariff_id': 0,
+                'trial_was_activated': False
             }
 
         return tariff_info
@@ -61,21 +62,46 @@ class Tariff(Service):
         return tariff_repository.find(tariff_id)
 
     @staticmethod
-    def activate_trial(user_id: int) -> None | UserTariffConnectionInterface:
-        tariff_info = tariff_repository.user_tariff_info(user_id)
-        if tariff_info is not None:
-            return None
-
-        trial_tariff = Tariff.tariff_info(constants.tariff_free_trail_id, user_id)
+    def initiate(user_id: int) -> UserTariffConnectionInterface:
+        current_tariff = tariff_repository.user_subscription(user_id)
+        if current_tariff is not None:
+            return current_tariff
 
         subscription: UserTariffConnectionInterface = {
             'user_id': user_id,
+            'tariff_id': 0,
+            'balance': 0,
+            'currency_code': tariff_repository.currency_code_for_user(user_id),
+            'end_date': None,
+            'trial_was_activated': False
+        }
+
+        return tariff_repository.update_subscription(subscription)
+
+    @staticmethod
+    def activate_trial(user_tariff_info: UserTariffInfoInterface) -> None | UserTariffConnectionInterface:
+        if user_tariff_info['trial_was_activated'] is True:
+            return None
+
+        if user_tariff_info['balance'] != 0 or user_tariff_info['end_date'] is not None \
+                or user_tariff_info['tariff_id'] != 0:
+            subscription: UserTariffConnectionInterface = {
+                'user_id': user_tariff_info['user_id'],
+                'trial_was_activated': True
+            }
+            return tariff_repository.update_subscription(subscription)
+
+        trial_tariff = Tariff.tariff_info(constants.tariff_free_trail_id, user_tariff_info['user_id'])
+
+        subscription: UserTariffConnectionInterface = {
+            'user_id': user_tariff_info['user_id'],
             'tariff_id': trial_tariff['id'],
             'balance': 0,
             'currency_code': trial_tariff['currency_code'],
             'end_date':
                 datetime.datetime.now()
                 + datetime.timedelta(days=constants.tariff_free_trail_days),
+            'trial_was_activated': True
         }
 
         return tariff_repository.update_subscription(subscription)
@@ -128,8 +154,8 @@ class Tariff(Service):
         return tariff_repository.increase_amount(user_id, amount)
 
     @staticmethod
-    def prolong(user_id: int, days: int):
-        pass
+    def prolong(user_id: int, days: int) -> datetime:
+        return tariff_repository.move_end_date(user_id, days)
 
     @staticmethod
     def chats_number_satisfactory(user_chat_id: int, strong: bool = True) -> bool:

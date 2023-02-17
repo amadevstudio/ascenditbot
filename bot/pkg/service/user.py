@@ -2,14 +2,16 @@ from typing import TypedDict
 
 from pkg.repository import user_repository
 from pkg.service.service import Service
+from pkg.service.tariff import Tariff
 from pkg.system.logger import logger
 from project import constants
-from project.types import UserInterface
+from project.types import UserInterface, UserTariffConnectionInterface
 
 
 class RegistrationResultInterface(TypedDict, total=False):
     user: UserInterface | None
     refer: UserInterface | None
+    subscription: UserTariffConnectionInterface | None
 
 
 class BeginParamsInterface(TypedDict, total=False):
@@ -28,6 +30,9 @@ class User(Service):
 
         if registration_result['is_new'] and registration_result['user']['ref_id'] is not None:
             result = {**result, 'refer': User.get_by_id(registration_result['user']['ref_id'])}
+
+        tariff_initiation_result = Tariff.initiate(registration_result['user']['id'])
+        result = {**result, 'subscription': tariff_initiation_result}
 
         return result
 

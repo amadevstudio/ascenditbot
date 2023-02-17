@@ -39,7 +39,8 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
         refer: UserInterface = registration_result['refer']
         await chat_id_sender(message.bot, int(refer['service_id']), [{
             'type': 'text',
-            'text': localization.get_message(['welcome', 'user_referred'], refer['language_code']),
+            'text': localization.get_message(
+                ['subscription', 'fund', 'from_referral', 'initialed'], refer['language_code']),
         }])
 
 
@@ -57,15 +58,17 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
 
     user_id = User.get_id_by_service_id(message.chat.id)
 
-    trial_info = Tariff.activate_trial(user_id)
+    user_tariff_info = Tariff.user_tariff_info(user_id)
+
+    trial_info = Tariff.activate_trial(user_tariff_info)
     if trial_info is not None:
         answer_messages.append({
             'type': 'text',
             'text': localization.get_message(['subscription', 'free_trial'], message.from_user.language_code),
             'parse_mode': 'Markdowns'
         })
+        user_tariff_info = Tariff.user_tariff_info(user_id)
 
-    user_tariff_info = Tariff.user_tariff_info(user_id)
     answer_messages.append({
         'type': 'text',
         'text':

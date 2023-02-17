@@ -76,6 +76,7 @@ class UserTariffConnectionInterface(TypedDict, total=False):
     balance: int
     currency_code: str
     end_date: datetime.datetime | None
+    trial_was_activated: bool
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
