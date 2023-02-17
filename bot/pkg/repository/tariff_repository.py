@@ -132,9 +132,9 @@ def user_subscription(user_id: int) -> UserTariffConnectionInterface | None:
 
 
 def update_subscription(subscription: UserTariffConnectionInterface) -> UserTariffConnectionInterface:
-    result = db.insert_model(
+    result = db.update_model(
         'user_tariff_connections', subscription,
-        conflict_unique_fields=['user_id'])
+        key_fields=['user_id'])
 
     tariff = db.find_model('tariffs', {'id': result['tariff_id']})
 

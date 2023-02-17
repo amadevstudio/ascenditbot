@@ -1,11 +1,9 @@
 import datetime
 from typing import Generator
 
-from lib.language import localization
 from pkg.repository import tariff_repository, chat_repository
 from pkg.repository.tariff_repository import UserTariffInfoInterface, TariffInfoInterface, ProcessSubscriptionInterface
 from pkg.service.service import Service
-from pkg.system.logger import logger
 
 from project import constants
 from project.types import UserTariffConnectionInterface, ErrorDictInterface, PaymentHistoryInterface, UserInterface
@@ -107,7 +105,7 @@ class Tariff(Service):
         return tariff_repository.update_subscription(subscription)
 
     @staticmethod
-    def change(user_id: int, chosen_tariff_id: int) -> UserTariffConnectionInterface | ErrorDictInterface:
+    def change(user_id: int, chosen_tariff_id: int, force=False) -> UserTariffConnectionInterface | ErrorDictInterface:
         user_subscription = Tariff.user_tariff_info(user_id)
         if user_subscription['tariff_id'] == chosen_tariff_id:
             return {'error': 'already_chosen'}
@@ -116,28 +114,36 @@ class Tariff(Service):
         user_tariff = Tariff.tariff_info(user_subscription['tariff_id'], user_id)
 
         # How many the user must pay
-        if user_subscription['tariff_id'] == 0:
-            change_sum = chosen_tariff['price']
-            new_subscription_end_date = datetime.datetime.now() + datetime.timedelta(
-                days=constants.tariff_duration_days)
-
-        else:
-            # Do not take into account the current day, since part of it has passed, charge again
-            days_left = (user_subscription['end_date'] - datetime.datetime.now()).days
-            if days_left > 0:
-                # Change sum is positive when chosen tariff is more expensive
-                change_sum = int(
-                    (days_left / constants.tariff_duration_days) * chosen_tariff['price']
-                    - ((days_left - 1) / constants.tariff_duration_days) * user_tariff['price']
-                )
-            else:
+        if force is False:
+            if user_subscription['tariff_id'] == 0:
                 change_sum = chosen_tariff['price']
+                new_subscription_end_date = datetime.datetime.now() + datetime.timedelta(
+                    days=constants.tariff_duration_days)
 
-            new_subscription_end_date = (None if chosen_tariff['id'] == 0 else user_subscription['end_date'])
+            else:
+                # Do not take into account the current day, since part of it has passed, charge again
+                days_left = (user_subscription['end_date'] - datetime.datetime.now()).days
+                if days_left > 0:
+                    # Change sum is positive when chosen tariff is more expensive
+                    change_sum = int(
+                        (days_left / constants.tariff_duration_days) * chosen_tariff['price']
+                        - ((days_left - 1) / constants.tariff_duration_days) * user_tariff['price']
+                    )
+                else:
+                    change_sum = chosen_tariff['price']
 
-        # Can the user pay for the best tariff?
-        if change_sum > 0 and user_subscription['balance'] < change_sum:
-            return {'error': 'not_enough_balance'}
+                new_subscription_end_date = (None if chosen_tariff['id'] == 0 else user_subscription['end_date'])
+
+            # Can the user pay for the best tariff?
+            if change_sum > 0 and user_subscription['balance'] < change_sum:
+                return {'error': 'not_enough_balance'}
+
+        else:  # if force is True:
+            change_sum = 0
+            if user_subscription['tariff_id'] == 0:
+                new_subscription_end_date = datetime.datetime.now()
+            else:
+                new_subscription_end_date = (None if chosen_tariff['id'] == 0 else user_subscription['end_date'])
 
         new_subscription: UserTariffConnectionInterface = {
             'user_id': user_id,
