@@ -26,7 +26,7 @@ class NavigationBuilder(metaclass=Singleton):
 
     # возвращает текущую страницу
     @staticmethod
-    def get_state_page(call: types.CallbackQuery, message: types.Message, state_data):
+    def get_state_page(call: types.CallbackQuery | None, message: types.Message, state_data):
         try:
             if call is not None:
                 try:
