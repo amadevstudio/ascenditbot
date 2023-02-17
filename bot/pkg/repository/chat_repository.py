@@ -99,7 +99,8 @@ def user_chats_count_by_service_id(user_chat_id: str, search_query: str | None =
         LEFT JOIN moderated_chats AS mc ON (mc.id = umcc.moderated_chat_id)
         INNER JOIN users AS u ON (u.id = umcc.user_id)
         WHERE u.service_id = %s {search_query_sql}
-    """.format(search_query_sql=search_query_sql), request_params)['count']
+    """.format(search_query_sql=search_query_sql),
+        request_params)['count']
 
 
 def user_chats(user_id: str, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
@@ -116,7 +117,7 @@ def user_chats(user_id: str, order_by: str, limit: int, offset: int) -> List[Mod
 
 def user_chats_by_service_id(
         user_chat_id: str, search_query: str | None = None,
-        order_by: Literal['name', 'created_at'] = 'name', limit: int | None = None, offset: int | None = 0) \
+        order_by: Literal['name', 'created_at'] = 'name', limit: int | None = None, offset: int = 0) \
         -> List[ModeratedChatInterface]:
 
     request_params = (user_chat_id,)
@@ -149,8 +150,7 @@ def user_chats_by_service_id(
         INNER JOIN users AS u ON (u.id = umcc.user_id)
         WHERE u.service_id = %s {search_query_sql}
         ORDER BY {order_field} {limit_sql} OFFSET %s
-    """.format(
-        order_field=order_by, search_query_sql=search_query_sql, limit_sql=limit_sql),
+    """.format(order_field=order_by, search_query_sql=search_query_sql, limit_sql=limit_sql),
         request_params)
 
 
@@ -176,16 +176,54 @@ def add_to_whitelist(chat_id: int, user_nickname: str) -> ModeratedChatInterface
         'allowed_users', allowed_user, conflict_unique_fields=['moderated_chat_id', 'nickname'])
 
 
-def chat_whitelist_count(chat_id: int) -> int | None:
+def chat_whitelist_count(chat_id: int, search_query: str | None = None) -> int | None:
+    request_params = (chat_id,)
+
+    if search_query is not None and search_query != "":
+        search_query_sql = " AND LOWER(nickname) LIKE '%%' || %s || '%%'"
+        request_params += (search_query,)
+    else:
+        search_query_sql = ""
+
     return db.fetchone("""
             SELECT COUNT(*) FROM allowed_users
-            WHERE moderated_chat_id = %s
-        """, (chat_id,))['count']
+            WHERE moderated_chat_id = %s {search_query_sql}
+        """.format(search_query_sql=search_query_sql),
+        request_params)['count']
 
 
-def chat_whitelist(chat_id: int, order_by: str, limit: int, offset: int) -> List[AllowedUserInterface] | None:
+def chat_whitelist(
+        chat_id: int, search_query: str | None = None,
+        order_by: Literal['nickname', 'created_at'] = 'nickname', limit: int | None = None, offset: int = 0) \
+        -> List[AllowedUserInterface] | None:
+
+    request_params = (chat_id,)
+
+    match order_by:
+        case 'created_at':
+            order_by = "created_at"
+        case 'nickname':
+            order_by = "nickname, created_at"
+        case _:
+            order_by = "nickname, created_at"
+
+    if search_query is not None and search_query != "":
+        search_query_sql = " AND LOWER(nickname) LIKE '%%' || %s || '%%'"
+        request_params += (search_query,)
+    else:
+        search_query_sql = ""
+
+    if limit is not None:
+        limit_sql = " LIMIT %s "
+        request_params += (limit,)
+    else:
+        limit_sql = ""
+
+    request_params += (offset,)
+
     return db.fetchall("""
         SELECT * FROM allowed_users
-        WHERE moderated_chat_id = %s
-        ORDER BY {order_field} LIMIT %s OFFSET %s
-    """.format(order_field=order_by), (chat_id, limit, offset,))
+        WHERE moderated_chat_id = %s {search_query_sql}
+        ORDER BY {order_field} {limit_sql} OFFSET %s
+    """.format(search_query_sql=search_query_sql, order_field=order_by, limit_sql=limit_sql),
+        request_params)

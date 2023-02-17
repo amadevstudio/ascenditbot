@@ -13,7 +13,7 @@ from pkg.service.service import Service
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
 from pkg.system.logger import logger
-from project.types import ModeratedChatInterface, ErrorDictInterface
+from project.types import ModeratedChatInterface, ErrorDictInterface, AllowedUserInterface
 
 
 class AdminValidationInterface(TypedDict, total=False):
@@ -223,12 +223,15 @@ class Chat(Service):
         return result_whitelisted
 
     @staticmethod
-    def whitelist_data_count_provider(chat_id: int) -> int:
-        return chat_repository.chat_whitelist_count(chat_id)
+    def whitelist_data_count_provider(chat_id: int, search_query: str | None = None) -> int:
+        return chat_repository.chat_whitelist_count(chat_id, search_query)
 
     @staticmethod
-    def whitelist_data_provider(chat_id: int, order_by: str, limit: int, offset: int):
-        return pkg.repository.chat_repository.chat_whitelist(chat_id, order_by, limit, offset)
+    def whitelist_data_provider(
+            chat_id: int, search_query: str | None = None,
+            order_by: Literal['created_at', 'nickname'] = 'nickname', limit: int | None = None, offset: int = 0) \
+            -> list[AllowedUserInterface] | None:
+        return pkg.repository.chat_repository.chat_whitelist(chat_id, search_query, order_by, limit, offset)
 
     @classmethod
     async def update_names(cls, user_service_id: int):

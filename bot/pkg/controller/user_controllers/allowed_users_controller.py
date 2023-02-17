@@ -77,9 +77,9 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
     current_page, chat_whitelist_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
         call, message, state_data, current_type, message.from_user.language_code,
 
-        Chat.whitelist_data_provider, [channel_state_data['id']],
-        Chat.whitelist_data_count_provider, [channel_state_data['id']],
-        _PER_PAGE, 'created_at'
+        Chat.whitelist_data_provider, [channel_state_data['id'], message.text if call is None else None],
+        Chat.whitelist_data_count_provider, [channel_state_data['id'], message.text if call is None else None],
+        _PER_PAGE, 'nickname'
     )
 
     # Error processing
