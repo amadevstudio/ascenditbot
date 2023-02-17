@@ -20,6 +20,9 @@ from project.types import UserInterface
 class BalanceHandler(Service):
     BOT = bot.bot
 
+    # Usage example
+    # import main; import asyncio; from pkg.service.payment import BalanceHandler
+    # asyncio.run(BalanceHandler.funding({'amount': 50000, 'currency': 'rub', 'user_id': 12, 'service': 'robokassa'}))
     @classmethod
     async def funding(cls, result: CallableInterface):
         user: UserInterface = User.get_by_id(result['user_id'])
@@ -105,6 +108,12 @@ class BalanceHandler(Service):
             return
 
         referrer_tariff_info = Tariff.user_tariff_info(referrer['id'])
+
+        # Promote tariff if disabled
+        if referrer_tariff_info['tariff_id'] == 0:
+            Tariff.change(referrer['id'], constants.tariff_free_trail_id, force=True)
+            referrer_tariff_info = Tariff.user_tariff_info(referrer['id'])
+
         tariff_as_referral = Tariff.tariff_info(referrer_tariff_info['tariff_id'], referral['id'])
 
         # Reward as part of incoming sum
