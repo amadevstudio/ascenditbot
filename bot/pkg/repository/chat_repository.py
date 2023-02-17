@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import List, Any, Literal
 
 from pkg.repository.database_connection import Database
 from project.types import ModeratedChatInterface, ErrorDictInterface, AllowedUserInterface, \
@@ -17,6 +17,10 @@ def find(chat_id: int) -> ModeratedChatInterface:
 
 def find_by(fields_value: ModeratedChatInterface) -> ModeratedChatInterface:
     return db.find_model('moderated_chats', fields_value)
+
+
+def update(chat_data: ModeratedChatInterface) -> ModeratedChatInterface:
+    return db.update_model('moderated_chats', chat_data, ['id'])
 
 
 def chat_creator(chat_id: int) -> UserInterface:
@@ -81,13 +85,21 @@ def user_chats_count(user_id: str) -> int | None:
     """, (user_id,))['count']
 
 
-def user_chats_count_by_service_id(user_chat_id: str) -> int | None:
+def user_chats_count_by_service_id(user_chat_id: str, search_query: str | None = None) -> int | None:
+    request_params = (user_chat_id,)
+
+    if search_query is not None and search_query != "":
+        search_query_sql = " AND LOWER(mc.name) LIKE '%%' || %s || '%%'"
+        request_params += (search_query,)
+    else:
+        search_query_sql = ""
+
     return db.fetchone("""
         SELECT COUNT(*) FROM user_moderated_chat_connections AS umcc
+        LEFT JOIN moderated_chats AS mc ON (mc.id = umcc.moderated_chat_id)
         INNER JOIN users AS u ON (u.id = umcc.user_id)
-        
-        WHERE u.service_id = %s
-    """, (user_chat_id,))['count']
+        WHERE u.service_id = %s {search_query_sql}
+    """.format(search_query_sql=search_query_sql), request_params)['count']
 
 
 def user_chats(user_id: str, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
@@ -102,17 +114,44 @@ def user_chats(user_id: str, order_by: str, limit: int, offset: int) -> List[Mod
     """.format(order_field=order_by), (user_id, limit, offset,))
 
 
-def user_chats_by_service_id(user_chat_id: str, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
-    if order_by == "created_at":
-        order_by = "mc.created_at"
+def user_chats_by_service_id(
+        user_chat_id: str, search_query: str | None = None,
+        order_by: Literal['name', 'created_at'] = 'name', limit: int | None = None, offset: int | None = 0) \
+        -> List[ModeratedChatInterface]:
+
+    request_params = (user_chat_id,)
+
+    match order_by:
+        case 'created_at':
+            order_by = "mc.created_at"
+        case 'name':
+            order_by = "mc.name, mc.created_at"
+        case _:
+            order_by = "mc.name, mc.created_at"
+
+    if search_query is not None and search_query != "":
+        search_query_sql = " AND LOWER(mc.name) LIKE '%%' || %s || '%%'"
+        request_params += (search_query,)
+    else:
+        search_query_sql = ""
+
+    if limit is not None:
+        limit_sql = " LIMIT %s "
+        request_params += (limit, )
+    else:
+        limit_sql = ""
+
+    request_params += (offset,)
 
     return db.fetchall("""
         SELECT mc.* FROM moderated_chats AS mc
         INNER JOIN user_moderated_chat_connections AS umcc ON (umcc.moderated_chat_id = mc.id)
         INNER JOIN users AS u ON (u.id = umcc.user_id)
-        WHERE u.service_id = %s
-        ORDER BY {order_field} LIMIT %s OFFSET %s
-    """.format(order_field=order_by), (user_chat_id, limit, offset,))
+        WHERE u.service_id = %s {search_query_sql}
+        ORDER BY {order_field} {limit_sql} OFFSET %s
+    """.format(
+        order_field=order_by, search_query_sql=search_query_sql, limit_sql=limit_sql),
+        request_params)
 
 
 def is_active_by_service_id(chat_service_id: str) -> bool:

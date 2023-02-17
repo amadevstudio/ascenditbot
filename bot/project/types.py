@@ -14,6 +14,7 @@ class UserInterface(TypedDict, total=False):
     created_at: datetime.datetime
     updated_at: datetime.datetime
     email: str
+    nickname: str
 
 
 class ModeratedChatInterface(TypedDict, total=False):
@@ -25,6 +26,7 @@ class ModeratedChatInterface(TypedDict, total=False):
     allowed_keywords: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    name: str
 
 
 class UserModeratedChatConnectionInterface(TypedDict, total=False):

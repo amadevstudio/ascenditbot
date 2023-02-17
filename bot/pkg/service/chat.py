@@ -7,6 +7,7 @@ from aiogram.utils import exceptions
 
 import pkg.repository.allowed_user_repository
 import pkg.repository.chat_repository
+from pkg.controller import bot
 from pkg.repository import chat_repository
 from pkg.service.service import Service
 from pkg.service.tariff import Tariff
@@ -25,6 +26,8 @@ class AccessValidationInterface(ErrorDictInterface, total=False):
 
 
 class Chat(Service):
+    BOT = bot.bot
+
     @staticmethod
     def find(chat_id: int) -> ModeratedChatInterface | None:
         return chat_repository.find(chat_id)
@@ -187,8 +190,8 @@ class Chat(Service):
         return chat_repository.user_chats_count(str(user_id))
 
     @staticmethod
-    def data_count_provider_by_service_id(user_chat_id: int) -> int | None:
-        return chat_repository.user_chats_count_by_service_id(str(user_chat_id))
+    def data_count_provider_by_service_id(user_chat_id: int, search_query: str | None = None) -> int | None:
+        return chat_repository.user_chats_count_by_service_id(str(user_chat_id), search_query)
 
     @staticmethod
     def data_provider(user_id: int, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
@@ -196,8 +199,10 @@ class Chat(Service):
 
     @staticmethod
     def data_provider_by_service_id(
-            user_chat_id: int, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
-        return chat_repository.user_chats_by_service_id(str(user_chat_id), order_by, limit, offset)
+            user_chat_id: int, search_query: str | None = None,
+            order_by: Literal['name', 'created_at'] = 'name', limit: int | None = None, offset: int = 0)\
+            -> List[ModeratedChatInterface]:
+        return chat_repository.user_chats_by_service_id(str(user_chat_id), search_query, order_by, limit, offset)
 
     @staticmethod
     def switch_active(chat_id: int) -> bool:
@@ -224,3 +229,13 @@ class Chat(Service):
     @staticmethod
     def whitelist_data_provider(chat_id: int, order_by: str, limit: int, offset: int):
         return pkg.repository.chat_repository.chat_whitelist(chat_id, order_by, limit, offset)
+
+    @classmethod
+    async def update_names(cls, user_service_id: int):
+        user_chats = cls.data_provider_by_service_id(user_service_id)
+        for chat in user_chats:
+            chat_info = await cls.load_info(cls.BOT, chat_service_id=str(chat['service_id']))
+            if 'error' in chat_info:
+                continue
+
+            chat_repository.update({'id': chat['id'], 'name': chat_info['title']})

@@ -117,8 +117,7 @@ class NavigationBuilder(metaclass=Singleton):
             return result
 
     def full_message_setup(self, call, message, state_data, current_type, language_code,
-                           data_provider, data_params, data_count_provider, data_count_params, per_page, order_field
-    ):
+                           data_provider, data_params, data_count_provider, data_count_params, per_page, order_field):
         current_page = self.__class__.get_state_page(call, message, state_data)
         user_chat_page_data = self.__class__.load_page_data(
             data_provider, data_params, data_count_provider, data_count_params, current_page, per_page, order_field)
