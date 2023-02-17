@@ -306,5 +306,13 @@ def increase_amount(user_id: int, amount: int) -> int:
     """, (amount, user_id,), returning='balance')['balance']
 
 
+def move_end_date(user_id: int, days: int) -> datetime:
+    return db.execute("""
+        UPDATE user_tariff_connections
+        SET end_date = end_date + interval '%s day'
+        WHERE user_id = %s
+    """, (days, user_id,), returning='end_date')['end_date']
+
+
 def add_payment_history(payment_history_data: PaymentHistoryInterface) -> PaymentHistoryInterface:
     return db.insert_model('payments_history', payment_history_data)

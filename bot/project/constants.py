@@ -5,4 +5,4 @@ tariff_duration_days = 30
 tariff_free_trail_days = 15
 tariff_free_trail_id = 1
 default_currency = 'usd'
-refer_percent = 10
+referred_days_part = 0.5
