@@ -4,13 +4,11 @@ from aiogram import types
 
 from framework.controller import state_data
 from lib.language import localization
-from framework.controller.message_tools import message_sender, go_back_inline_markup, call_or_command, \
-    image_link_or_object, notify, go_back_inline_button
+from framework.controller.message_tools import message_sender, go_back_inline_markup, is_call_or_command, \
+    image_link_or_object, notify, go_back_inline_button, determine_search_query
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
 from pkg.controller.user_controllers.common_controller import chat_access_denied, raise_error
-from pkg.service.tariff import Tariff
-from pkg.service.user import User
 from pkg.service.user_storage import UserStorage
 from pkg.service.chat import Chat
 
@@ -18,7 +16,7 @@ _PER_PAGE = 5
 
 
 async def add_chat(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    if call_or_command(call, message):
+    if is_call_or_command(call, message):
         message_structures = [{
             'type': 'image',
             'image': image_link_or_object(
@@ -78,11 +76,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     # Getting data and full navigation setup
     current_state_data = state_data.get_current_state_data(call, message, current_type)
 
-    if call is None and message.text != '':
-        try:
-            int(message.text)
-        except ValueError:
-            current_state_data['search_query'] = message.text
+    current_state_data = determine_search_query(call, message, current_state_data)
     search_query = current_state_data.get('search_query', None)
 
     current_page, user_chat_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(

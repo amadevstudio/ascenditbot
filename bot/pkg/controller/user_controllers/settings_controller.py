@@ -3,7 +3,7 @@ import json
 from aiogram import types
 
 from framework.controller.message_tools import message_sender, go_back_inline_markup, go_back_inline_button, \
-    call_or_command
+    is_call_or_command
 from lib.language import localization
 from pkg.config import routes
 from pkg.service.user import User
@@ -30,7 +30,7 @@ async def page(call: types.CallbackQuery, message: types.Message, change_user_st
 
 
 async def email(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    if not call_or_command(call, message) and len(message.text) != 0:
+    if not is_call_or_command(call, message) and len(message.text) != 0:
         User.update_email_by_service_id(message.chat.id, message.text)
 
     user = User.find_by_service_id(message.chat.id)
@@ -46,5 +46,5 @@ async def email(call: types.CallbackQuery, message: types.Message, change_user_s
     }]
     await message_sender(message, resending=call is None, message_structures=message_structures)
 
-    if call_or_command(call, message) and change_user_state:
+    if is_call_or_command(call, message) and change_user_state:
         UserStorage.change_page(message.chat.id, routes.RouteMap.type('settings_email'))

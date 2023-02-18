@@ -2,8 +2,8 @@ import json
 
 from aiogram import types
 
-from framework.controller.message_tools import notify, message_sender, call_or_command, go_back_inline_markup, \
-    go_back_inline_button
+from framework.controller.message_tools import notify, message_sender, is_call_or_command, go_back_inline_markup, \
+    go_back_inline_button, determine_search_query
 from framework.controller import state_data
 from lib.language import localization
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
@@ -17,7 +17,7 @@ from pkg.service.user_storage import UserStorage
 
 # Add user to whitelist
 async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    if call_or_command(call, message):
+    if is_call_or_command(call, message):
         message_structures = [{
             'type': 'text',
             'text': localization.get_message(['chat', 'add_to_whitelist', 'text'], message.from_user.language_code),
@@ -72,11 +72,7 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
     channel_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('chat'))
     whitelist_state_data = state_data.get_current_state_data(call, message, current_type)
 
-    if call is None and message.text != '':
-        try:
-            int(message.text)
-        except ValueError:
-            whitelist_state_data['search_query'] = message.text
+    whitelist_state_data = determine_search_query(call, message, whitelist_state_data)
     search_query = whitelist_state_data.get('search_query', None)
 
     chat_info = await Chat.load_info(message.bot, str(channel_state_data['service_id']))
