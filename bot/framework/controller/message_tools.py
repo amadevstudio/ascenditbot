@@ -1,3 +1,4 @@
+import copy
 import json
 import time
 from typing import Literal
@@ -107,8 +108,12 @@ async def notify(
     UserStorage.change_page(message.chat.id, config.routes.RouteMap.type('nowhere'))
 
 
-def call_or_command(call: types.CallbackQuery = None, message: types.Message = None,
-                    entity: types.Message | types.CallbackQuery = None) -> bool:
+def is_command(message_text: str) -> bool:
+    return message_text and message_text.startswith('/')
+
+
+def is_call_or_command(call: types.CallbackQuery = None, message: types.Message = None,
+                       entity: types.Message | types.CallbackQuery = None) -> bool:
     """
     If entity passed call and message are ignored
     """
@@ -116,3 +121,20 @@ def call_or_command(call: types.CallbackQuery = None, message: types.Message = N
         call, message = call_and_message_accessed_processor(entity)
 
     return call is not None or (call is None and message.text is not None and message.text[0]) == '/'
+
+
+def determine_search_query(
+        call: types.CallbackQuery | None, message: types.Message, state_data: dict[str, any]) -> dict[str, any]:
+    local_state_data = copy.deepcopy(state_data)
+
+    if call is None and message.text != '':
+        try:
+            int(message.text)
+        except ValueError:
+            local_state_data['search_query'] = message.text
+            return local_state_data
+
+    if 'search_query' in local_state_data and local_state_data['search_query'] is None:
+        del local_state_data['search_query']
+
+    return local_state_data
