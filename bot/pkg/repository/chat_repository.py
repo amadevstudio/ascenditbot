@@ -89,7 +89,7 @@ def user_chats_count_by_service_id(user_chat_id: str, search_query: str | None =
     request_params = (user_chat_id,)
 
     if search_query is not None and search_query != "":
-        search_query_sql = " AND LOWER(mc.name) LIKE '%%' || %s || '%%'"
+        search_query_sql = " AND LOWER(mc.name) LIKE LOWER('%%' || %s || '%%')"
         request_params += (search_query,)
     else:
         search_query_sql = ""
@@ -131,7 +131,7 @@ def user_chats_by_service_id(
             order_by = "mc.name, mc.created_at"
 
     if search_query is not None and search_query != "":
-        search_query_sql = " AND LOWER(mc.name) LIKE '%%' || %s || '%%'"
+        search_query_sql = " AND LOWER(mc.name) LIKE LOWER('%%' || %s || '%%')"
         request_params += (search_query,)
     else:
         search_query_sql = ""
@@ -180,7 +180,7 @@ def chat_whitelist_count(chat_id: int, search_query: str | None = None) -> int |
     request_params = (chat_id,)
 
     if search_query is not None and search_query != "":
-        search_query_sql = " AND LOWER(nickname) LIKE '%%' || %s || '%%'"
+        search_query_sql = " AND LOWER(nickname) LIKE LOWER('%%' || %s || '%%')"
         request_params += (search_query,)
     else:
         search_query_sql = ""
@@ -208,7 +208,7 @@ def chat_whitelist(
             order_by = "nickname, created_at"
 
     if search_query is not None and search_query != "":
-        search_query_sql = " AND LOWER(nickname) LIKE '%%' || %s || '%%'"
+        search_query_sql = " AND LOWER(nickname) LIKE LOWER('%%' || %s || '%%')"
         request_params += (search_query,)
     else:
         search_query_sql = ""
