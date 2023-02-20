@@ -36,8 +36,6 @@ To do so, use
 Using [dbmate](https://github.com/amacneil/dbmate)
 as migration engine.
 
-__TODO: Production migrations runs automatically.__
-
 Create new migration with  
 `docker compose run migrator -e POSTGRES_URL new create_users_table`  
 Migrate with  
