@@ -43,4 +43,4 @@ Migrate with
 View help and rest of the commands with  
 `docker compose run migrator --help`
 
-Don't forget to own the project.
+Don't forget to own the project if necessary.
