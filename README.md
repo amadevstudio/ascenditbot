@@ -5,6 +5,7 @@ Telegram whitelist bot for a chats
 
 - `touch env/.env.local` and set variables:
   - *TELEGRAM_BOT_TOKEN*
+  - *TELEGRAM_ADMIN_GROUP_ID*
 - `docker compose build`
 - `docker compose up`
 - `docker compose run migrator -e POSTGRES_URL up`
