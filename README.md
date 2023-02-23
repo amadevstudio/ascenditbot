@@ -11,6 +11,16 @@ Telegram whitelist bot for a chats
 - `docker compose run migrator -e POSTGRES_URL up`
 - `sudo chmod u+x scripts/own_project.sh && ./scripts/own_project.sh`
 
+Additional steps for production:
+- Create administrator user and perform all steps from him
+- Set additional variables:
+  - *ENVIRONMENT=production*
+  - *POSTGRES_PASSWORD*
+  - *POSTGRES_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_SERVER}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"*
+  - *REDIS_PASSWORD*
+- Use docker compose command with prod file: `docker compose -f docker-compose.yml -f docker-compose.prod.yml build`
+- And run in background `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
+
 ### Pycharm
 - Set bot folder: RClick on bot -> Mark directory as -> Mark as Sources Root
 - For Community version you can use local packages environment for packages mapping:
