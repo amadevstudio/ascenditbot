@@ -5,10 +5,21 @@ Telegram whitelist bot for a chats
 
 - `touch env/.env.local` and set variables:
   - *TELEGRAM_BOT_TOKEN*
+  - *TELEGRAM_ADMIN_GROUP_ID*
 - `docker compose build`
 - `docker compose up`
 - `docker compose run migrator -e POSTGRES_URL up`
 - `sudo chmod u+x scripts/own_project.sh && ./scripts/own_project.sh`
+
+Additional steps for production:
+- Create administrator user and perform all steps from him
+- Set additional variables:
+  - *ENVIRONMENT=production*
+  - *POSTGRES_PASSWORD*
+  - *POSTGRES_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_SERVER}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"*
+  - *REDIS_PASSWORD*
+- Use docker compose command with prod file: `docker compose -f docker-compose.yml -f docker-compose.prod.yml build`
+- And run in background `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
 
 ### Pycharm
 - Set bot folder: RClick on bot -> Mark directory as -> Mark as Sources Root
@@ -36,8 +47,6 @@ To do so, use
 Using [dbmate](https://github.com/amacneil/dbmate)
 as migration engine.
 
-__TODO: Production migrations runs automatically.__
-
 Create new migration with  
 `docker compose run migrator -e POSTGRES_URL new create_users_table`  
 Migrate with  
@@ -45,4 +54,4 @@ Migrate with
 View help and rest of the commands with  
 `docker compose run migrator --help`
 
-Don't forget to own the project.
+Don't forget to own the project if necessary.
