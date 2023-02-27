@@ -74,7 +74,7 @@ class Tariff(Service):
             'trial_was_activated': False
         }
 
-        return tariff_repository.update_subscription(subscription)
+        return tariff_repository.update_subscription(subscription, create=True)
 
     @staticmethod
     def activate_trial(user_tariff_info: UserTariffInfoInterface) -> None | UserTariffConnectionInterface:
