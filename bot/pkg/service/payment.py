@@ -161,9 +161,6 @@ payment_processors: dict[str, PaymentProcessor] = {
 }
 
 
-server = PaymentServer(3000, list(payment_processors.values()))
-
-
 class Payment(Service):
     # @staticmethod
     # def is_test(text: str) -> [float, str]:
