@@ -19,9 +19,11 @@ class RouteActionsInterface(TypedDict):
 
 class RouteInterface(TypedDict, total=False):
     method: Callable
-    routes: List[AvailableRoutes]
-    commands: List[AvailableCommands]
+    available_from: list[Literal['command', 'message', 'call']]  # Which types of action trigger the route
+    commands: list[AvailableCommands]  # Commands that triggers the route
+    routes: list[AvailableRoutes]  # Routes that can be reached directly
     wait_for_input: bool
+    states_for_input: list[AvailableRoutes]  # States for message input (for example, its own name)
     actions: Dict[str, RouteActionsInterface]
     validator: Callable
 
@@ -35,22 +37,28 @@ class RoutesInterface(TypedDict):
     add_to_chat_whitelist: RouteInterface
     chat_whitelist: RouteInterface
     allowed_user: RouteInterface
+    subscription: RouteInterface
+    tariffs: RouteInterface
+    fund: RouteInterface
+    fund_amount: RouteInterface
+    settings: RouteInterface
+    settings_email: RouteInterface
     nowhere: RouteInterface
 
 
 # TODO: use nesting routing
 class RouteMap:
-    ROUTES: RoutesInterface = {
+    ROUTES: dict[AvailableRoutes, RouteInterface] = {
         'start': {
             'method': welcome_controller.start,
-            'commands': ['start'],
+            'available_from': ['command'],
             'routes': [
                 'menu'
             ],
         },
         'menu': {
             'method': welcome_controller.menu,
-            'commands': ['menu'],
+            'available_from': ['command', 'call'],
             'routes': [
                 'add_chat',
                 'my_chats',
@@ -61,25 +69,23 @@ class RouteMap:
         },
         'help': {
             'method': welcome_controller.help_page,
-            'commands': ['help']
+            'available_from': ['command', 'call'],
         },
 
         'add_chat': {
             'method': chats_controller.add_chat,
-            'commands': ['add_chat'],
+            'available_from': ['command', 'message', 'call'],
             'wait_for_input': True,
-            # 'available_from': ['call', 'command', 'message'],
-            # 'chat_type': types.ChatType.PRIVATE
         },
-
         'my_chats': {
             'method': chats_controller.my_chats,
-            'commands': ['my_chats'],
+            'available_from': ['command', 'message', 'call'],
             'routes': ['chat'],
             'wait_for_input': True,
         },
         'chat': {
             'method': chats_controller.show,
+            'available_from': ['call'],
             'routes': [
                 'add_to_chat_whitelist',
                 'chat_whitelist'
@@ -93,17 +99,20 @@ class RouteMap:
         },
         'add_to_chat_whitelist': {
             'method': allowed_users_controller.add_to_chat_whitelist,
+            'available_from': ['message', 'call'],
             'wait_for_input': True,
             'validator': chat_access_validator
         },
         'chat_whitelist': {
             'method': allowed_users_controller.chat_whitelist,
+            'available_from': ['message', 'call'],
             'routes': ['allowed_user'],
             'wait_for_input': True,
             'validator': chat_access_validator
         },
         'allowed_user': {
             'method': allowed_users_controller.show,
+            'available_from': ['call'],
             'actions': {
                 'switch_active': {
                     'method': allowed_users_controller.switch_active
@@ -114,9 +123,10 @@ class RouteMap:
             },
             'validator': chat_access_validator
         },
+
         'subscription': {
             'method': subscription_controller.page,
-            'commands': ['subscription'],
+            'available_from': ['command', 'call'],
             'routes': [
                 'tariffs',
                 'fund'
@@ -124,6 +134,7 @@ class RouteMap:
         },
         'tariffs': {
             'method': subscription_controller.tariffs,
+            'available_from': ['call'],
             'actions': {
                 'change_tariff': {
                     'method': subscription_controller.change_tariff
@@ -132,22 +143,26 @@ class RouteMap:
         },
         'fund': {
             'method': subscription_controller.fund_balance_page,
+            'available_from': ['call'],
             'wait_for_input': True,
             'validator': email_presence_validator
         },
         'fund_amount': {
             'method': subscription_controller.fund_link_page,
+            'available_from': ['message', 'call'],
             'wait_for_input': True,
+            'states_for_input': ['fund', 'fund_amount'],
             'validator': email_presence_validator
         },
 
         'settings': {
             'method': settings_controller.page,
-            'commands': ['settings'],
+            'available_from': ['command', 'call'],
             'routes': ['settings_email']
         },
         'settings_email': {
             'method': settings_controller.email,
+            'available_from': ['message', 'call'],
             'wait_for_input': True
         },
 
