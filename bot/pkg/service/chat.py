@@ -1,13 +1,12 @@
 import typing
 from typing import TypedDict, List, Literal
 
-import aiogram.bot.bot
-from aiogram import types
-from aiogram.utils import exceptions
+import aiogram
+from aiogram import types, exceptions
 
 import pkg.repository.allowed_user_repository
 import pkg.repository.chat_repository
-from pkg.controller import bot
+from pkg.controller.bot_setup import bot
 from pkg.repository import chat_repository
 from pkg.service.service import Service
 from pkg.service.tariff import Tariff
@@ -26,22 +25,22 @@ class AccessValidationInterface(ErrorDictInterface, total=False):
 
 
 class Chat(Service):
-    BOT = bot.bot
+    BOT = bot
 
     @staticmethod
     def find(chat_id: int) -> ModeratedChatInterface | None:
         return chat_repository.find(chat_id)
 
     @staticmethod
-    async def _get_chat_member(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_id: int) \
+    async def _get_chat_member(bot: aiogram.Bot, chat_service_id: int, user_id: int) \
             -> types.ChatMember | ErrorDictInterface:
         try:
             chat_member = await bot.get_chat_member(chat_service_id, user_id)
             return chat_member
-        except exceptions.Unauthorized:
-            return {'error': 'not_member'}
-        except exceptions.ChatNotFound:
-            return {'error': 'not_found'}
+        # except exceptions.Unauthorized:
+        #     return {'error': 'not_member'}
+        # except exceptions.ChatNotFound:
+        #     return {'error': 'not_found'}
         except Exception as e:
             logger.err(e)
             return {'error': 'unknown'}
@@ -60,7 +59,7 @@ class Chat(Service):
         return {}
 
     @staticmethod
-    async def _validate_admin_rights(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
+    async def _validate_admin_rights(bot: aiogram.Bot, chat_service_id: int, user_service_id: int) \
             -> ErrorDictInterface | AdminValidationInterface:
         chat_administrators = await bot.get_chat_administrators(chat_service_id)
         administrator: types.ChatMemberAdministrator | types.ChatMemberOwner | None = None
@@ -78,7 +77,7 @@ class Chat(Service):
         return {'administrator': administrator}
 
     @staticmethod
-    async def validate_access(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
+    async def validate_access(bot: aiogram.Bot, chat_service_id: int, user_service_id: int) \
             -> AccessValidationInterface:
         # Validate we are admin with deletion rights
         chat_member = await Chat._get_chat_member(bot, chat_service_id, bot.id)
@@ -147,7 +146,7 @@ class Chat(Service):
         return {}
 
     @staticmethod
-    async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
+    async def add(bot: aiogram.Bot, chat_service_id: int, user_service_id: int) \
             -> ModeratedChatInterface | ErrorDictInterface:
 
         validate_access_result = await Chat.validate_access(bot, chat_service_id, user_service_id)
@@ -173,12 +172,12 @@ class Chat(Service):
         return result_connection
 
     @staticmethod
-    async def load_info(bot: aiogram.bot.bot.Bot, chat_service_id: str) \
+    async def load_info(bot: aiogram.Bot, chat_service_id: str) \
             -> TypedDict('_', {'service_id': str, 'title': str}) | ErrorDictInterface:
-        try:
-            chat_info: types.Chat = await bot.get_chat(chat_service_id)
-        except aiogram.utils.exceptions.ChatNotFound:
-            return {'error': "chat_not_found"}
+        # try:
+        chat_info: types.Chat = await bot.get_chat(chat_service_id)
+        # except aiogram.utils.exceptions.ChatNotFound:
+        #     return {'error': "chat_not_found"}
 
         return {
             'service_id': str(chat_info['id']),

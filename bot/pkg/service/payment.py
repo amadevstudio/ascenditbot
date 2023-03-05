@@ -7,7 +7,7 @@ from lib.language import localization
 from lib.payment.payment import CallableInterface, PaymentProcessor, PaymentServer
 from lib.payment.services import robokassa
 from pkg.config.config import environment
-from pkg.controller import bot
+from pkg.controller.bot_setup import bot
 from pkg.service.service import Service
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
@@ -18,7 +18,7 @@ from project.types import UserInterface
 
 
 class BalanceHandler(Service):
-    BOT = bot.bot
+    BOT = bot
 
     # Usage example
     # import main; import asyncio; from pkg.service.payment import BalanceHandler

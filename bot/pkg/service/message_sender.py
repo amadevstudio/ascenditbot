@@ -1,6 +1,6 @@
 from framework.controller.message_tools import chat_id_sender
 from pkg.config.config import environment
-from pkg.controller import bot
+from pkg.controller.bot_setup import bot
 
 
 class MessageSender:
@@ -8,7 +8,7 @@ class MessageSender:
     async def notify_admins(text: str):
         telegram_admin_group_id = environment.get('TELEGRAM_ADMIN_GROUP_ID', None)
         if telegram_admin_group_id is not None:
-            await chat_id_sender(bot.bot, int(telegram_admin_group_id), message_structures=[{
+            await chat_id_sender(bot, int(telegram_admin_group_id), message_structures=[{
                 'type': 'text',
                 'text': text
             }])
