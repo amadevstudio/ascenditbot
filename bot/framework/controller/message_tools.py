@@ -1,27 +1,29 @@
 import copy
 import json
 import time
-from typing import Literal
+from typing import Literal, TypedDict
 
 import aiogram
-from aiogram import types, utils
+from aiogram import types
+from aiogram.utils import keyboard
 
 from lib.language import localization
 from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages, \
     MessageStructuresInterface
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg import config
+from pkg.controller.bot_setup import bot
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 
 
 def go_back_inline_markup(language_code: str, button_text: Literal['back', 'cancel'] = 'back'):
     button = go_back_inline_button(language_code, button_text)
-    return types.InlineKeyboardMarkup().add(button)
+    return keyboard.InlineKeyboardBuilder().add(button).as_markup()
 
 
 def go_back_inline_button(language_code: str, button_text: Literal['back', 'cancel'] = 'back'):
-    return types.InlineKeyboardButton(localization.get_message(
+    return keyboard.InlineKeyboardButton(text=localization.get_message(
         ["buttons", button_text], language_code), callback_data=json.dumps({'tp': 'back'}))
 
 
@@ -33,7 +35,7 @@ def image_link_or_object(path: str):
 
 
 async def chat_id_sender(
-        bot: aiogram.bot.bot.Bot, user_chat_id: int, message_structures: list[MessageStructuresInterface] = None):
+        bot: aiogram.Bot, user_chat_id: int, message_structures: list[MessageStructuresInterface] = None):
     for message_to_send in message_structures:
         message_structure = message_to_send
 
@@ -57,7 +59,9 @@ async def chat_id_sender(
 
 
 async def message_sender(
-        message: types.Message, resending=False, message_structures: list[MessageStructuresInterface] = None):
+        message: types.Message, resending=False,
+        message_structures: list[MessageStructuresInterface] = None):
+
     if message_structures is None:
         message_structures = []
 
@@ -68,16 +72,16 @@ async def message_sender(
     new_message_structures = None
     try:
         new_message_structures = await message_master(
-            message, resending=resending, message_structures=message_structures,
+            bot, message, resending=resending, message_structures=message_structures,
             previous_message_structures=previous_message_structures)
-    except utils.exceptions.MessageNotModified:
-        pass
+    # except utils.exceptions.MessageNotModified:
+    #     pass
     except Exception as e:
         timeout = get_timeout_from_error_bot(e)
         if timeout:
             time.sleep(timeout)
             new_message_structures = await message_master(
-                message, resending=resending, message_structures=message_structures,
+                bot, message, resending=resending, message_structures=message_structures,
                 previous_message_structures=previous_message_structures)
         else:
             logger.err(e)
@@ -95,7 +99,7 @@ async def notify(
         alert: bool = False, button_text: Literal['back', 'cancel'] = 'back'
 ):
     if call is not None:
-        await call.bot.answer_callback_query(
+        await bot.answer_callback_query(
             callback_query_id=call.id, show_alert=alert, text=text)
         return
 
