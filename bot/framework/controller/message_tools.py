@@ -9,7 +9,7 @@ from aiogram.utils import keyboard
 
 from lib.language import localization
 from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages, \
-    MessageStructuresInterface
+    MessageStructuresInterface, ButtonData
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg import config
 from pkg.controller.bot_setup import bot
@@ -17,14 +17,13 @@ from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 
 
-def go_back_inline_markup(language_code: str, button_text: Literal['back', 'cancel'] = 'back'):
-    button = go_back_inline_button(language_code, button_text)
-    return keyboard.InlineKeyboardBuilder().add(button).as_markup()
+def go_back_inline_markup(language_code: str, button_text: Literal['back', 'cancel'] = 'back') \
+        -> list[list[ButtonData]]:
+    return[[go_back_inline_button(language_code, button_text)]]
 
 
-def go_back_inline_button(language_code: str, button_text: Literal['back', 'cancel'] = 'back'):
-    return keyboard.InlineKeyboardButton(text=localization.get_message(
-        ["buttons", button_text], language_code), callback_data=json.dumps({'tp': 'back'}))
+def go_back_inline_button(language_code: str, button_text: Literal['back', 'cancel'] = 'back') -> ButtonData:
+    return {'text': localization.get_message(["buttons", button_text], language_code), 'callback_data': {'tp': 'back'}}
 
 
 def image_link_or_object(path: str):
