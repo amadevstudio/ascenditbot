@@ -28,7 +28,7 @@ def go_back_inline_button(language_code: str, button_text: Literal['back', 'canc
 
 def image_link_or_object(path: str):
     if path[0:2] == "./":
-        return types.InputFile(path)
+        return types.FSInputFile(path)
 
     return path
 
