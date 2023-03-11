@@ -33,6 +33,10 @@ class Chat(Service):
         return chat_repository.find(chat_id)
 
     @staticmethod
+    def find_by(chat: ModeratedChatInterface) -> ModeratedChatInterface | None:
+        return chat_repository.find_by(chat)
+
+    @staticmethod
     async def _get_chat_member(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_id: int) \
             -> types.ChatMember | ErrorDictInterface:
         try:
