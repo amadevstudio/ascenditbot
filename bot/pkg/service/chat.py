@@ -47,13 +47,13 @@ class Chat(Service):
 
     @staticmethod
     async def _validate_bot_rights(chat_member: types.ChatMember) -> ErrorDictInterface:
-        if chat_member.status in ['user', 'member'] or 'can_delete_messages' not in chat_member:
+        if chat_member.status in ['user', 'member'] or chat_member.can_delete_messages is None:
             return {'error': 'not_admin'}
 
         # Unresolved attribute reference 'can_delete_messages' for class 'ChatMember'
         # It works, but using hash interface don't warn
         # if chat_member.can_delete_messages is False:
-        if chat_member['can_delete_messages'] is False:
+        if chat_member.can_delete_messages is False:
             return {'error': 'cant_edit_messages'}
 
         return {}
@@ -179,9 +179,11 @@ class Chat(Service):
         except aiogram.exceptions.TelegramBadRequest:
             return {'error': "chat_not_found"}
 
+        chat_title = chat_info.title if chat_info.title is not None else ''
+
         return {
-            'service_id': str(chat_info['id']),
-            'title': chat_info['title']
+            'service_id': str(chat_info.id),
+            'title': chat_title
         }
 
     @staticmethod
