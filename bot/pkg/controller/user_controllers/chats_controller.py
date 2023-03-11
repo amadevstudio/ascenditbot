@@ -40,7 +40,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
     else:
         chat_service_id = message.text
 
-    result_connection = await Chat.add(message.bot, chat_service_id, message.from_user.id)
+    result_connection = await Chat.add(chat_service_id, message.from_user.id)
 
     if 'error' in result_connection:
         if result_connection['error'] == 'connection_exists':
@@ -49,7 +49,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
             await chat_access_denied(call, message, result_connection)
             return
 
-    chat_info = await Chat.load_info(message.bot, chat_service_id=str(chat_service_id))
+    chat_info = await Chat.load_info(chat_service_id=str(chat_service_id))
     if 'error' in chat_info:
         await notify(call, message, localization.get_message(
             ['chat', 'errors', 'not_found_tg'], message.from_user.language_code))
@@ -110,7 +110,7 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     # Chat buttons
     reply_markup = types.InlineKeyboardMarkup()
     for chat_data in user_chat_page_data['data']:
-        chat_info = await Chat.load_info(message.bot, chat_service_id=str(chat_data['service_id']))
+        chat_info = await Chat.load_info(chat_service_id=str(chat_data['service_id']))
 
         if 'error' not in chat_info:
             button_text = localization.get_message(
@@ -168,7 +168,7 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
             call, message, localization.get_message(['chat', 'errors', 'not_found'], message.from_user.language_code))
         return
 
-    chat_info = await Chat.load_info(call.bot, str(chat_data['service_id']))
+    chat_info = await Chat.load_info(str(chat_data['service_id']))
 
     if 'error' in chat_info:
         await notify(call, message, localization.get_message(

@@ -75,7 +75,7 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
     whitelist_state_data = determine_search_query(call, message, whitelist_state_data)
     search_query = whitelist_state_data.get('search_query', None)
 
-    chat_info = await Chat.load_info(message.bot, str(channel_state_data['service_id']))
+    chat_info = await Chat.load_info(str(channel_state_data['service_id']))
 
     current_page, chat_whitelist_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
         call, message, whitelist_state_data, current_type, message.from_user.language_code,
@@ -156,7 +156,7 @@ async def show(call: types.CallbackQuery, message: types.message, change_user_st
             call, message, localization.get_message(['chat', 'errors', 'not_found'], message.from_user.language_code))
         return
 
-    chat_info = await Chat.load_info(call.bot, str(chat_state_data['service_id']))
+    chat_info = await Chat.load_info(str(chat_state_data['service_id']))
 
     if 'error' in chat_info:
         await notify(call, message, localization.get_message(
