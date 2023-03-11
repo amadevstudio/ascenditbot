@@ -54,11 +54,10 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
         await notify(call, message, localization.get_message(
             ['chat', 'errors', 'not_found_tg'], message.from_user.language_code))
 
-    button = types.InlineKeyboardButton(
-        localization.get_message(['buttons', 'go_to_settings'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'chat', 'id': result_connection['moderated_chat_id']}))
-    reply_markup = types.InlineKeyboardMarkup().add(button)
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+    reply_markup = [[{
+        'text': localization.get_message(['buttons', 'go_to_settings'], message.from_user.language_code),
+        'callback_data': {'tp': 'chat', 'id': result_connection['moderated_chat_id']}
+    }], [go_back_inline_button(message.from_user.language_code)]]
 
     message_structures = [{
         'type': 'text',
