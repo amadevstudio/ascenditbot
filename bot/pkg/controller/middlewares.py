@@ -10,7 +10,8 @@ class NoWhereInputProcessorMiddleware(BaseMiddleware):
     # async def on_process_update(self, update: types.Update (call or message), data: dict):
     async def __call__(
             self, handler: Callable[[Message, Dict[str, Any]], Awaitable[Any]],
-            message: types.Message, data: dict):
+            message: types.Message,
+            data: dict[str, Any]):
         # handler = current_handler.get()
         # dispatcher = Dispatcher.get_current()
 

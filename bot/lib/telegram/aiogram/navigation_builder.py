@@ -1,6 +1,6 @@
 import json
 import math
-from typing import Callable
+from typing import Callable, Any
 
 from aiogram import types
 
@@ -26,7 +26,7 @@ class NavigationBuilder(metaclass=Singleton):
 
     # возвращает текущую страницу
     @staticmethod
-    def get_state_page(call: types.CallbackQuery | None, message: types.Message, state_data: dict[str, any]):
+    def get_state_page(call: types.CallbackQuery | None, message: types.Message, state_data: dict[str, Any]):
         try:
             if call is not None:
                 try:

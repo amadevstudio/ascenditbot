@@ -33,7 +33,7 @@ LOADING_TYPE = MasterMessages.text.value
 
 class ButtonData(TypedDict):
     text: str
-    callback_data: str | dict[str, any]
+    callback_data: str | dict[str, Any]
 
 
 message_types = Literal['text', 'image']

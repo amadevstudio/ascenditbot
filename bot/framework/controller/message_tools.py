@@ -1,7 +1,7 @@
 import copy
 import json
 import time
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, Any
 
 import aiogram
 from aiogram import types
@@ -127,7 +127,7 @@ def is_call_or_command(call: types.CallbackQuery = None, message: types.Message 
 
 
 def determine_search_query(
-        call: types.CallbackQuery | None, message: types.Message, state_data: dict[str, any]) -> dict[str, any]:
+        call: types.CallbackQuery | None, message: types.Message, state_data: dict[str, Any]) -> dict[str, Any]:
     local_state_data = copy.deepcopy(state_data)
 
     if call is None and message.text != '':
