@@ -46,7 +46,7 @@ def user_router():
         if 'message' in route_params['available_from']:
             router.message.register(
                 handler, F.text, ChatTypeFilter(PRIVATE_CHAT),
-                CurrentStateMessageFilter(route_params.get('states_for_input', route)))
+                CurrentStateMessageFilter(route_params.get('states_for_input', [route])))
         if 'call' in route_params['available_from']:
             router.callback_query.register(
                 handler, ChatTypeFilter(PRIVATE_CHAT),
