@@ -186,21 +186,6 @@ class Tariff(Service):
             yield user
 
     @staticmethod
-    def validity_for_moderation(chat_service_id: int):
-        # TODO: add caching, set here and on tariff update
-
-        creator = chat_repository.chat_creator_by_service_id(str(chat_service_id))
-
-        if creator is None:
-            return False
-
-        creator_tariff_info = Tariff.user_tariff_info(creator['id'])
-        if creator_tariff_info['tariff_id'] == 0:
-            return False
-
-        return True
-
-    @staticmethod
     def currency_code_for_user(user_id: int):
         return tariff_repository.currency_code_for_user(user_id)
 
