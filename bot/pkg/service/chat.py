@@ -37,10 +37,10 @@ class Chat(Service):
         try:
             chat_member = await cls.BOT.get_chat_member(chat_service_id, user_id)
             return chat_member
-        # except exceptions.Unauthorized:
-        #     return {'error': 'not_member'}
-        # except exceptions.ChatNotFound:
-        #     return {'error': 'not_found'}
+        except exceptions.TelegramForbiddenError:
+            return {'error': 'not_member'}
+        except exceptions.TelegramBadRequest:
+            return {'error': 'not_found'}
         except Exception as e:
             logger.err(e)
             return {'error': 'unknown'}
@@ -174,10 +174,10 @@ class Chat(Service):
     @classmethod
     async def load_info(cls, chat_service_id: str) \
             -> TypedDict('_', {'service_id': str, 'title': str}) | ErrorDictInterface:
-        # try:
-        chat_info: types.Chat = await cls.BOT.get_chat(chat_service_id)
-        # except aiogram.utils.exceptions.ChatNotFound:
-        #     return {'error': "chat_not_found"}
+        try:
+            chat_info: types.Chat = await cls.BOT.get_chat(chat_service_id)
+        except aiogram.exceptions.TelegramBadRequest:
+            return {'error': "chat_not_found"}
 
         return {
             'service_id': str(chat_info['id']),
