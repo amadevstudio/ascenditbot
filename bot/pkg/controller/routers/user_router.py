@@ -19,7 +19,7 @@ PRIVATE_CHAT = aiogram.enums.chat_type.ChatType.PRIVATE
 def user_router():
     router = Router()
 
-    router.message.middleware(NoWhereInputProcessorMiddleware())
+    router.message.outer_middleware(NoWhereInputProcessorMiddleware())
 
     # @dp.message(Command("test1"))
     # async def cmd_test1(message: types.Message):
