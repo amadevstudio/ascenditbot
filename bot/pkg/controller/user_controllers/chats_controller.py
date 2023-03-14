@@ -106,8 +106,9 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     message_text = localization.get_message(['my_chats', 'list', 'main'], message.from_user.language_code)
     message_text += '\n' + routing_helper_message
 
+    reply_markup = []
+
     # Chat buttons
-    reply_markup = types.InlineKeyboardMarkup()
     for chat_data in user_chat_page_data['data']:
         chat_info = await Chat.load_info(chat_service_id=str(chat_data['service_id']))
 
@@ -126,18 +127,16 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
 
         button_data = {'tp': 'chat', 'id': chat_data['id']}
 
-        b = types.InlineKeyboardButton(
-            text=button_text,
-            callback_data=json.dumps(button_data))
-        reply_markup.add(b)
+        reply_markup.append([{'text': button_text, 'callback_data': button_data}])
 
     if search_query is not None:
-        reply_markup.add(types.InlineKeyboardButton(
-            text=localization.get_message(['buttons', 'clear_search'], message.from_user.language_code),
-            callback_data=json.dumps({'tp': current_type, 'p': 1, 'search_query': None})))
+        reply_markup.append([{
+            'text': localization.get_message(['buttons', 'clear_search'], message.from_user.language_code),
+            'callback_data': {'tp': current_type, 'p': 1, 'search_query': None}
+        }])
 
     # Navigation markup
-    reply_markup.add(*nav_layout)
+    reply_markup.append(nav_layout)
 
     # Sending
     message_structures = [{
