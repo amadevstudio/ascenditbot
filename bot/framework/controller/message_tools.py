@@ -5,7 +5,6 @@ from typing import Literal, TypedDict, Any
 
 import aiogram
 from aiogram import types
-from aiogram.utils import keyboard
 
 from lib.language import localization
 from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages, \
@@ -73,8 +72,8 @@ async def message_sender(
         new_message_structures = await message_master(
             bot, message, resending=resending, message_structures=message_structures,
             previous_message_structures=previous_message_structures)
-    # except utils.exceptions.MessageNotModified:
-    #     pass
+    except aiogram.exceptions.TelegramBadRequest:  # except utils.exceptions.MessageNotModified:
+        pass
     except Exception as e:
         timeout = get_timeout_from_error_bot(e)
         if timeout:
