@@ -151,8 +151,13 @@ async def my_chats(call: telegram_types.CallbackQuery, message: telegram_types.M
     await Chat.update_names(message.chat.id)
 
 
-async def show(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
-    chat_income_data = state_data.get_current_state_data(call, message, 'chat')
+async def show(
+        call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True,
+        ignore_callback_data=False):
+    if ignore_callback_data is False:
+        chat_income_data = state_data.get_state_data(call, message, 'chat')
+    else:
+        chat_income_data = state_data.get_local_state_data(message, 'chat')
 
     if not len(chat_income_data):
         await raise_error(None, message, 'state_data_none')
@@ -226,5 +231,4 @@ async def switch_active(call: telegram_types.CallbackQuery, message: telegram_ty
     UserStorage.add_user_state_data(message.chat.id, 'chat', chat_state_data)
 
     # Tell show method to take data from state
-    call.data = {}
-    await show(call, message, change_user_state=False)
+    await show(call, message, change_user_state=False, ignore_callback_data=True)
