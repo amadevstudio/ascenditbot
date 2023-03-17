@@ -1,7 +1,6 @@
 import json
 
 from aiogram import types
-from aiogram.utils import keyboard
 
 from pkg.config import routes
 from pkg.template.tariff.common import build_subscription_info_short
