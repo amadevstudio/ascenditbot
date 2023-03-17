@@ -108,24 +108,22 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
     message_text += '\n' + routing_helper_message
 
     # Chat buttons
-    reply_markup = types.InlineKeyboardMarkup()
+    reply_markup = []
     for whitelist_data in chat_whitelist_page_data['data']:
         button_text = localization.get_message(
             ['whitelist', 'list', 'button', 'active' if whitelist_data['active'] else 'inactive'],
             message.from_user.language_code, nickname=whitelist_data['nickname'])
 
-        b = types.InlineKeyboardButton(
-            text=button_text,
-            callback_data=json.dumps({'tp': 'allowed_user', 'id': whitelist_data['id']}))
-        reply_markup.add(b)
+        reply_markup.append([{
+            'text': button_text, 'callback_data': {'tp': 'allowed_user', 'id': whitelist_data['id']}}])
 
     if search_query is not None:
-        reply_markup.add(types.InlineKeyboardButton(
-            text=localization.get_message(['buttons', 'clear_search'], message.from_user.language_code),
-            callback_data=json.dumps({'tp': current_type, 'p': 1, 'search_query': None})))
+        reply_markup.append([{
+            'text': localization.get_message(['buttons', 'clear_search'], message.from_user.language_code),
+            'callback_data': {'tp': current_type, 'p': 1, 'search_query': None}}])
 
     # Navigation markup
-    reply_markup.add(*nav_layout)
+    reply_markup.append(nav_layout)
 
     # Sending
     message_structures = [{
