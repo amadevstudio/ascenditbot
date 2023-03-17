@@ -22,7 +22,7 @@ async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Messag
             'type': 'text',
             'text': localization.get_message(['chat', 'add_to_whitelist', 'text'], message.from_user.language_code),
             'reply_markup': go_back_inline_markup(message.from_user.language_code),
-            'parse_mode': 'Markdown'
+            'parse_mode': 'MarkdownV2'
         }]
         await message_sender(message, resending=call is None, message_structures=message_structures)
 
