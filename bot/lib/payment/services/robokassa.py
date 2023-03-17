@@ -35,9 +35,12 @@ class RobokassaPaymentProcessor(PaymentProcessor):
         summ = package_params.get('Shp_Sum', '')
         user_id = package_params.get('Shp_UserId', '')
 
+        payment_password = self.credentials['password_2'] if package_params.get('IsTest') != '1' \
+            else self.credentials['password_2_test']
+
         secure_seed = f"{out_sum}" \
                       f":{inv_id}" \
-                      f":{self.credentials['password_2']}" \
+                      f":{payment_password}" \
                       f":Shp_Currency={currency}" \
                       f":Shp_Sum={summ}" \
                       f":Shp_UserId={user_id}"
@@ -60,14 +63,14 @@ class RobokassaPaymentProcessor(PaymentProcessor):
         return result_text
 
     def generate_payment_link(
-            self, summ: int, user_id: int, currency: str, culture: str = None) -> str | ErrorDictInterface:
+            self, summ: int, user_id: int, currency: str, culture: str = None, test: bool = False
+    ) -> str | ErrorDictInterface:
         inv_id = 0  # max 2^31 - 1
 
         if currency not in self.AVAILABLE_CURRENCIES:
             return {'error': 'currency_not_available'}
 
-        # payment_password = (self.credentials['password_1'] if not test else self.credentials['password_1_test'])
-        payment_password = self.credentials['password_1']
+        payment_password = (self.credentials['password_1'] if not test else self.credentials['password_1_test'])
 
         is_test = self.credentials['test']
 
@@ -78,9 +81,9 @@ class RobokassaPaymentProcessor(PaymentProcessor):
                       f":{inv_id}" \
                       + (f":{currency}" if use_currency else '') \
                       + f":{payment_password}" \
-                      f":Shp_Currency={currency}" \
-                      f":Shp_Sum={summ}" \
-                      f":Shp_UserId={user_id}"
+                        f":Shp_Currency={currency}" \
+                        f":Shp_Sum={summ}" \
+                        f":Shp_UserId={user_id}"
         signature = hashlib.md5(secure_seed.encode()).hexdigest()
 
         return f"https://auth.robokassa.ru/Merchant/Index.aspx?" \
@@ -90,9 +93,9 @@ class RobokassaPaymentProcessor(PaymentProcessor):
                f"&Encoding=utf-8" \
                f"&Description={user_id}" \
                f"&OutSum={summ}" \
-               + (f"&OutSumCurrency={currency}" if use_currency else '') \
-               + f"&Shp_Currency={currency}" \
-               f"&Shp_Sum={summ}" \
-               f"&Shp_UserId={user_id}" \
-               f"&SignatureValue={signature}" \
+            + (f"&OutSumCurrency={currency}" if use_currency else '') \
+            + f"&Shp_Currency={currency}" \
+              f"&Shp_Sum={summ}" \
+              f"&Shp_UserId={user_id}" \
+              f"&SignatureValue={signature}" \
             + ("&IsTest=1" if is_test else "")

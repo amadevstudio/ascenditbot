@@ -1,6 +1,6 @@
 from framework.controller.message_tools import chat_id_sender
 from lib.language import localization
-from lib.payment.payment import CallableInterface, PaymentProcessor, PaymentServer
+from lib.payment.payment import CallableInterface, PaymentProcessor
 from lib.payment.services import robokassa
 from pkg.config.config import environment
 from pkg.controller.bot_setup import bot
@@ -152,6 +152,8 @@ payment_processors: dict[str, PaymentProcessor] = {
         'login': environment['ROBOKASSA_LOGIN'],
         'password_1': environment['ROBOKASSA_PAYMENT_P1'],
         'password_2': environment['ROBOKASSA_PAYMENT_P2'],
+        'password_1_test': environment['ROBOKASSA_PAYMENT_P1_TEST'],
+        'password_2_test': environment['ROBOKASSA_PAYMENT_P2_TEST'],
         'test': False if environment['ENVIRONMENT'] == 'production' else True
     }, BalanceHandler.funding, logger=logger)
 }
@@ -173,4 +175,5 @@ class Payment(Service):
     def generate_payment_link(amount: float, user: UserInterface, currency_code: str, fund_service: str) \
             -> str | robokassa.ErrorDictInterface:
         return payment_processors[fund_service].generate_payment_link(
-            amount, user['id'], currency_code, user['language_code'])
+            amount, user['id'], currency_code, user['language_code'],
+            test=user['is_admin'] or environment['ENVIRONMENT'] != 'production')
