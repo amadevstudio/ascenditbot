@@ -40,7 +40,7 @@ async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Messag
     if user_nickname[0] == '@':
         user_nickname = user_nickname[1:]
 
-    chat_state_data = UserStorage.get_user_state_data(message.chat.id, 'chat')
+    chat_state_data = state_data.get_local_state_data(message, 'chat')
 
     result_connection = Chat.add_to_whitelist(chat_state_data['id'], user_nickname)
 
@@ -69,8 +69,8 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
     current_type = routes.RouteMap.type('chat_whitelist')
 
     # Getting data and full navigation setup
-    channel_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('chat'))
-    whitelist_state_data = state_data.get_current_state_data(call, message, current_type)
+    channel_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('chat'))
+    whitelist_state_data = state_data.get_state_data(call, message, current_type)
 
     whitelist_state_data = determine_search_query(call, message, whitelist_state_data)
     search_query = whitelist_state_data.get('search_query', None)
@@ -142,8 +142,8 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
 
 # Show allowed user
 async def show(call: types.CallbackQuery, message: types.message, change_user_state=True):
-    allowed_user_state_data = state_data.get_current_state_data(call, message, routes.RouteMap.type('allowed_user'))
-    chat_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('chat'))
+    allowed_user_state_data = state_data.get_state_data(call, message, routes.RouteMap.type('allowed_user'))
+    chat_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('chat'))
 
     if not len(allowed_user_state_data) or not len(chat_state_data):
         await notify(
@@ -198,7 +198,7 @@ async def show(call: types.CallbackQuery, message: types.message, change_user_st
 
 
 async def switch_active(call: types.CallbackQuery, message: types.Message):
-    allowed_user_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('allowed_user'))
+    allowed_user_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('allowed_user'))
     if allowed_user_state_data is None:
         await raise_error(None, message, 'state_data_none')
         return
@@ -217,7 +217,7 @@ async def switch_active(call: types.CallbackQuery, message: types.Message):
 
 
 async def delete(call: types.CallbackQuery, message: types.Message):
-    allowed_user_state_data = UserStorage.get_user_state_data(message.chat.id, routes.RouteMap.type('allowed_user'))
+    allowed_user_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('allowed_user'))
     if allowed_user_state_data is None:
         await raise_error(None, message, 'state_data_none')
         return

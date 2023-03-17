@@ -1,5 +1,3 @@
-import json
-
 from framework.system import telegram_types
 
 from framework.controller import state_data
@@ -73,7 +71,7 @@ async def my_chats(call: telegram_types.CallbackQuery, message: telegram_types.M
     current_type = routes.RouteMap.type('my_chats')
 
     # Getting data and full navigation setup
-    current_state_data = state_data.get_current_state_data(call, message, current_type)
+    current_state_data = state_data.get_state_data(call, message, current_type)
 
     current_state_data = determine_search_query(call, message, current_state_data)
     search_query = current_state_data.get('search_query', None)
@@ -213,7 +211,7 @@ async def show(call: telegram_types.CallbackQuery, message: telegram_types.Messa
 
 
 async def switch_active(call: telegram_types.CallbackQuery, message: telegram_types.Message):
-    chat_state_data = UserStorage.get_user_state_data(message.chat.id, 'chat')
+    chat_state_data = state_data.get_local_state_data(message, 'chat')
     if chat_state_data is None:
         await notify(
             None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
