@@ -6,7 +6,7 @@ from pkg.service.chat import Chat
 
 
 async def chat_access_validator(call: telegram_types.CallbackQuery, message: telegram_types.Message) -> bool:
-    channel_state_data = state_data.get_current_state_data(call, message, 'chat')
+    channel_state_data = state_data.get_state_data(call, message, 'chat')
     chat_service_id = channel_state_data.get(
         'service_id',
         Chat.find(channel_state_data['id']).get('service_id', None))
