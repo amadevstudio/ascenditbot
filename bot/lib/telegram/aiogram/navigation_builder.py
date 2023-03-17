@@ -2,7 +2,7 @@ import json
 import math
 from typing import Callable, Any, TypedDict
 
-from aiogram import types
+from framework.system import telegram_types
 
 from lib.python.singleton import Singleton
 from lib.telegram.aiogram.message_master import MessageStructuresInterface
@@ -27,7 +27,7 @@ class NavigationBuilder(metaclass=Singleton):
 
     # возвращает текущую страницу
     @staticmethod
-    def get_state_page(call: types.CallbackQuery | None, message: types.Message, state_data: dict[str, Any]) -> int:
+    def get_state_page(call: telegram_types.CallbackQuery | None, message: telegram_types.Message, state_data: dict[str, Any]) -> int:
         try:
             if call is not None:
                 try:

@@ -2,7 +2,7 @@ import typing
 from typing import TypedDict, List, Literal
 
 import aiogram
-from aiogram import types, exceptions
+from framework.system import telegram_types, telegram_exceptions
 
 import pkg.repository.allowed_user_repository
 import pkg.repository.chat_repository
@@ -16,11 +16,11 @@ from project.types import ModeratedChatInterface, ErrorDictInterface, AllowedUse
 
 
 class AdminValidationInterface(TypedDict, total=False):
-    administrator: types.ChatMemberAdministrator | types.ChatMemberOwner
+    administrator: telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner
 
 
 class AccessValidationInterface(ErrorDictInterface, total=False):
-    administrator: types.ChatMemberAdministrator | types.ChatMemberOwner
+    administrator: telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner
     chat_info: ModeratedChatInterface
 
 
@@ -33,20 +33,20 @@ class Chat(Service):
 
     @classmethod
     async def _get_chat_member(cls, chat_service_id: int, user_id: int) \
-            -> types.ChatMember | ErrorDictInterface:
+            -> telegram_types.ChatMember | ErrorDictInterface:
         try:
             chat_member = await cls.BOT.get_chat_member(chat_service_id, user_id)
             return chat_member
-        except exceptions.TelegramForbiddenError:
+        except telegram_exceptions.TelegramForbiddenError:
             return {'error': 'not_member'}
-        except exceptions.TelegramBadRequest:
+        except telegram_exceptions.TelegramBadRequest:
             return {'error': 'not_found'}
         except Exception as e:
             logger.err(e)
             return {'error': 'unknown'}
 
     @staticmethod
-    async def _validate_bot_rights(chat_member: types.ChatMember) -> ErrorDictInterface:
+    async def _validate_bot_rights(chat_member: telegram_types.ChatMember) -> ErrorDictInterface:
         if chat_member.status in ['user', 'member'] or chat_member.can_delete_messages is None:
             return {'error': 'not_admin'}
 
@@ -62,7 +62,7 @@ class Chat(Service):
     async def _validate_admin_rights(cls, chat_service_id: int, user_service_id: int) \
             -> ErrorDictInterface | AdminValidationInterface:
         chat_administrators = await cls.BOT.get_chat_administrators(chat_service_id)
-        administrator: types.ChatMemberAdministrator | types.ChatMemberOwner | None = None
+        administrator: telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner | None = None
 
         for chat_administrator in chat_administrators:
             if chat_administrator.user.id == user_service_id:
@@ -94,7 +94,7 @@ class Chat(Service):
             return {'error': admin_rights_validation['error']}
 
         administrator = typing.cast(
-            types.ChatMemberAdministrator | types.ChatMemberOwner, admin_rights_validation['administrator'])
+            telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner, admin_rights_validation['administrator'])
 
         chat_info = chat_repository.find_by({'service_id': str(chat_service_id)})
         exists_in_the_bot = chat_info is not None
@@ -107,7 +107,7 @@ class Chat(Service):
 
     @staticmethod
     def validate_subscription(
-            administrator: types.ChatMemberAdministrator | types.ChatMemberOwner,
+            administrator: telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner,
             user_service_id: int,
             chat_info: ModeratedChatInterface) -> ErrorDictInterface:
 
@@ -175,8 +175,8 @@ class Chat(Service):
     async def load_info(cls, chat_service_id: str) \
             -> TypedDict('_', {'service_id': str, 'title': str}) | ErrorDictInterface:
         try:
-            chat_info: types.Chat = await cls.BOT.get_chat(chat_service_id)
-        except aiogram.exceptions.TelegramBadRequest:
+            chat_info: telegram_types.Chat = await cls.BOT.get_chat(chat_service_id)
+        except telegram_exceptions.TelegramBadRequest:
             return {'error': "chat_not_found"}
 
         chat_title = chat_info.title if chat_info.title is not None else ''

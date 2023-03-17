@@ -1,9 +1,10 @@
 from functools import partial
 
 import aiogram
-from aiogram import types, Router, F
+from aiogram import Router, F
 from aiogram.filters.command import Command
 
+from framework.system import telegram_types
 from framework.controller import state_navigator
 from framework.controller.router_tools import event_wrapper, event_action_wrapper
 from framework.controller.filters.chat_type import ChatTypeFilter
@@ -22,13 +23,13 @@ def user_router():
     router.message.outer_middleware(NoWhereInputProcessorMiddleware())
 
     # @dp.message(Command("test1"))
-    # async def cmd_test1(message: types.Message):
+    # async def cmd_test1(message: telegram_types.Message):
     #     await message.reply("Test 1")
     #
     # dp.message.register(cmd_test2, Command("test2"))
 
     @router.callback_query(ChatTypeFilter(PRIVATE_CHAT), BackButtonHandler())
-    async def go_back(call: types.CallbackQuery):
+    async def go_back(call: telegram_types.CallbackQuery):
         await state_navigator.go_back(call)
 
     route: AvailableRoutes

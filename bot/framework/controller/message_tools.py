@@ -1,10 +1,10 @@
 import copy
 import json
 import time
-from typing import Literal, TypedDict, Any
+from typing import Literal, Any
+from framework.system import telegram_types
 
 import aiogram
-from aiogram import types
 
 from framework.system import telegram_exceptions
 from lib.language import localization
@@ -28,7 +28,7 @@ def go_back_inline_button(language_code: str, button_text: Literal['back', 'canc
 
 def image_link_or_object(path: str):
     if path[0:2] == "./":
-        return types.FSInputFile(path)
+        return telegram_types.FSInputFile(path)
 
     return path
 
@@ -58,7 +58,7 @@ async def chat_id_sender(
 
 
 async def message_sender(
-        message: types.Message, resending=False,
+        message: telegram_types.Message, resending=False,
         message_structures: list[MessageStructuresInterface] = None):
 
     if message_structures is None:
@@ -100,7 +100,7 @@ async def message_sender(
 
 
 async def notify(
-        call: types.CallbackQuery | None, message: types.Message, text: str,
+        call: telegram_types.CallbackQuery | None, message: telegram_types.Message, text: str,
         alert: bool = False, button_text: Literal['back', 'cancel'] = 'back'
 ):
     if call is not None:
@@ -121,8 +121,8 @@ def is_command(message_text: str) -> bool:
     return message_text and message_text.startswith('/')
 
 
-def is_call_or_command(call: types.CallbackQuery = None, message: types.Message = None,
-                       entity: types.Message | types.CallbackQuery = None) -> bool:
+def is_call_or_command(call: telegram_types.CallbackQuery = None, message: telegram_types.Message = None,
+                       entity: telegram_types.Message | telegram_types.CallbackQuery = None) -> bool:
     """
     If entity passed call and message are ignored
     """
@@ -133,7 +133,7 @@ def is_call_or_command(call: types.CallbackQuery = None, message: types.Message 
 
 
 def determine_search_query(
-        call: types.CallbackQuery | None, message: types.Message, state_data: dict[str, Any]) -> dict[str, Any]:
+        call: telegram_types.CallbackQuery | None, message: telegram_types.Message, state_data: dict[str, Any]) -> dict[str, Any]:
     local_state_data = copy.deepcopy(state_data)
 
     if call is None and message.text != '':

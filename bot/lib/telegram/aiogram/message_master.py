@@ -4,8 +4,9 @@ import re
 from typing import *
 from urllib.parse import unquote
 
+from framework.system import telegram_types
+
 import aiogram
-from aiogram import types
 from aiogram.utils import keyboard
 
 
@@ -45,7 +46,7 @@ class MessageStructuresInterface(TypedDict, total=False):
     reply_markup: list[list[ButtonData]]
     parse_mode: Literal['MarkdownV2', 'HTML'] | None
     disable_web_page_preview: bool
-    image: str | types.InputFile
+    image: str | telegram_types.FSInputFile
 
 
 class PreviousMessageStructuresInterface(TypedDict):
@@ -89,7 +90,7 @@ def build_markup(markup: list[list[ButtonData]] | None):
 # resending: позволяет принудительно отправить сообщение повторно
 # postloading: обработка случаев, когда до это отправляется сообщение "загрузка"
 async def message_master(
-        bot: aiogram.Bot, aiogram_message: types.Message,
+        bot: aiogram.Bot, aiogram_message: telegram_types.Message,
         resending=False,
         message_structures=None,
         previous_message_structures=None
@@ -146,7 +147,7 @@ async def message_master(
             messages_to_edit = []
             break
 
-    result: types.Message | None
+    result: telegram_types.Message | None
 
     for message_to_edit_id in messages_to_edit:
         message_structure = messages_to_edit[message_to_edit_id]

@@ -1,6 +1,6 @@
 import json
 
-from aiogram import types
+from framework.system import telegram_types
 
 from framework.controller.message_tools import notify, message_sender, is_call_or_command, go_back_inline_markup, \
     go_back_inline_button, determine_search_query
@@ -16,7 +16,7 @@ from pkg.service.user_storage import UserStorage
 
 
 # Add user to whitelist
-async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def add_to_chat_whitelist(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     if is_call_or_command(call, message):
         message_structures = [{
             'type': 'text',
@@ -65,7 +65,7 @@ async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Messag
 
 
 # Show chat whitelist
-async def chat_whitelist(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def chat_whitelist(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     current_type = routes.RouteMap.type('chat_whitelist')
 
     # Getting data and full navigation setup
@@ -139,7 +139,7 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
 
 
 # Show allowed user
-async def show(call: types.CallbackQuery, message: types.message, change_user_state=True, ignore_callback_data=False):
+async def show(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True, ignore_callback_data=False):
     allowed_user_state_data = state_data.get_state_data(
         call if not ignore_callback_data else None, message, routes.RouteMap.type('allowed_user'))
     chat_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('chat'))
@@ -196,7 +196,7 @@ async def show(call: types.CallbackQuery, message: types.message, change_user_st
         UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_state_data | allowed_user_data)
 
 
-async def switch_active(call: types.CallbackQuery, message: types.Message):
+async def switch_active(call: telegram_types.CallbackQuery, message: telegram_types.Message):
     allowed_user_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('allowed_user'))
     if allowed_user_state_data is None:
         await raise_error(None, message, 'state_data_none')
@@ -214,7 +214,7 @@ async def switch_active(call: types.CallbackQuery, message: types.Message):
     await show(call, message, change_user_state=False, ignore_callback_data=True)
 
 
-async def delete(call: types.CallbackQuery, message: types.Message):
+async def delete(call: telegram_types.CallbackQuery, message: telegram_types.Message):
     allowed_user_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('allowed_user'))
     if allowed_user_state_data is None:
         await raise_error(None, message, 'state_data_none')

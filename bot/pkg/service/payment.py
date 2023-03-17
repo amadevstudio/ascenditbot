@@ -1,7 +1,3 @@
-import json
-
-from aiogram import types
-
 from framework.controller.message_tools import chat_id_sender
 from lib.language import localization
 from lib.payment.payment import CallableInterface, PaymentProcessor, PaymentServer

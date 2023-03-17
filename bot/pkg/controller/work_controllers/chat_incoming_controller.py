@@ -1,10 +1,9 @@
-from aiogram import types, utils
-
+from framework.system import telegram_types, telegram_exceptions
 from pkg.service.allowed_user import AllowedUser
 from pkg.service.tariff import Tariff
 
 
-async def incoming_chat_message(message: types.Message):
+async def incoming_chat_message(message: telegram_types.Message):
     # Ignore messages sent by bots
     if message.from_user.is_bot:  # and message.from_user.username != 'GroupAnonymousBot'
         return

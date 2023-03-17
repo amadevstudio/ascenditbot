@@ -1,6 +1,6 @@
 import json
 
-from aiogram import types
+from framework.system import telegram_types
 
 from pkg.config import routes
 from pkg.template.tariff.common import build_subscription_info_short
@@ -13,7 +13,7 @@ from pkg.service.user_storage import UserStorage
 from project.types import UserInterface
 
 
-async def start(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def start(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     registration_result = None
 
     if call is None:
@@ -46,7 +46,7 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
         }])
 
 
-async def menu(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def menu(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     buttons = []
     for button_type in ['add_chat', 'my_chats', 'help', 'subscription', 'settings']:
         buttons.append({
@@ -85,7 +85,7 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
         UserStorage.new_navigation_journey(message.chat.id, routes.RouteMap.type('menu'))
 
 
-async def help_page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def help_page(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     await message_sender(message, resending=call is None, message_structures=[{
         'type': 'text',
         'text': localization.get_message(['help', 'text'], message.from_user.language_code),
