@@ -1,6 +1,6 @@
 import json
 
-from aiogram import types
+from framework.system import telegram_types
 
 from framework.controller.message_tools import message_sender, go_back_inline_button, notify, go_back_inline_markup
 from framework.controller import state_data
@@ -17,7 +17,7 @@ from pkg.template.tariff.common import build_subscription_info, channels_count_t
 from project import constants
 
 
-async def page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def page(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     user_id = User.get_id_by_service_id(message.chat.id)
 
     tariff_message = localization.get_message(['subscription', 'show', 'text'], message.from_user.language_code)
@@ -32,18 +32,16 @@ async def page(call: types.CallbackQuery, message: types.Message, change_user_st
     user_tariff_info = Tariff.user_tariff_info(user_id)
     tariff_message += "\n\n" + build_subscription_info(user_tariff_info, message.from_user.language_code)
 
-    reply_markup = types.InlineKeyboardMarkup()
-    choose_tariff_button = types.InlineKeyboardButton(
-        localization.get_message(['subscription', 'buttons', 'choose_tariff'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'tariffs'})
-    )
-    reply_markup.add(choose_tariff_button)
-    replenish_button = types.InlineKeyboardButton(
-        localization.get_message(['subscription', 'buttons', 'fund'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'fund'})
-    )
-    reply_markup.add(replenish_button)
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+    reply_markup = []
+    choose_tariff_button = {
+        'text': localization.get_message(['subscription', 'buttons', 'choose_tariff'], message.from_user.language_code),
+        'callback_data': {'tp': 'tariffs'}}
+    reply_markup.append([choose_tariff_button])
+    replenish_button = {
+        'text': localization.get_message(['subscription', 'buttons', 'fund'], message.from_user.language_code),
+        'callback_data': {'tp': 'fund'}}
+    reply_markup.append([replenish_button])
+    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
 
     message_structures = [{
         'type': 'text',
@@ -57,14 +55,14 @@ async def page(call: types.CallbackQuery, message: types.Message, change_user_st
         UserStorage.change_page(message.chat.id, routes.RouteMap.type('subscription'))
 
 
-async def tariffs(_, message: types.Message, change_user_state=True):
+async def tariffs(_, message: telegram_types.Message, change_user_state=True):
     user_id = User.get_id_by_service_id(message.chat.id)
     user_tariff_info = Tariff.user_tariff_info(user_id)
 
     available_tariffs = Tariff.tariffs_info(user_id)
 
     tariffs_message = localization.get_message(['tariffs', 'index'], message.from_user.language_code)
-    reply_markup = types.InlineKeyboardMarkup()
+    reply_markup = []
 
     tariffs_message += "\n\n" + localization.get_message(
         ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
@@ -87,13 +85,13 @@ async def tariffs(_, message: types.Message, change_user_state=True):
         if tariff['id'] == user_tariff_info['tariff_id']:
             tariff_button_text = '* ' + tariff_button_text + ' ' + localization.get_message(
                 ['tariffs', 'info', 'selected'], message.from_user.language_code)
-        reply_markup.add(types.InlineKeyboardButton(
-            tariff_button_text, callback_data=json.dumps({'tp': 'change_tariff', 'id': tariff['id']})))
+        reply_markup.append([{
+            'text': tariff_button_text, 'callback_data': {'tp': 'change_tariff', 'id': tariff['id']}}])
 
     tariffs_message += "\n\n" + localization.get_message(['tariffs', 'current'], message.from_user.language_code)
     tariffs_message += "\n" + build_subscription_info(user_tariff_info, message.from_user.language_code)
 
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
 
     await message_sender(message, message_structures=[{
         'type': 'text',
@@ -106,7 +104,7 @@ async def tariffs(_, message: types.Message, change_user_state=True):
         UserStorage.change_page(message.chat.id, routes.RouteMap.type('tariffs'))
 
 
-async def change_tariff(call: types.CallbackQuery, message: types.Message):
+async def change_tariff(call: telegram_types.CallbackQuery, message: telegram_types.Message):
     chosen_tariff_id = state_data.decode_call_data(call).get('id', None)
 
     user_id = User.get_id_by_service_id(message.chat.id)
@@ -131,7 +129,7 @@ async def change_tariff(call: types.CallbackQuery, message: types.Message):
     await tariffs(call, message, change_user_state=False)
 
 
-async def fund_balance_page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def fund_balance_page(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     user = User.find_by_service_id(message.chat.id)
     user_id = user['id']
 
@@ -143,39 +141,40 @@ async def fund_balance_page(call: types.CallbackQuery, message: types.Message, c
     message_text += "\n\n" + localization.get_message(
         ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
 
-    reply_markup = types.InlineKeyboardMarkup()
+    reply_markup = []
     reply_markup_row_buffer = []
 
     for tariff in available_tariffs:
         if tariff['price'] == 0:
             continue
 
-        reply_markup_row_buffer.append(types.InlineKeyboardButton(
-            f"{Tariff.user_amount(tariff['price'])} {user_currency_code}",
-            callback_data=json.dumps({
+        reply_markup_row_buffer.append({
+            'text': f"{Tariff.user_amount(tariff['price'])} {user_currency_code}",
+            'callback_data': {
                 'tp': 'fund_amount', 'value': Tariff.user_amount(tariff['price'])  # , 'currency': user_currency_code
-            })))
+            }})
 
         if len(reply_markup_row_buffer) == 3:
-            reply_markup.row(*reply_markup_row_buffer)
+            reply_markup.append(reply_markup_row_buffer)
             reply_markup_row_buffer = []
 
-    reply_markup.row(*reply_markup_row_buffer)
+    if len(reply_markup_row_buffer) > 0:
+        reply_markup.append(reply_markup_row_buffer)
 
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
 
     await message_sender(message, message_structures=[{
         'type': 'text',
         'text': message_text,
         'reply_markup': reply_markup,
-        'parse_mode': 'Markdown'
+        'parse_mode': 'HTML'
     }])
 
     if change_user_state:
         UserStorage.change_page(message.chat.id, routes.RouteMap.type('fund'))
 
 
-async def fund_link_page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def fund_link_page(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     fund_service = Payment.get_fund_service()
 
     if call is not None:

@@ -1,6 +1,4 @@
-import json
-
-from aiogram import types
+from framework.system import telegram_types
 
 from framework.controller import state_data
 from lib.language import localization
@@ -15,7 +13,7 @@ from pkg.service.chat import Chat
 _PER_PAGE = 5
 
 
-async def add_chat(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def add_chat(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     if is_call_or_command(call, message):
         message_structures = [{
             'type': 'image',
@@ -40,7 +38,7 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
     else:
         chat_service_id = message.text
 
-    result_connection = await Chat.add(message.bot, chat_service_id, message.from_user.id)
+    result_connection = await Chat.add(chat_service_id, message.from_user.id)
 
     if 'error' in result_connection:
         if result_connection['error'] == 'connection_exists':
@@ -49,16 +47,15 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
             await chat_access_denied(call, message, result_connection)
             return
 
-    chat_info = await Chat.load_info(message.bot, chat_service_id=str(chat_service_id))
+    chat_info = await Chat.load_info(chat_service_id=str(chat_service_id))
     if 'error' in chat_info:
         await notify(call, message, localization.get_message(
             ['chat', 'errors', 'not_found_tg'], message.from_user.language_code))
 
-    button = types.InlineKeyboardButton(
-        localization.get_message(['buttons', 'go_to_settings'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'chat', 'id': result_connection['moderated_chat_id']}))
-    reply_markup = types.InlineKeyboardMarkup().add(button)
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+    reply_markup = [[{
+        'text': localization.get_message(['buttons', 'go_to_settings'], message.from_user.language_code),
+        'callback_data': {'tp': 'chat', 'id': result_connection['moderated_chat_id']}
+    }], [go_back_inline_button(message.from_user.language_code)]]
 
     message_structures = [{
         'type': 'text',
@@ -70,11 +67,11 @@ async def add_chat(call: types.CallbackQuery, message: types.Message, change_use
     await message_sender(message, resending=call is None, message_structures=message_structures)
 
 
-async def my_chats(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def my_chats(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     current_type = routes.RouteMap.type('my_chats')
 
     # Getting data and full navigation setup
-    current_state_data = state_data.get_current_state_data(call, message, current_type)
+    current_state_data = state_data.get_state_data(call, message, current_type)
 
     current_state_data = determine_search_query(call, message, current_state_data)
     search_query = current_state_data.get('search_query', None)
@@ -107,10 +104,11 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     message_text = localization.get_message(['my_chats', 'list', 'main'], message.from_user.language_code)
     message_text += '\n' + routing_helper_message
 
+    reply_markup = []
+
     # Chat buttons
-    reply_markup = types.InlineKeyboardMarkup()
     for chat_data in user_chat_page_data['data']:
-        chat_info = await Chat.load_info(message.bot, chat_service_id=str(chat_data['service_id']))
+        chat_info = await Chat.load_info(chat_service_id=str(chat_data['service_id']))
 
         if 'error' not in chat_info:
             button_text = localization.get_message(
@@ -127,18 +125,16 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
 
         button_data = {'tp': 'chat', 'id': chat_data['id']}
 
-        b = types.InlineKeyboardButton(
-            text=button_text,
-            callback_data=json.dumps(button_data))
-        reply_markup.add(b)
+        reply_markup.append([{'text': button_text, 'callback_data': button_data}])
 
     if search_query is not None:
-        reply_markup.add(types.InlineKeyboardButton(
-            text=localization.get_message(['buttons', 'clear_search'], message.from_user.language_code),
-            callback_data=json.dumps({'tp': current_type, 'p': 1, 'search_query': None})))
+        reply_markup.append([{
+            'text': localization.get_message(['buttons', 'clear_search'], message.from_user.language_code),
+            'callback_data': {'tp': current_type, 'p': 1, 'search_query': None}
+        }])
 
     # Navigation markup
-    reply_markup.add(*nav_layout)
+    reply_markup.append(nav_layout)
 
     # Sending
     message_structures = [{
@@ -155,8 +151,10 @@ async def my_chats(call: types.CallbackQuery, message: types.Message, change_use
     await Chat.update_names(message.chat.id)
 
 
-async def show(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    chat_income_data = state_data.get_current_state_data(call, message, 'chat')
+async def show(
+        call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True,
+        ignore_callback_data=False):
+    chat_income_data = state_data.get_state_data(call if not ignore_callback_data else None, message, 'chat')
 
     if not len(chat_income_data):
         await raise_error(None, message, 'state_data_none')
@@ -168,7 +166,7 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
             call, message, localization.get_message(['chat', 'errors', 'not_found'], message.from_user.language_code))
         return
 
-    chat_info = await Chat.load_info(call.bot, str(chat_data['service_id']))
+    chat_info = await Chat.load_info(str(chat_data['service_id']))
 
     if 'error' in chat_info:
         await notify(call, message, localization.get_message(
@@ -180,26 +178,27 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
     if chat_data['disabled']:
         message_text += "\n\n" + localization.get_message(['chat', 'show', 'disabled'], message.from_user.language_code)
 
-    reply_markup = types.InlineKeyboardMarkup()
-    add_to_whitelist_button = types.InlineKeyboardButton(
-        localization.get_message(['chat', 'show', 'add_to_whitelist_button'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'add_to_chat_whitelist'})
-    )
-    reply_markup.add(add_to_whitelist_button)
-    whitelist_button = types.InlineKeyboardButton(
-        localization.get_message(['chat', 'show', 'whitelist_button'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'chat_whitelist'})
-    )
-    reply_markup.add(whitelist_button)
-    state_button = types.InlineKeyboardButton(
-        localization.get_message(
+    reply_markup = []
+    add_to_whitelist_button = {
+        'text': localization.get_message(['chat', 'show', 'add_to_whitelist_button'], message.from_user.language_code),
+        'callback_data': {'tp': 'add_to_chat_whitelist'}}
+    reply_markup.append([add_to_whitelist_button])
+
+    whitelist_button = {
+        'text': localization.get_message(['chat', 'show', 'whitelist_button'], message.from_user.language_code),
+        'callback_data': {'tp': 'chat_whitelist'}}
+    reply_markup.append([whitelist_button])
+
+    state_button = {
+        'text': localization.get_message(
             [
                 'chat', 'show', 'active_button',
                 'active' if chat_data['active'] else 'inactive'],
             message.from_user.language_code,
-        ), callback_data=json.dumps({'tp': 'switch_active'}))
-    reply_markup.add(state_button)
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+        ), 'callback_data': {'tp': 'switch_active'}}
+    reply_markup.append([state_button])
+
+    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
 
     message_structures = [{
         'type': 'text',
@@ -213,11 +212,11 @@ async def show(call: types.CallbackQuery, message: types.Message, change_user_st
         UserStorage.add_user_state_data(message.chat.id, 'chat', chat_data)
 
 
-async def switch_active(call: types.CallbackQuery, message: types.Message):
-    chat_state_data = UserStorage.get_user_state_data(message.chat.id, 'chat')
+async def switch_active(call: telegram_types.CallbackQuery, message: telegram_types.Message):
+    chat_state_data = state_data.get_local_state_data(message, 'chat')
     if chat_state_data is None:
         await notify(
-            None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
+            call, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
         return
 
     new_active_values = Chat.switch_active(chat_state_data['id'])
@@ -229,5 +228,4 @@ async def switch_active(call: types.CallbackQuery, message: types.Message):
     UserStorage.add_user_state_data(message.chat.id, 'chat', chat_state_data)
 
     # Tell show method to take data from state
-    call.data = {}
-    await show(call, message, change_user_state=False)
+    await show(call, message, change_user_state=False, ignore_callback_data=True)

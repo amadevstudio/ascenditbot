@@ -1,3 +1,5 @@
+from typing import Any
+
 from pkg.repository import user_storage_repository
 from pkg.service.service import Service
 
@@ -9,7 +11,7 @@ class UserStorage(Service):
         user_storage_repository.add_user_state(chat_id, initial_page)
 
     @staticmethod
-    def change_page(service_chat_id: int, state: str, data: dict[str, any] = None):
+    def change_page(service_chat_id: int, state: str, data: dict[str, Any] = None):
         curr_state = user_storage_repository.get_user_curr_state(service_chat_id)
         if curr_state == state:
             return

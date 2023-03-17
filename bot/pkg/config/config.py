@@ -25,6 +25,8 @@ class EnvironmentInterface(TypedDict):
     ROBOKASSA_LOGIN: str
     ROBOKASSA_PAYMENT_P1: str
     ROBOKASSA_PAYMENT_P2: str
+    ROBOKASSA_PAYMENT_P1_TEST: str
+    ROBOKASSA_PAYMENT_P2_TEST: str
 
 
 environment: EnvironmentInterface = {
@@ -41,7 +43,9 @@ environment: EnvironmentInterface = {
 
     'ROBOKASSA_LOGIN': os.environ['ROBOKASSA_LOGIN'],
     'ROBOKASSA_PAYMENT_P1': os.environ['ROBOKASSA_PAYMENT_P1'],
-    'ROBOKASSA_PAYMENT_P2': os.environ['ROBOKASSA_PAYMENT_P2']
+    'ROBOKASSA_PAYMENT_P2': os.environ['ROBOKASSA_PAYMENT_P2'],
+    'ROBOKASSA_PAYMENT_P1_TEST': os.environ['ROBOKASSA_PAYMENT_P1_TEST'],
+    'ROBOKASSA_PAYMENT_P2_TEST': os.environ['ROBOKASSA_PAYMENT_P2_TEST']
 }
 
 empty_photo_link = "https://cdn3.iconfinder.com/data/icons/online-states/150/Photos-512.png"

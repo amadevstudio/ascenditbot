@@ -1,154 +1,64 @@
 from functools import partial
 
-from aiogram import types
+import aiogram
+from aiogram import Router, F
+from aiogram.filters.command import Command
 
-from framework.controller.router_tools import event_wrapper, get_type, user_state, event_action_wrapper, \
-    message_route_validator
-from pkg.config.routes import RouteMap
+from framework.system import telegram_types
+from framework.controller import state_navigator
+from framework.controller.router_tools import event_wrapper, event_action_wrapper
+from framework.controller.filters.chat_type import ChatTypeFilter
+
+from pkg.config.routes import RouteMap, AvailableRoutes
+from pkg.controller.middlewares import NoWhereInputProcessorMiddleware
+from pkg.controller.filters.current_state import CurrentStateMessageFilter, CurrentStateActionFilter
+from pkg.controller.filters.callback_button_type import CallbackButtonTypeFilter, BackButtonHandler
+
+PRIVATE_CHAT = aiogram.enums.chat_type.ChatType.PRIVATE
 
 
-def user_router(dispatcher):
-    # /start
-    @dispatcher.message_handler(commands=RouteMap.get_route_commands('start'), chat_type=types.ChatType.PRIVATE)
-    async def start(entity: types.Message):
-        await event_wrapper(RouteMap.type('start'), entity)
+def user_router():
+    router = Router()
 
-    # /menu
-    @dispatcher.message_handler(commands=RouteMap.get_route_commands('menu'), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('menu'), chat_type=types.ChatType.PRIVATE)
-    async def menu(entity: types.Message | types.CallbackQuery):
-        await event_wrapper(RouteMap.type('menu'), entity)
+    router.message.outer_middleware(NoWhereInputProcessorMiddleware())
 
-    # /help
-    @dispatcher.message_handler(commands=RouteMap.get_route_commands('help'), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('help'), chat_type=types.ChatType.PRIVATE)
-    async def menu(entity: types.Message | types.CallbackQuery):
-        await event_wrapper(RouteMap.type('help'), entity)
+    # @dp.message(Command("test1"))
+    # async def cmd_test1(message: telegram_types.Message):
+    #     await message.reply("Test 1")
+    #
+    # dp.message.register(cmd_test2, Command("test2"))
 
-    # /add_chat
-    @dispatcher.message_handler(commands=RouteMap.get_route_commands('add_chat'), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.message_handler(
-        partial(message_route_validator, ['add_chat']), content_types=types.ContentType.ANY,
-        chat_type=types.ChatType.PRIVATE)
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('add_chat'), chat_type=types.ChatType.PRIVATE)
-    async def add_group(entity: types.Message | types.CallbackQuery):
-        await event_wrapper(RouteMap.type('add_chat'), entity)
+    @router.callback_query(ChatTypeFilter(PRIVATE_CHAT), BackButtonHandler())
+    async def go_back(call: telegram_types.CallbackQuery):
+        await state_navigator.go_back(call)
 
-    # /my_chats
-    @dispatcher.message_handler(commands=RouteMap.get_route_commands('my_chats'), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.message_handler(
-        partial(message_route_validator, ['my_chats']), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('my_chats'), chat_type=types.ChatType.PRIVATE)
-    async def my_chats(entity: types.Message | types.CallbackQuery, *args, **kwargs):
-        await event_wrapper(RouteMap.type('my_chats'), entity)
+    route: AvailableRoutes
+    for route in RouteMap.ROUTES:
+        if route == 'nowhere':
+            continue
 
-    # open chat
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('chat'), chat_type=types.ChatType.PRIVATE)
-    async def chat(call: types.CallbackQuery):
-        await event_wrapper(RouteMap.type('chat'), call)
+        route_params = RouteMap.ROUTES[route]
+        handler = partial(event_wrapper, RouteMap.type(route))
 
-    # switch chat active status
-    @dispatcher.callback_query_handler(
-        lambda call: (
-                user_state(call) == RouteMap.state('chat')
-                and get_type(call) == RouteMap.action_type('chat', 'switch_active')),
-        chat_type=types.ChatType.PRIVATE)
-    async def chat_switch_active(call: types.CallbackQuery):
-        await event_action_wrapper(RouteMap.type('chat'), RouteMap.action_type('chat', 'switch_active'), call)
+        if 'command' in route_params['available_from']:
+            router.message.register(
+                handler, Command(route_params.get('commands', route)), F.text,
+                ChatTypeFilter(PRIVATE_CHAT))
+        if 'message' in route_params['available_from']:
+            router.message.register(
+                handler, F.text, ChatTypeFilter(PRIVATE_CHAT),
+                CurrentStateMessageFilter(route_params.get('states_for_input', [route])))
+        if 'call' in route_params['available_from']:
+            router.callback_query.register(
+                handler, ChatTypeFilter(PRIVATE_CHAT),
+                CallbackButtonTypeFilter(route))
 
-    # add to whitelist
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('add_to_chat_whitelist'), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.message_handler(
-        partial(message_route_validator, ['add_to_chat_whitelist']), chat_type=types.ChatType.PRIVATE)
-    async def chat_switch_active(entity: types.Message | types.CallbackQuery):
-        await event_wrapper(RouteMap.type('add_to_chat_whitelist'), entity)
+        if 'actions' in route_params:
+            for action in route_params['actions']:
+                action_handler = partial(
+                    event_action_wrapper, RouteMap.type(route), RouteMap.action_type(route, action))
+                router.callback_query.register(
+                    action_handler, ChatTypeFilter(PRIVATE_CHAT),
+                    CurrentStateActionFilter(route, action))
 
-    # show whitelist
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('chat_whitelist'), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.message_handler(
-        partial(message_route_validator, ['chat_whitelist']), chat_type=types.ChatType.PRIVATE)
-    async def chat_whitelist(entity: types.Message | types.CallbackQuery):
-        await event_wrapper(RouteMap.type('chat_whitelist'), entity)
-
-    # open allowed user
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('allowed_user'), chat_type=types.ChatType.PRIVATE)
-    async def allowed_user(call: types.CallbackQuery):
-        await event_wrapper(RouteMap.type('allowed_user'), call)
-
-    # switch allowed user active
-    @dispatcher.callback_query_handler(
-        lambda call: (
-                user_state(call) == RouteMap.state('allowed_user')
-                and get_type(call) == RouteMap.action_type('allowed_user', 'switch_active')),
-        chat_type=types.ChatType.PRIVATE)
-    async def allowed_user_switch_active(call: types.CallbackQuery):
-        await event_action_wrapper(
-            RouteMap.type('allowed_user'), RouteMap.action_type('allowed_user', 'switch_active'), call)
-
-    # delete allowed user
-    @dispatcher.callback_query_handler(
-        lambda call: (
-                user_state(call) == RouteMap.state('allowed_user')
-                and get_type(call) == RouteMap.action_type('allowed_user', 'delete')),
-        chat_type=types.ChatType.PRIVATE)
-    async def allowed_user_switch_active(call: types.CallbackQuery):
-        await event_action_wrapper(RouteMap.type('allowed_user'), RouteMap.action_type('allowed_user', 'delete'), call)
-
-    # /subscription
-    @dispatcher.message_handler(commands=RouteMap.get_route_commands('subscription'), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('subscription'), chat_type=types.ChatType.PRIVATE)
-    async def my_chats(entity: types.Message | types.CallbackQuery, *args, **kwargs):
-        await event_wrapper(RouteMap.type('subscription'), entity)
-
-    # open tariffs
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('tariffs'), chat_type=types.ChatType.PRIVATE)
-    async def chat(call: types.CallbackQuery):
-        await event_wrapper(RouteMap.type('tariffs'), call)
-
-    # change tariff
-    @dispatcher.callback_query_handler(
-        lambda call: (
-                user_state(call) == RouteMap.state('tariffs')
-                and get_type(call) == RouteMap.action_type('tariffs', 'change_tariff')),
-        chat_type=types.ChatType.PRIVATE)
-    async def change_tariff(call: types.CallbackQuery):
-        await event_action_wrapper(RouteMap.type('tariffs'), RouteMap.action_type('tariffs', 'change_tariff'), call)
-
-    # open fund page
-    @dispatcher.callback_query_handler(
-        lambda call: (get_type(call) == RouteMap.type('fund')), chat_type=types.ChatType.PRIVATE)
-    async def fund(call: types.CallbackQuery):
-        await event_wrapper(RouteMap.type('fund'), call)
-
-    # on fund amount input
-    @dispatcher.message_handler(
-        partial(message_route_validator, ['fund', 'fund_amount']), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('fund_amount'), chat_type=types.ChatType.PRIVATE)
-    async def my_chats(entity: types.Message | types.CallbackQuery):
-        await event_wrapper(RouteMap.type('fund_amount'), entity)
-
-    # /settings
-    @dispatcher.message_handler(commands=RouteMap.get_route_commands('settings'), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('settings'), chat_type=types.ChatType.PRIVATE)
-    async def settings(entity: types.Message | types.CallbackQuery, *args, **kwargs):
-        await event_wrapper(RouteMap.type('settings'), entity)
-
-    # Email input
-    @dispatcher.callback_query_handler(
-        lambda call: get_type(call) == RouteMap.type('settings_email'), chat_type=types.ChatType.PRIVATE)
-    @dispatcher.message_handler(
-        partial(message_route_validator, ['settings_email']), chat_type=types.ChatType.PRIVATE)
-    async def settings_email(entity: types.Message | types.CallbackQuery):
-        await event_wrapper(RouteMap.type('settings_email'), entity)
+    return router

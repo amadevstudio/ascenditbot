@@ -1,15 +1,17 @@
-from aiogram import types
-from aiogram.dispatcher.middlewares import BaseMiddleware
+from typing import Callable, Dict, Any, Awaitable
+from framework.system import telegram_types
+
+from aiogram import BaseMiddleware
 
 from framework.controller import state_navigator
 
 
 class NoWhereInputProcessorMiddleware(BaseMiddleware):
-    def __init__(self):
-        super(NoWhereInputProcessorMiddleware, self).__init__()
-
-    # async def on_process_update(self, update: types.Update (call or message), data: dict):
-    async def on_pre_process_message(self, message: types.Message, data: dict):
+    # async def on_process_update(self, update: telegram_types.Update (call or message), data: dict):
+    async def __call__(
+            self, handler: Callable[[telegram_types.Message, Dict[str, Any]], Awaitable[Any]],
+            message: telegram_types.Message,
+            data: dict[str, Any]):
         # handler = current_handler.get()
         # dispatcher = Dispatcher.get_current()
 
@@ -17,5 +19,6 @@ class NoWhereInputProcessorMiddleware(BaseMiddleware):
         # Using: @dispatcher; async def handler(message, middleware_data)
 
         state_navigator.nowhere_input_processor(message)
+        return await handler(message, data)
 
         # raise CancelHandler()

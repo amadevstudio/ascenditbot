@@ -1,11 +1,13 @@
 import enum
+import json
 import re
 from typing import *
 from urllib.parse import unquote
 
-from aiogram import types
+from framework.system import telegram_types
 
-from lib.python.dict_interface import validate_structure
+import aiogram
+from aiogram.utils import keyboard
 
 
 def get_timeout_from_error_bot(error):
@@ -28,19 +30,11 @@ class MasterMessages(enum.Enum):
 
 
 LOADING_TYPE = MasterMessages.text.value
-message_structures_interface = {
-    'type': tuple(MasterMessages.all_types()),
 
-    'text': str,
-    'reply_markup': types.InlineKeyboardMarkup,
-    'parse_mode': ('Markdown', 'MarkdownV2', 'HTML', None),
-    'disable_web_page_preview': bool,
-    'image': (str, types.InputFile),
-}
-previous_message_structures_interface = {
-    'id': int,
-    'type': tuple(MasterMessages.all_types()),
-}
+
+class ButtonData(TypedDict):
+    text: str
+    callback_data: str | dict[str, Any]
 
 
 message_types = Literal['text', 'image']
@@ -49,10 +43,10 @@ message_types = Literal['text', 'image']
 class MessageStructuresInterface(TypedDict, total=False):
     type: message_types
     text: str
-    reply_markup: types.InlineKeyboardMarkup
-    parse_mode: Literal['Markdown', 'MarkdownV2', 'HTML'] | None
+    reply_markup: list[list[ButtonData]]
+    parse_mode: Literal['MarkdownV2', 'HTML'] | None
     disable_web_page_preview: bool
-    image: str | types.InputFile
+    image: str | telegram_types.FSInputFile
 
 
 class PreviousMessageStructuresInterface(TypedDict):
@@ -60,21 +54,44 @@ class PreviousMessageStructuresInterface(TypedDict):
     type: message_types
 
 
-def build_new_prev_message_structure(message_id: int, message_type: message_types) -> PreviousMessageStructuresInterface:
+def build_new_prev_message_structure(message_id: int,
+                                     message_type: message_types) -> PreviousMessageStructuresInterface:
     result = {
         'id': message_id,
         'type': message_type
     }
-    if not validate_structure(result, previous_message_structures_interface):
-        raise TypeError("Message structure don't match schema")
 
     return result
+
+
+def build_markup(markup: list[list[ButtonData]] | None):
+    if markup is None:
+        return None
+
+    keyboard_builder = keyboard.InlineKeyboardBuilder()
+    for row in markup:
+        row_buttons = []
+        for button_data in row:
+            if isinstance(button_data['callback_data'], str):
+                callback_data = button_data['callback_data']
+            elif isinstance(button_data['callback_data'], dict):
+                callback_data = json.dumps(button_data['callback_data'])
+            else:
+                callback_data = None
+
+            row_buttons.append(keyboard.InlineKeyboardButton(
+                text=button_data.get('text', ''),
+                callback_data=callback_data))
+
+        keyboard_builder.row(*row_buttons)
+    return keyboard_builder.as_markup()
 
 
 # resending: позволяет принудительно отправить сообщение повторно
 # postloading: обработка случаев, когда до это отправляется сообщение "загрузка"
 async def message_master(
-        aiogram_message: types.Message, resending=False,
+        bot: aiogram.Bot, aiogram_message: telegram_types.Message,
+        resending=False,
         message_structures=None,
         previous_message_structures=None
 ) -> List[PreviousMessageStructuresInterface]:
@@ -83,16 +100,7 @@ async def message_master(
     if previous_message_structures is None:
         previous_message_structures = []
 
-    for previous_message_structure in previous_message_structures:
-        # Validate schema
-        if not validate_structure(previous_message_structure, previous_message_structures_interface):
-            raise TypeError("Message structure don't match schema")
-
     for message_structure in message_structures:
-        # Validate schema
-        if not validate_structure(message_structure, message_structures_interface):
-            raise TypeError(f"Message structure don't match schema: {message_structure}")
-
         # Unquote url
         if 'image' in message_structure and isinstance(message_structure['image'], str):
             message_structure['image'] = unquote(message_structure['image'])
@@ -133,37 +141,39 @@ async def message_master(
 
     for message_to_delete in messages_to_delete:
         try:
-            await aiogram_message.bot.delete_message(aiogram_message.chat.id, message_to_delete['id'])
+            await bot.delete_message(aiogram_message.chat.id, message_to_delete['id'])
         except Exception:
             messages_to_send = message_structures
             messages_to_edit = []
             break
 
-    result: types.Message | None
+    result: telegram_types.Message | None
 
     for message_to_edit_id in messages_to_edit:
         message_structure = messages_to_edit[message_to_edit_id]
 
+        reply_markup = build_markup(message_structure.get('reply_markup', None))
+
         if message_structure['type'] == MasterMessages.text.value:
-            result = await aiogram_message.bot.edit_message_text(
+            result = await bot.edit_message_text(
                 text=message_structure.get('text', None),
                 chat_id=aiogram_message.chat.id,
                 message_id=message_to_edit_id,
                 parse_mode=message_structure.get('parse_mode', None),
-                reply_markup=message_structure.get('reply_markup', None),
+                reply_markup=reply_markup,
                 disable_web_page_preview=message_structure.get('disable_web_page_preview', None))
 
         elif message_structure['type'] == MasterMessages.image.value:
-            result = await aiogram_message.bot.edit_message_media(
+            result = await bot.edit_message_media(
                 media=message_structure.get('image', None),
                 chat_id=aiogram_message.chat.id,
                 message_id=message_to_edit_id)
-            await aiogram_message.bot.edit_message_caption(
+            await bot.edit_message_caption(
                 chat_id=aiogram_message.chat.id,
                 message_id=message_to_edit_id,
                 caption=message_structure.get('text', None),
                 parse_mode=message_structure.get('parse_mode', None),
-                reply_markup=message_structure.get('reply_markup', None))
+                reply_markup=reply_markup)
 
         else:
             result = None
@@ -175,11 +185,13 @@ async def message_master(
     for message_to_send in messages_to_send:
         message_structure = message_to_send
 
+        reply_markup = build_markup(message_structure.get('reply_markup', None))
+
         if message_structure['type'] == MasterMessages.text.value:
             result = await aiogram_message.answer(
                 text=message_structure.get('text', None),
                 parse_mode=message_structure.get('parse_mode', None),
-                reply_markup=message_structure.get('reply_markup', None),
+                reply_markup=reply_markup,
                 disable_web_page_preview=message_structure.get('disable_web_page_preview', None))
 
         elif message_structure['type'] == MasterMessages.image.value:
@@ -187,7 +199,7 @@ async def message_master(
                 photo=message_structure.get('image', None),
                 caption=message_structure.get('text', None),
                 parse_mode=message_structure.get('parse_mode', None),
-                reply_markup=message_structure.get('reply_markup', None))
+                reply_markup=reply_markup)
 
         else:
             result = None

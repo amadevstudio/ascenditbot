@@ -1,6 +1,6 @@
 import json
 
-from aiogram import types
+from framework.system import telegram_types
 
 from framework.controller.message_tools import message_sender, go_back_inline_markup, go_back_inline_button, \
     is_call_or_command
@@ -10,13 +10,11 @@ from pkg.service.user import User
 from pkg.service.user_storage import UserStorage
 
 
-async def page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    reply_markup = types.InlineKeyboardMarkup()
-    reply_markup.add(types.InlineKeyboardButton(
-        localization.get_message(['settings', 'buttons', 'email'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': routes.RouteMap.type('settings_email')})
-    ))
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+async def page(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
+    reply_markup = [[{
+        'text': localization.get_message(['settings', 'buttons', 'email'], message.from_user.language_code),
+        'callback_data': {'tp': routes.RouteMap.type('settings_email')}}],
+        [go_back_inline_button(message.from_user.language_code)]]
 
     message_structures = [{
         'type': 'text',
@@ -29,7 +27,7 @@ async def page(call: types.CallbackQuery, message: types.Message, change_user_st
         UserStorage.change_page(message.chat.id, routes.RouteMap.type('settings'))
 
 
-async def email(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def email(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     if not is_call_or_command(call, message) and len(message.text) != 0:
         User.update_email_by_service_id(message.chat.id, message.text)
 

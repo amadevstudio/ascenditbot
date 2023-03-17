@@ -1,10 +1,11 @@
 import json
 import math
-from typing import Callable
+from typing import Callable, Any, TypedDict
 
-from aiogram import types
+from framework.system import telegram_types
 
 from lib.python.singleton import Singleton
+from lib.telegram.aiogram.message_master import MessageStructuresInterface
 
 
 class NavigationBuilder(metaclass=Singleton):
@@ -26,7 +27,7 @@ class NavigationBuilder(metaclass=Singleton):
 
     # возвращает текущую страницу
     @staticmethod
-    def get_state_page(call: types.CallbackQuery | None, message: types.Message, state_data: dict[str, any]):
+    def get_state_page(call: telegram_types.CallbackQuery | None, message: telegram_types.Message, state_data: dict[str, Any]) -> int:
         try:
             if call is not None:
                 try:
@@ -44,11 +45,17 @@ class NavigationBuilder(metaclass=Singleton):
 
         return p
 
+    class PageDataInterface(TypedDict, total=False):
+        data: dict
+        page_count: int
+        curr_page: int
+        error: str
+
     # возвращает данные из бд на нужной странице и общее количество
     @staticmethod
     def load_page_data(
             data_provider: Callable, data_params: list, data_count_provider: Callable, data_count_params: list,
-            curr_page: int, per_page: int, order_field: str):
+            curr_page: int, per_page: int, order_field: str) -> PageDataInterface:
 
         if curr_page < 1:
             curr_page = 1
@@ -75,24 +82,25 @@ class NavigationBuilder(metaclass=Singleton):
         }
 
     # возвращает кнопки переключения страниц
-    def generate_nav_layout(self, curr_page, page_count, curr_type, language_code, back_button_text="back"):
-        buttons = []
+    def generate_nav_layout(
+            self, curr_page: int, page_count: int, curr_type: str, language_code: str, back_button_text: str = "back"
+    ) -> list[MessageStructuresInterface]:
+        buttons: list[MessageStructuresInterface] = []
 
+        # Previous
         cb_data = {"tp": curr_type, "p": curr_page - 1}
         text = ("❮" if curr_page > 1 else "-")
-        button_prev = types.InlineKeyboardButton(
-            text=text, callback_data=json.dumps(cb_data))
-        buttons.append(button_prev)
+        buttons.append({'text': text, 'callback_data': cb_data})
 
-        b = types.InlineKeyboardButton(
-            text=self.get_message(["actions", back_button_text], language_code), callback_data=self.back_button_data)
-        buttons.append(b)
+        # Go back
+        buttons.append({
+            'text': self.get_message(["actions", back_button_text], language_code),
+            'callback_data': self.back_button_data})
 
+        # Next
         text = ("❯" if curr_page < page_count else "-")
         cb_data = {"tp": curr_type, "p": curr_page + 1}
-        button_next = types.InlineKeyboardButton(
-            text=text, callback_data=json.dumps(cb_data))
-        buttons.append(button_next)
+        buttons.append({'text': text, 'callback_data': cb_data})
 
         return buttons
 

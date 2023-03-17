@@ -48,7 +48,8 @@ class PaymentProcessor(ABC):
 
     @abstractmethod
     def generate_payment_link(
-            self, amount: float, user_id: int, currency: str, culture: str) -> str | ErrorDictInterface: pass
+            self, amount: float, user_id: int, currency: str, culture: str, test: bool = False
+    ) -> str | ErrorDictInterface: pass
 
 
 class PaymentServer:

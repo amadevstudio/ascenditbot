@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 
-from aiogram import Dispatcher
+from aiogram import Bot
 
 from framework import controller
 from pkg.service.tariff import Tariff
@@ -9,9 +9,7 @@ from pkg.system.logger import logger
 from pkg.template.tariff import auto_update
 
 
-async def subscription_handler(dispatcher: Dispatcher):
-    bot = dispatcher.bot
-
+async def subscription_handler(bot: Bot):
     while True:
         # Wait to the next hour
         delta = datetime.timedelta(hours=1)

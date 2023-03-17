@@ -1,6 +1,6 @@
 import json
 
-from aiogram import types
+from framework.system import telegram_types
 
 from pkg.config import routes
 from pkg.template.tariff.common import build_subscription_info_short
@@ -13,7 +13,7 @@ from pkg.service.user_storage import UserStorage
 from project.types import UserInterface
 
 
-async def start(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def start(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     registration_result = None
 
     if call is None:
@@ -21,16 +21,18 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
         initial_data = User.analyze_initial_data(message.text)
         registration_result = User.register(message.chat.id, message.from_user.language_code, initial_data)
 
-    button = types.InlineKeyboardButton(localization.get_message(
-        ['welcome', 'lets_begin'], message.from_user.language_code), callback_data=json.dumps({'tp': 'menu'}))
-    markup = types.InlineKeyboardMarkup().add(button)
+    markup = [[{
+        'text': localization.get_message(['welcome', 'lets_begin'], message.from_user.language_code),
+        'callback_data': {'tp': 'menu'}}]]
 
     message_structures = [{
         'type': 'text',
         'text': localization.get_message(['welcome', 'introduction'], message.from_user.language_code),
         'reply_markup': markup,
     }]
-    await message_sender(message, resending=call is None, message_structures=message_structures)
+    await message_sender(
+        message, resending=call is None,
+        message_structures=message_structures)
 
     if change_user_state:
         UserStorage.new_navigation_journey(message.chat.id, routes.RouteMap.type('start'))
@@ -44,15 +46,13 @@ async def start(call: types.CallbackQuery, message: types.Message, change_user_s
         }])
 
 
-async def menu(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def menu(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     buttons = []
     for button_type in ['add_chat', 'my_chats', 'help', 'subscription', 'settings']:
-        buttons.append(types.InlineKeyboardButton(
-            localization.get_message(['buttons', button_type], message.from_user.language_code),
-            callback_data=json.dumps({'tp': button_type})))
-    markup = types.InlineKeyboardMarkup().row(buttons[0], buttons[1])
-    markup.row(buttons[2], buttons[3])
-    markup.row(buttons[4])
+        buttons.append({
+            'text': localization.get_message(['buttons', button_type], message.from_user.language_code),
+            'callback_data': {'tp': button_type}})
+    markup = [[buttons[0], buttons[1]], [buttons[2], buttons[3]], [buttons[4]]]
 
     answer_messages = []
 
@@ -65,7 +65,7 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
         answer_messages.append({
             'type': 'text',
             'text': localization.get_message(['subscription', 'free_trial'], message.from_user.language_code),
-            'parse_mode': 'Markdown'
+            'parse_mode': 'HTML'
         })
         user_tariff_info = Tariff.user_tariff_info(user_id)
 
@@ -75,16 +75,17 @@ async def menu(call: types.CallbackQuery, message: types.Message, change_user_st
             build_subscription_info_short(user_tariff_info, message.from_user.language_code)
             + "\n\n" + localization.get_message(['menu', 'text'], message.from_user.language_code),
         'reply_markup': markup,
-        'parse_mode': 'Markdown'
+        'parse_mode': 'HTML'
     })
 
-    await message_sender(message, resending=call is None, message_structures=answer_messages)
+    await message_sender(
+        message, resending=call is None, message_structures=answer_messages)
 
     if change_user_state:
         UserStorage.new_navigation_journey(message.chat.id, routes.RouteMap.type('menu'))
 
 
-async def help_page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
+async def help_page(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     await message_sender(message, resending=call is None, message_structures=[{
         'type': 'text',
         'text': localization.get_message(['help', 'text'], message.from_user.language_code),

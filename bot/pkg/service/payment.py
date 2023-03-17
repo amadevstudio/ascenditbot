@@ -1,13 +1,9 @@
-import json
-
-from aiogram import types
-
 from framework.controller.message_tools import chat_id_sender
 from lib.language import localization
-from lib.payment.payment import CallableInterface, PaymentProcessor, PaymentServer
+from lib.payment.payment import CallableInterface, PaymentProcessor
 from lib.payment.services import robokassa
 from pkg.config.config import environment
-from pkg.controller import bot
+from pkg.controller.bot_setup import bot
 from pkg.service.service import Service
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
@@ -18,7 +14,7 @@ from project.types import UserInterface
 
 
 class BalanceHandler(Service):
-    BOT = bot.bot
+    BOT = bot
 
     # Usage example
     # import main; import asyncio; from pkg.service.payment import BalanceHandler
@@ -28,9 +24,9 @@ class BalanceHandler(Service):
         user: UserInterface = User.get_by_id(result['user_id'])
         language_code = user['language_code']
 
-        button = types.InlineKeyboardButton(localization.get_message(
-            ['buttons', 'menu'], language_code), callback_data=json.dumps({'tp': 'menu'}))
-        markup = types.InlineKeyboardMarkup().add(button)
+        markup = [[{
+            'text': localization.get_message(['buttons', 'menu'], language_code),
+            'callback_data': {'tp': 'menu'}}]]
 
         # An error occurred
         if 'error' in result:
@@ -137,9 +133,9 @@ class BalanceHandler(Service):
         success_message += "\n\n" + localization.get_message(['tariffs', 'current'], referrer['language_code']) \
                            + "\n" + build_subscription_info(new_user_tariff_info, referrer['language_code'])
 
-        button = types.InlineKeyboardButton(localization.get_message(
-            ['buttons', 'menu'], referrer['language_code']), callback_data=json.dumps({'tp': 'menu'}))
-        markup = types.InlineKeyboardMarkup().add(button)
+        markup = [[{
+            'text': localization.get_message(['buttons', 'menu'], referrer['language_code']),
+            'callback_data': {'tp': 'menu'}}]]
 
         message_structures = [{
             'type': 'text',
@@ -156,12 +152,11 @@ payment_processors: dict[str, PaymentProcessor] = {
         'login': environment['ROBOKASSA_LOGIN'],
         'password_1': environment['ROBOKASSA_PAYMENT_P1'],
         'password_2': environment['ROBOKASSA_PAYMENT_P2'],
+        'password_1_test': environment['ROBOKASSA_PAYMENT_P1_TEST'],
+        'password_2_test': environment['ROBOKASSA_PAYMENT_P2_TEST'],
         'test': False if environment['ENVIRONMENT'] == 'production' else True
     }, BalanceHandler.funding, logger=logger)
 }
-
-
-server = PaymentServer(3000, list(payment_processors.values()))
 
 
 class Payment(Service):
@@ -180,4 +175,5 @@ class Payment(Service):
     def generate_payment_link(amount: float, user: UserInterface, currency_code: str, fund_service: str) \
             -> str | robokassa.ErrorDictInterface:
         return payment_processors[fund_service].generate_payment_link(
-            amount, user['id'], currency_code, user['language_code'])
+            amount, user['id'], currency_code, user['language_code'],
+            test=user['is_admin'] or environment['ENVIRONMENT'] != 'production')

@@ -15,6 +15,7 @@ class UserInterface(TypedDict, total=False):
     updated_at: datetime.datetime
     email: str
     nickname: str
+    is_admin: bool
 
 
 class ModeratedChatInterface(TypedDict, total=False):

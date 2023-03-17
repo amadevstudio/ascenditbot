@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from lib.python.data_helper import get_all_level_values
 from pkg.repository.storage_connection import Storage
@@ -50,7 +51,7 @@ def get_user_prev_curr_states(chat_id):
 
 
 @convert_bytes_to_strings
-def get_user_state_data(chat_id, state) -> dict[str, any]:
+def get_user_state_data(chat_id, state) -> dict[str, Any]:
     state_data = Storage().connection.hget(
         STORAGE_KEYS['users']['tg']['@id']['state_data'].format(chat_id=chat_id), state)
     if state_data is None:

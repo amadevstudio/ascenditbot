@@ -1,13 +1,12 @@
-from aiogram import types
+from framework.system import telegram_types
 
 from pkg.config import routes
 from pkg.service.user_storage import UserStorage
 
 from pkg.config.routes import RouteMap
-from pkg.system.logger import logger
 
 
-async def go_back(call: types.CallbackQuery):
+async def go_back(call: telegram_types.CallbackQuery):
     if call.message:
         # try:
         # lastText = storage.get_user_last_text(call.message.chat.id)
@@ -30,7 +29,7 @@ async def go_back(call: types.CallbackQuery):
 
 
 # If status is 'nowhere' and previous waits for text goback to previously and process
-def nowhere_input_processor(message: types.Message):
+def nowhere_input_processor(message: telegram_types.Message):
     prev, curr = UserStorage.prev_curr_states(message.chat.id)
     if curr is None:
         curr = routes.RouteMap.main_route()

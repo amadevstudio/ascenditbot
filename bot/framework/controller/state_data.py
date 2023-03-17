@@ -1,13 +1,13 @@
 import json
 from typing import Any
 
-from aiogram import types
+from framework.system import telegram_types
 
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 
 
-def decode_call_data(call: types.CallbackQuery) -> dict[str, Any]:
+def decode_call_data(call: telegram_types.CallbackQuery) -> dict[str, Any]:
     try:
         return json.loads(call.data)
     except Exception as e:
@@ -16,17 +16,27 @@ def decode_call_data(call: types.CallbackQuery) -> dict[str, Any]:
     return {}
 
 
-def get_current_state_data(call: types.CallbackQuery, message: types.Message, route: str) -> dict[str, Any]:
+def get_local_state_data(message: telegram_types.Message, route: str):
+    try:
+        return UserStorage.get_user_state_data(message.chat.id, route)
+    except json.decoder.JSONDecodeError:
+        return {}
+
+
+def get_state_data(
+        call: telegram_types.CallbackQuery | None, message: telegram_types.Message, route: str) -> dict[str, Any]:
     try:
         state_data = UserStorage.get_user_state_data(message.chat.id, route)
     except json.decoder.JSONDecodeError:
         state_data = {}
 
-    try:
-        call_data = json.loads(call.data)
-        if route != call_data.get('tp', None):
-            call_data = {}
-    except Exception:
-        call_data = {}
+    call_data = {}
+    if call is not None:
+        try:
+            call_data = json.loads(call.data)
+            if route != call_data.get('tp', None):
+                call_data = {}
+        except Exception:
+            pass
 
     return state_data | call_data
