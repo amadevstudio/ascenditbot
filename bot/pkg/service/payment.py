@@ -28,9 +28,9 @@ class BalanceHandler(Service):
         user: UserInterface = User.get_by_id(result['user_id'])
         language_code = user['language_code']
 
-        button = types.InlineKeyboardButton(localization.get_message(
-            ['buttons', 'menu'], language_code), callback_data=json.dumps({'tp': 'menu'}))
-        markup = types.InlineKeyboardMarkup().add(button)
+        markup = [[{
+            'text': localization.get_message(['buttons', 'menu'], language_code),
+            'callback_data': {'tp': 'menu'}}]]
 
         # An error occurred
         if 'error' in result:
@@ -137,9 +137,9 @@ class BalanceHandler(Service):
         success_message += "\n\n" + localization.get_message(['tariffs', 'current'], referrer['language_code']) \
                            + "\n" + build_subscription_info(new_user_tariff_info, referrer['language_code'])
 
-        button = types.InlineKeyboardButton(localization.get_message(
-            ['buttons', 'menu'], referrer['language_code']), callback_data=json.dumps({'tp': 'menu'}))
-        markup = types.InlineKeyboardMarkup().add(button)
+        markup = [[{
+            'text': localization.get_message(['buttons', 'menu'], referrer['language_code']),
+            'callback_data': {'tp': 'menu'}}]]
 
         message_structures = [{
             'type': 'text',

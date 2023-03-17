@@ -154,10 +154,7 @@ async def my_chats(call: telegram_types.CallbackQuery, message: telegram_types.M
 async def show(
         call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True,
         ignore_callback_data=False):
-    if ignore_callback_data is False:
-        chat_income_data = state_data.get_state_data(call, message, 'chat')
-    else:
-        chat_income_data = state_data.get_local_state_data(message, 'chat')
+    chat_income_data = state_data.get_state_data(call if not ignore_callback_data else None, message, 'chat')
 
     if not len(chat_income_data):
         await raise_error(None, message, 'state_data_none')
@@ -219,7 +216,7 @@ async def switch_active(call: telegram_types.CallbackQuery, message: telegram_ty
     chat_state_data = state_data.get_local_state_data(message, 'chat')
     if chat_state_data is None:
         await notify(
-            None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
+            call, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
         return
 
     new_active_values = Chat.switch_active(chat_state_data['id'])

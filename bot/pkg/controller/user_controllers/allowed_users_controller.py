@@ -22,7 +22,7 @@ async def add_to_chat_whitelist(call: types.CallbackQuery, message: types.Messag
             'type': 'text',
             'text': localization.get_message(['chat', 'add_to_whitelist', 'text'], message.from_user.language_code),
             'reply_markup': go_back_inline_markup(message.from_user.language_code),
-            'parse_mode': 'MarkdownV2'
+            'parse_mode': 'HTML'
         }]
         await message_sender(message, resending=call is None, message_structures=message_structures)
 
@@ -139,8 +139,9 @@ async def chat_whitelist(call: types.CallbackQuery, message: types.Message, chan
 
 
 # Show allowed user
-async def show(call: types.CallbackQuery, message: types.message, change_user_state=True):
-    allowed_user_state_data = state_data.get_state_data(call, message, routes.RouteMap.type('allowed_user'))
+async def show(call: types.CallbackQuery, message: types.message, change_user_state=True, ignore_callback_data=False):
+    allowed_user_state_data = state_data.get_state_data(
+        call if not ignore_callback_data else None, message, routes.RouteMap.type('allowed_user'))
     chat_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('chat'))
 
     if not len(allowed_user_state_data) or not len(chat_state_data):
@@ -164,24 +165,24 @@ async def show(call: types.CallbackQuery, message: types.message, change_user_st
         ['allowed_user', 'show', 'text'], message.from_user.language_code,
         chat_name=chat_info['title'], nickname=allowed_user_data['nickname'])
 
-    reply_markup = types.InlineKeyboardMarkup()
+    reply_markup = []
 
-    state_button = types.InlineKeyboardButton(
-        localization.get_message(
+    state_button = {
+        'text': localization.get_message(
             ['allowed_user', 'show', 'active_button', 'active' if allowed_user_data['active'] else 'inactive'],
             message.from_user.language_code,
-        ), callback_data=json.dumps({'tp': 'switch_active'}))
-    reply_markup.add(state_button)
+        ), 'callback_data': {'tp': 'switch_active'}}
+    reply_markup.append([state_button])
 
-    reply_markup.add(types.InlineKeyboardButton(
-        localization.get_message(
+    reply_markup.append([{
+        'text': localization.get_message(
             [
                 'allowed_user', 'show', 'delete_button',
                 'initial' if 'deleting' not in allowed_user_state_data else 'deleting'],
             message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'delete'})))
+        'callback_data': {'tp': 'delete'}}])
 
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
 
     message_structures = [{
         'type': 'text',
@@ -210,8 +211,7 @@ async def switch_active(call: types.CallbackQuery, message: types.Message):
     UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_state_data)
 
     # Tell show method to take data from state
-    call.data = {}
-    await show(call, message, change_user_state=False)
+    await show(call, message, change_user_state=False, ignore_callback_data=True)
 
 
 async def delete(call: types.CallbackQuery, message: types.Message):

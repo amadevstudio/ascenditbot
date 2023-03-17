@@ -6,6 +6,7 @@ from typing import Literal, TypedDict, Any
 import aiogram
 from aiogram import types
 
+from framework.system import telegram_exceptions
 from lib.language import localization
 from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages, \
     MessageStructuresInterface, ButtonData
@@ -68,23 +69,29 @@ async def message_sender(
     previous_message_structures = UserStorage.get_message_structures(message.chat.id) if resending is False else []
 
     new_message_structures = None
+
     try:
         new_message_structures = await message_master(
             bot, message, resending=resending, message_structures=message_structures,
             previous_message_structures=previous_message_structures)
-    except aiogram.exceptions.TelegramBadRequest:  # except utils.exceptions.MessageNotModified:
-        pass
-    except Exception as e:
-        timeout = get_timeout_from_error_bot(e)
-        if timeout:
-            time.sleep(timeout)
-            new_message_structures = await message_master(
-                bot, message, resending=resending, message_structures=message_structures,
-                previous_message_structures=previous_message_structures)
-        else:
-            logger.err(e)
 
-        # bot_blocked_reaction(e, chat_id)
+    except telegram_exceptions.TelegramBadRequest as e:
+        # print(e.method)
+        if 'message is not modified' in str(e):  # except utils.exceptions.MessageNotModified:
+            return
+
+        logger.log(e)
+
+    except telegram_exceptions.TelegramRetryAfter as e:
+        time.sleep(e.retry_after)
+        await message_master(
+            bot, message, resending=resending, message_structures=message_structures,
+            previous_message_structures=previous_message_structures)
+        return
+
+    except Exception as e:
+        logger.err(e)
+        # TODO: bot_blocked_reaction(e, chat_id)
 
     if new_message_structures is not None:
         UserStorage.set_message_structures(message.chat.id, new_message_structures)
@@ -106,7 +113,7 @@ async def notify(
         'text': text,
         'reply_markup': go_back_inline_markup(message.from_user.language_code, button_text=button_text)
     }]
-    await message_sender(message, resending=True, message_structures=message_structures)
+    await message_sender(message, resending=alert, message_structures=message_structures)
     UserStorage.change_page(message.chat.id, config.routes.RouteMap.type('nowhere'))
 
 

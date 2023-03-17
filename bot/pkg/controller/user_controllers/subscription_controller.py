@@ -32,18 +32,16 @@ async def page(call: types.CallbackQuery, message: types.Message, change_user_st
     user_tariff_info = Tariff.user_tariff_info(user_id)
     tariff_message += "\n\n" + build_subscription_info(user_tariff_info, message.from_user.language_code)
 
-    reply_markup = types.InlineKeyboardMarkup()
-    choose_tariff_button = types.InlineKeyboardButton(
-        localization.get_message(['subscription', 'buttons', 'choose_tariff'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'tariffs'})
-    )
-    reply_markup.add(choose_tariff_button)
-    replenish_button = types.InlineKeyboardButton(
-        localization.get_message(['subscription', 'buttons', 'fund'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': 'fund'})
-    )
-    reply_markup.add(replenish_button)
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+    reply_markup = []
+    choose_tariff_button = {
+        'text': localization.get_message(['subscription', 'buttons', 'choose_tariff'], message.from_user.language_code),
+        'callback_data': {'tp': 'tariffs'}}
+    reply_markup.append([choose_tariff_button])
+    replenish_button = {
+        'text': localization.get_message(['subscription', 'buttons', 'fund'], message.from_user.language_code),
+        'callback_data': {'tp': 'fund'}}
+    reply_markup.append([replenish_button])
+    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
 
     message_structures = [{
         'type': 'text',
@@ -64,7 +62,7 @@ async def tariffs(_, message: types.Message, change_user_state=True):
     available_tariffs = Tariff.tariffs_info(user_id)
 
     tariffs_message = localization.get_message(['tariffs', 'index'], message.from_user.language_code)
-    reply_markup = types.InlineKeyboardMarkup()
+    reply_markup = []
 
     tariffs_message += "\n\n" + localization.get_message(
         ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
@@ -87,13 +85,13 @@ async def tariffs(_, message: types.Message, change_user_state=True):
         if tariff['id'] == user_tariff_info['tariff_id']:
             tariff_button_text = '* ' + tariff_button_text + ' ' + localization.get_message(
                 ['tariffs', 'info', 'selected'], message.from_user.language_code)
-        reply_markup.add(types.InlineKeyboardButton(
-            tariff_button_text, callback_data=json.dumps({'tp': 'change_tariff', 'id': tariff['id']})))
+        reply_markup.append([{
+            'text': tariff_button_text, 'callback_data': {'tp': 'change_tariff', 'id': tariff['id']}}])
 
     tariffs_message += "\n\n" + localization.get_message(['tariffs', 'current'], message.from_user.language_code)
     tariffs_message += "\n" + build_subscription_info(user_tariff_info, message.from_user.language_code)
 
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
 
     await message_sender(message, message_structures=[{
         'type': 'text',
@@ -143,32 +141,33 @@ async def fund_balance_page(call: types.CallbackQuery, message: types.Message, c
     message_text += "\n\n" + localization.get_message(
         ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
 
-    reply_markup = types.InlineKeyboardMarkup()
+    reply_markup = []
     reply_markup_row_buffer = []
 
     for tariff in available_tariffs:
         if tariff['price'] == 0:
             continue
 
-        reply_markup_row_buffer.append(types.InlineKeyboardButton(
-            f"{Tariff.user_amount(tariff['price'])} {user_currency_code}",
-            callback_data=json.dumps({
+        reply_markup_row_buffer.append({
+            'text': f"{Tariff.user_amount(tariff['price'])} {user_currency_code}",
+            'callback_data': {
                 'tp': 'fund_amount', 'value': Tariff.user_amount(tariff['price'])  # , 'currency': user_currency_code
-            })))
+            }})
 
         if len(reply_markup_row_buffer) == 3:
-            reply_markup.row(*reply_markup_row_buffer)
+            reply_markup.append(reply_markup_row_buffer)
             reply_markup_row_buffer = []
 
-    reply_markup.row(*reply_markup_row_buffer)
+    if len(reply_markup_row_buffer) > 0:
+        reply_markup.append(reply_markup_row_buffer)
 
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
 
     await message_sender(message, message_structures=[{
         'type': 'text',
         'text': message_text,
         'reply_markup': reply_markup,
-        'parse_mode': 'Markdown'
+        'parse_mode': 'HTML'
     }])
 
     if change_user_state:

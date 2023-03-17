@@ -11,12 +11,10 @@ from pkg.service.user_storage import UserStorage
 
 
 async def page(call: types.CallbackQuery, message: types.Message, change_user_state=True):
-    reply_markup = types.InlineKeyboardMarkup()
-    reply_markup.add(types.InlineKeyboardButton(
-        localization.get_message(['settings', 'buttons', 'email'], message.from_user.language_code),
-        callback_data=json.dumps({'tp': routes.RouteMap.type('settings_email')})
-    ))
-    reply_markup.add(go_back_inline_button(message.from_user.language_code))
+    reply_markup = [[{
+        'text': localization.get_message(['settings', 'buttons', 'email'], message.from_user.language_code),
+        'callback_data': {'tp': routes.RouteMap.type('settings_email')}}],
+        [go_back_inline_button(message.from_user.language_code)]]
 
     message_structures = [{
         'type': 'text',
