@@ -3,7 +3,7 @@ import asyncio
 from lib.language import localization
 from lib.payment.payment import PaymentServer
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
-from pkg.background.async_tasks.main_handler import on_bot_startup
+from pkg.background.async_tasks.main_handler import on_bot_startup, before_bot_startup
 from pkg.config.config import environment
 from pkg.controller.bot_setup import bot, dispatcher
 
@@ -41,6 +41,7 @@ async def run():
     server = PaymentServer(3000, list(payment_processors.values()))
 
     await bot.delete_webhook(drop_pending_updates=False)
+    await before_bot_startup(bot)
     await dp.start_polling(bot)  # , on_startup=on_bot_startup)
     await on_bot_startup(bot)
 
