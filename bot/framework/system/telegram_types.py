@@ -1,5 +1,6 @@
 from aiogram import types
 
+Chat = types.Chat
 
 CallbackQuery = types.CallbackQuery
 Message = types.Message

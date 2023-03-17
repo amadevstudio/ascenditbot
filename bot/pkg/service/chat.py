@@ -1,7 +1,6 @@
 import typing
 from typing import TypedDict, List, Literal
 
-import aiogram
 from framework.system import telegram_types, telegram_exceptions
 
 import pkg.repository.allowed_user_repository
@@ -94,7 +93,8 @@ class Chat(Service):
             return {'error': admin_rights_validation['error']}
 
         administrator = typing.cast(
-            telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner, admin_rights_validation['administrator'])
+            telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner,
+            admin_rights_validation['administrator'])
 
         chat_info = chat_repository.find_by({'service_id': str(chat_service_id)})
         exists_in_the_bot = chat_info is not None
