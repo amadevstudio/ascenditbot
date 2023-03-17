@@ -176,4 +176,4 @@ class Payment(Service):
             -> str | robokassa.ErrorDictInterface:
         return payment_processors[fund_service].generate_payment_link(
             amount, user['id'], currency_code, user['language_code'],
-            test=user['is_admin'] or environment['ENVIRONMENT'] != 'production')
+            test=user['is_admin'])

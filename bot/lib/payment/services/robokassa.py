@@ -70,9 +70,9 @@ class RobokassaPaymentProcessor(PaymentProcessor):
         if currency not in self.AVAILABLE_CURRENCIES:
             return {'error': 'currency_not_available'}
 
-        payment_password = (self.credentials['password_1'] if not test else self.credentials['password_1_test'])
+        is_test = self.credentials['test'] or test
 
-        is_test = self.credentials['test']
+        payment_password = (self.credentials['password_1'] if not is_test else self.credentials['password_1_test'])
 
         use_currency = currency != 'rub'
 
