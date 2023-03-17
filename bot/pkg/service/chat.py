@@ -1,12 +1,13 @@
 import typing
 from typing import TypedDict, List, Literal
 
-import aiogram
-from framework.system import telegram_types, telegram_exceptions
+import aiogram.bot.bot
+from aiogram import types
+from aiogram.utils import exceptions
 
 import pkg.repository.allowed_user_repository
 import pkg.repository.chat_repository
-from pkg.controller.bot_setup import bot
+from pkg.controller import bot
 from pkg.repository import chat_repository
 from pkg.service.service import Service
 from pkg.service.tariff import Tariff
@@ -16,53 +17,57 @@ from project.types import ModeratedChatInterface, ErrorDictInterface, AllowedUse
 
 
 class AdminValidationInterface(TypedDict, total=False):
-    administrator: telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner
+    administrator: types.ChatMemberAdministrator | types.ChatMemberOwner
 
 
 class AccessValidationInterface(ErrorDictInterface, total=False):
-    administrator: telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner
+    administrator: types.ChatMemberAdministrator | types.ChatMemberOwner
     chat_info: ModeratedChatInterface
 
 
 class Chat(Service):
-    BOT = bot
+    BOT = bot.bot
 
     @staticmethod
     def find(chat_id: int) -> ModeratedChatInterface | None:
         return chat_repository.find(chat_id)
 
-    @classmethod
-    async def _get_chat_member(cls, chat_service_id: int, user_id: int) \
-            -> telegram_types.ChatMember | ErrorDictInterface:
+    @staticmethod
+    def find_by(chat: ModeratedChatInterface) -> ModeratedChatInterface | None:
+        return chat_repository.find_by(chat)
+
+    @staticmethod
+    async def _get_chat_member(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_id: int) \
+            -> types.ChatMember | ErrorDictInterface:
         try:
-            chat_member = await cls.BOT.get_chat_member(chat_service_id, user_id)
+            chat_member = await bot.get_chat_member(chat_service_id, user_id)
             return chat_member
-        except telegram_exceptions.TelegramForbiddenError:
+        except exceptions.Unauthorized:
             return {'error': 'not_member'}
-        except telegram_exceptions.TelegramBadRequest:
+        except exceptions.ChatNotFound:
             return {'error': 'not_found'}
         except Exception as e:
             logger.err(e)
             return {'error': 'unknown'}
 
     @staticmethod
-    async def _validate_bot_rights(chat_member: telegram_types.ChatMember) -> ErrorDictInterface:
-        if chat_member.status in ['user', 'member'] or chat_member.can_delete_messages is None:
+    async def _validate_bot_rights(chat_member: types.chat_member) -> ErrorDictInterface:
+        if chat_member.status in ['user', 'member'] or 'can_delete_messages' not in chat_member:
             return {'error': 'not_admin'}
 
         # Unresolved attribute reference 'can_delete_messages' for class 'ChatMember'
         # It works, but using hash interface don't warn
         # if chat_member.can_delete_messages is False:
-        if chat_member.can_delete_messages is False:
+        if chat_member['can_delete_messages'] is False:
             return {'error': 'cant_edit_messages'}
 
         return {}
 
-    @classmethod
-    async def _validate_admin_rights(cls, chat_service_id: int, user_service_id: int) \
+    @staticmethod
+    async def _validate_admin_rights(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
             -> ErrorDictInterface | AdminValidationInterface:
-        chat_administrators = await cls.BOT.get_chat_administrators(chat_service_id)
-        administrator: telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner | None = None
+        chat_administrators = await bot.get_chat_administrators(chat_service_id)
+        administrator: types.ChatMemberAdministrator | types.ChatMemberOwner | None = None
 
         for chat_administrator in chat_administrators:
             if chat_administrator.user.id == user_service_id:
@@ -76,25 +81,25 @@ class Chat(Service):
 
         return {'administrator': administrator}
 
-    @classmethod
-    async def validate_access(cls, chat_service_id: int, user_service_id: int) \
+    @staticmethod
+    async def validate_access(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
             -> AccessValidationInterface:
         # Validate we are admin with deletion rights
-        chat_member = await cls._get_chat_member(chat_service_id, bot.id)
+        chat_member = await Chat._get_chat_member(bot, chat_service_id, bot.id)
         if 'error' in chat_member:
             return {'error': chat_member['error']}
 
-        bot_rights_validation = await cls._validate_bot_rights(chat_member)
+        bot_rights_validation = await Chat._validate_bot_rights(chat_member)
         if 'error' in bot_rights_validation:
             return {'error': bot_rights_validation['error']}
 
         # Validate client is an admin with edit rights too
-        admin_rights_validation = await cls._validate_admin_rights(chat_service_id, user_service_id)
+        admin_rights_validation = await Chat._validate_admin_rights(bot, chat_service_id, user_service_id)
         if 'error' in admin_rights_validation:
             return {'error': admin_rights_validation['error']}
 
         administrator = typing.cast(
-            telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner, admin_rights_validation['administrator'])
+            types.ChatMemberAdministrator | types.ChatMemberOwner, admin_rights_validation['administrator'])
 
         chat_info = chat_repository.find_by({'service_id': str(chat_service_id)})
         exists_in_the_bot = chat_info is not None
@@ -107,7 +112,7 @@ class Chat(Service):
 
     @staticmethod
     def validate_subscription(
-            administrator: telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner,
+            administrator: types.ChatMemberAdministrator | types.ChatMemberOwner,
             user_service_id: int,
             chat_info: ModeratedChatInterface) -> ErrorDictInterface:
 
@@ -145,15 +150,15 @@ class Chat(Service):
 
         return {}
 
-    @classmethod
-    async def add(cls, chat_service_id: int, user_service_id: int) \
+    @staticmethod
+    async def add(bot: aiogram.bot.bot.Bot, chat_service_id: int, user_service_id: int) \
             -> ModeratedChatInterface | ErrorDictInterface:
 
-        validate_access_result = await cls.validate_access(chat_service_id, user_service_id)
+        validate_access_result = await Chat.validate_access(bot, chat_service_id, user_service_id)
         if 'error' in validate_access_result:
             return validate_access_result
 
-        validate_subscription_result = cls.validate_subscription(
+        validate_subscription_result = Chat.validate_subscription(
             validate_access_result['administrator'], user_service_id, validate_access_result['chat_info'])
         if 'error' in validate_subscription_result:
             return validate_subscription_result
@@ -171,19 +176,17 @@ class Chat(Service):
 
         return result_connection
 
-    @classmethod
-    async def load_info(cls, chat_service_id: str) \
+    @staticmethod
+    async def load_info(bot: aiogram.bot.bot.Bot, chat_service_id: str) \
             -> TypedDict('_', {'service_id': str, 'title': str}) | ErrorDictInterface:
         try:
-            chat_info: telegram_types.Chat = await cls.BOT.get_chat(chat_service_id)
-        except telegram_exceptions.TelegramBadRequest:
+            chat_info: types.Chat = await bot.get_chat(chat_service_id)
+        except aiogram.utils.exceptions.ChatNotFound:
             return {'error': "chat_not_found"}
 
-        chat_title = chat_info.title if chat_info.title is not None else ''
-
         return {
-            'service_id': str(chat_info.id),
-            'title': chat_title
+            'service_id': str(chat_info['id']),
+            'title': chat_info['title']
         }
 
     @staticmethod
@@ -238,7 +241,7 @@ class Chat(Service):
     async def update_names(cls, user_service_id: int):
         user_chats = cls.data_provider_by_service_id(user_service_id)
         for chat in user_chats:
-            chat_info = await cls.load_info(chat_service_id=str(chat['service_id']))
+            chat_info = await cls.load_info(cls.BOT, chat_service_id=str(chat['service_id']))
             if 'error' in chat_info:
                 continue
 

@@ -1,5 +1,6 @@
 from framework.system import telegram_types, telegram_exceptions
 from pkg.service.allowed_user import AllowedUser
+from pkg.service.chat import Chat
 from pkg.service.tariff import Tariff
 from pkg.system.logger import logger
 
@@ -17,8 +18,9 @@ async def incoming_chat_message(message: telegram_types.Message):
     nickname: str = message.from_user.username
     chat_service_id: int = message.chat.id
 
-    # Validate owner subscription
-    if not Tariff.validity_for_moderation(chat_service_id):
+    # Validate chat
+    chat_data = Chat.find_by({'service_id': str(message.chat.id)})
+    if chat_data is None or chat_data['disabled']:
         return
 
     # Validate allowed to write

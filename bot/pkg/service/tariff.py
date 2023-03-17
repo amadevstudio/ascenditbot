@@ -122,7 +122,11 @@ class Tariff(Service):
 
             else:
                 # Do not take into account the current day, since part of it has passed, charge again
-                days_left = (user_subscription['end_date'] - datetime.datetime.now()).days
+                if user_subscription['end_date'] is None:
+                    days_left = constants.tariff_duration_days
+                else:
+                    days_left = user_subscription['end_date'] - datetime.datetime.now()
+
                 if days_left > 0:
                     # Change sum is positive when chosen tariff is more expensive
                     change_sum = int(
@@ -180,21 +184,6 @@ class Tariff(Service):
 
         for user in tariff_repository.users_with_remaining_days(notify_about_days):
             yield user
-
-    @staticmethod
-    def validity_for_moderation(chat_service_id: int):
-        # TODO: add caching, set here and on tariff update
-
-        creator = chat_repository.chat_creator_by_service_id(str(chat_service_id))
-
-        if creator is None:
-            return False
-
-        creator_tariff_info = Tariff.user_tariff_info(creator['id'])
-        if creator_tariff_info['tariff_id'] == 0:
-            return False
-
-        return True
 
     @staticmethod
     def currency_code_for_user(user_id: int):
