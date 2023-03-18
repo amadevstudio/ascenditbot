@@ -15,7 +15,7 @@ def get_type(call: telegram_types.CallbackQuery):
 
 
 def message_route_validator(state_types: list[str], message: telegram_types.Message):
-    if message.text[0] == '/':
+    if message.text is not None and message.text[0] == '/':
         return False
 
     route_map_state_types = [RouteMap.state(state_type) for state_type in state_types]
@@ -44,7 +44,7 @@ async def event_wrapper(route_type: AvailableRoutes, entity: telegram_types.Mess
             return
 
     # Clear state on commands
-    if call is None and message.text[0] == '/':
+    if call is None and message.text is not None and message.text[0] == '/':
         UserStorage.new_navigation_journey(message.chat.id, routes.RouteMap.type('menu'))
 
     await RouteMap.get_route_prop(route_type, 'method')(call, message)

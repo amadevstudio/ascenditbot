@@ -11,6 +11,10 @@ FSInputFile = types.FSInputFile
 InlineKeyboardMarkup = types.InlineKeyboardMarkup
 InlineKeyboardButton = types.InlineKeyboardButton
 
+KeyboardButtonRequestChat = types.KeyboardButtonRequestChat
+ReplyKeyboardRemove = types.ReplyKeyboardRemove
+
 ChatMember = types.ChatMember
 ChatMemberAdministrator = types.ChatMemberAdministrator
 ChatMemberOwner = types.ChatMemberOwner
+ChatAdministratorRights = types.ChatAdministratorRights

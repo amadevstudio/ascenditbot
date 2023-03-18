@@ -1,3 +1,6 @@
+from typing import TypedDict
+
+
 def validate_structure(struct, conf):
     if isinstance(struct, dict) and isinstance(conf, dict):
         # struct is a dict of types or other dicts
@@ -13,3 +16,7 @@ def validate_structure(struct, conf):
     else:
         # struct is neither a dict, nor list, not type
         return False
+
+
+def validate_typed_dict_interface(dictionary: dict, interface: TypedDict):
+    return isinstance(dictionary, dict) and all(key in interface.__annotations__ for key in dictionary.keys())
