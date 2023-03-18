@@ -10,7 +10,7 @@ from pkg.controller.bot_setup import bot, dispatcher
 from pkg.controller.router import init_routes
 
 from pkg.repository.database_connection import Database
-from pkg.repository.storage_connection import Storage
+from framework.repository.storage_connection import Storage
 from pkg.service.payment import payment_processors
 
 # from db.adapter import database
