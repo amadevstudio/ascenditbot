@@ -4,6 +4,7 @@ import re
 from typing import *
 from urllib.parse import unquote
 
+from framework.repository import file_storage_repository
 from framework.system import telegram_types
 
 import aiogram
@@ -66,6 +67,7 @@ class MessageStructuresInterface(TypedDict, total=False):
     parse_mode: Literal['MarkdownV2', 'HTML'] | None
     disable_web_page_preview: bool
     image: str | telegram_types.FSInputFile
+    file_id: str | None
 
 
 class PreviousMessageStructuresInterface(TypedDict):
@@ -122,8 +124,10 @@ def build_markup(message_structure: MessageStructuresInterface):
                     user_administrator_rights, bot_administrator_rights = [telegram_types.ChatAdministratorRights(
                         can_delete_messages=rights.get('can_delete_messages', None)
                     ) if rights is not None else None for rights in [
-                        button_data.get('user_administrator_rights', None),
-                        button_data.get('bot_administrator_rights', None)]]
+                                                                               button_data.get(
+                                                                                   'user_administrator_rights', None),
+                                                                               button_data.get(
+                                                                                   'bot_administrator_rights', None)]]
 
                     row_buttons.append(keyboard.KeyboardButton(
                         text=button_data.get('text', ''),
@@ -156,10 +160,24 @@ async def message_master(
     if previous_message_structures is None:
         previous_message_structures = []
 
-    for message_structure in message_structures:
-        # Unquote url
-        if 'image' in message_structure and isinstance(message_structure['image'], str):
-            message_structure['image'] = unquote(message_structure['image'])
+    # Process images
+    for i, message_structure in enumerate(message_structures):
+        if 'image' not in message_structure:
+            continue
+
+        if isinstance(message_structure['image'], str):
+            # Unquote url
+            message_structures[i]['image'] = unquote(message_structure['image'])
+            file_id = file_storage_repository.get_file_id(message_structures[i]['image'])
+
+        elif isinstance(message_structure['image'], telegram_types.FSInputFile):
+            file_id = file_storage_repository.get_file_id(message_structures[i]['image'].path)
+
+        else:
+            file_id = None
+
+        if file_id is not None:
+            message_structures[i]['file_id'] = file_id
 
     def message_structure_filter(filtrating_message_structure):
         return filtrating_message_structure['type'] in MasterMessages.all_types()
@@ -205,6 +223,9 @@ async def message_master(
 
     result: telegram_types.Message | None
 
+    def image_digger(image_message_structure: MessageStructuresInterface) -> str | telegram_types.FSInputFile:
+        return image_message_structure.get('file_id', image_message_structure['image'])
+
     for message_to_edit_id in messages_to_edit:
         message_structure = messages_to_edit[message_to_edit_id]
 
@@ -221,7 +242,7 @@ async def message_master(
 
         elif message_structure['type'] == MasterMessages.image.value:
             result = await bot.edit_message_media(
-                media=message_structure.get('image', None),
+                media=image_digger(message_structure),
                 chat_id=aiogram_message.chat.id,
                 message_id=message_to_edit_id)
             await bot.edit_message_caption(
@@ -252,7 +273,7 @@ async def message_master(
 
         elif message_structure['type'] == MasterMessages.image.value:
             result = await aiogram_message.answer_photo(
-                photo=message_structure.get('image', None),
+                photo=image_digger(message_structure),
                 caption=message_structure.get('text', None),
                 parse_mode=message_structure.get('parse_mode', None),
                 reply_markup=reply_markup)
@@ -261,11 +282,18 @@ async def message_master(
             result = None
 
         if result is not None:
+            # Save message type
             message_type = \
                 message_structure['type'] if message_structure.get('markup_type', 'inline') != 'reply' \
                 else f"{message_structure['type']}_reply"
-
             new_message_structures.append(
                 build_new_prev_message_structure(result.message_id, message_type))
+
+            # Save files id
+            if result.photo is not None and message_structure.get('file_id', None) is None:
+                if isinstance(message_structure['image'], str):
+                    file_storage_repository.add_file_id(message_structure['image'], result.photo[0].file_id)
+                elif isinstance(message_structure['image'], telegram_types.FSInputFile):
+                    file_storage_repository.add_file_id(message_structure['image'].path, result.photo[0].file_id)
 
     return new_message_structures

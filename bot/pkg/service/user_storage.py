@@ -1,6 +1,6 @@
 from typing import Any
 
-from pkg.repository import user_storage_repository
+from framework.repository import user_storage_repository
 from pkg.service.service import Service
 
 
