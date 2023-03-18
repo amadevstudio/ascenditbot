@@ -14,6 +14,17 @@ _PER_PAGE = 5
 
 
 async def add_chat(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
+    reply_add_chat_structure = {
+        'type': 'text',
+        'text': localization.get_message(
+            ['add_chat', 'add_chat_reply_button_text'], message.from_user.language_code),
+        'markup_type': 'reply',
+        'reply_markup': [[{
+            'text': localization.get_message(
+                ['add_chat', 'add_chat_reply_button'], message.from_user.language_code),
+            'request_id': 1, 'chat_is_channel': False, 'bot_is_member': True}]]
+    }
+
     if is_call_or_command(call, message):
         message_structures = [{
             'type': 'image',
@@ -22,7 +33,7 @@ async def add_chat(call: telegram_types.CallbackQuery, message: telegram_types.M
             'text': localization.get_message(['add_chat', 'instruction'], message.from_user.language_code),
             'reply_markup': go_back_inline_markup(message.from_user.language_code),
             'parse_mode': 'HTML'
-        }]
+        }, reply_add_chat_structure]
         await message_sender(message, resending=call is None, message_structures=message_structures)
 
         if change_user_state:
@@ -35,6 +46,8 @@ async def add_chat(call: telegram_types.CallbackQuery, message: telegram_types.M
 
     if message.forward_from_chat is not None:
         chat_service_id = message.forward_from_chat.id
+    elif message.chat_shared is not None:
+        chat_service_id = message.chat_shared.chat_id
     else:
         chat_service_id = message.text
 
@@ -62,7 +75,7 @@ async def add_chat(call: telegram_types.CallbackQuery, message: telegram_types.M
         'text': localization.get_message(
             ['add_chat', 'success'], message.from_user.language_code).format(chat_name=chat_info['title']),
         'reply_markup': reply_markup
-    }]
+    }, reply_add_chat_structure]
 
     await message_sender(message, resending=call is None, message_structures=message_structures)
 
