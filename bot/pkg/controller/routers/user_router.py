@@ -10,7 +10,7 @@ from framework.controller.router_tools import event_wrapper, event_action_wrappe
 from framework.controller.filters.chat_type import ChatTypeFilter
 
 from pkg.config.routes import RouteMap, AvailableRoutes
-from pkg.controller.middlewares import NoWhereInputProcessorMiddleware
+from pkg.controller.middlewares.middlewares import NoWhereInputProcessorMiddleware, ReplyMarkupCleaner
 from pkg.controller.filters.current_state import CurrentStateMessageFilter, CurrentStateActionFilter
 from pkg.controller.filters.callback_button_type import CallbackButtonTypeFilter, BackButtonHandler
 
@@ -22,15 +22,19 @@ def user_router():
 
     router.message.outer_middleware(NoWhereInputProcessorMiddleware())
 
-    # @dp.message(Command("test1"))
-    # async def cmd_test1(message: telegram_types.Message):
-    #     await message.reply("Test 1")
-    #
-    # dp.message.register(cmd_test2, Command("test2"))
+    router.message.middleware(ReplyMarkupCleaner())
+    router.callback_query.middleware(ReplyMarkupCleaner())
 
     @router.callback_query(ChatTypeFilter(PRIVATE_CHAT), BackButtonHandler())
     async def go_back(call: telegram_types.CallbackQuery):
         await state_navigator.go_back(call)
+
+    @router.message(
+        F.chat_shared, ChatTypeFilter(PRIVATE_CHAT),
+        CurrentStateMessageFilter(['add_chat']))
+    async def add_chat_result(message: telegram_types.Message):
+        handlerv = partial(event_wrapper, RouteMap.type('add_chat'))
+        await handlerv(message)
 
     route: AvailableRoutes
     for route in RouteMap.ROUTES:
