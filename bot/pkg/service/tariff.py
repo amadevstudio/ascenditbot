@@ -27,7 +27,12 @@ class Tariff(Service):
 
     @staticmethod
     def user_amount(price: int, accuracy: int = 0, ndigits: int = 2) -> float:
-        return round((int(price) + int(accuracy)) / 100, ndigits)
+        rounded = round((int(price) + int(accuracy)) / 100, ndigits)
+        integer_value = int(rounded)
+        if rounded == integer_value:
+            return integer_value
+
+        return rounded
 
     @staticmethod
     def user_tariff_info(user_id: int) -> UserTariffInfoInterface:
