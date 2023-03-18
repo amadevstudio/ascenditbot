@@ -18,7 +18,8 @@ emoji_codes = {
     'crown': '👑',
     'gear': '⚙️',
     'email': '📧',
-    'CL': '🆑'
+    'CL': '🆑',
+    'magic_wand': '🪄'
 }
 
 local_lang_based_links = {
@@ -220,6 +221,14 @@ routed_messages = {
                 " или просто перешлите боту сообщение из неё, написанное от лица группы (анонимный администратор)"
                 f" {emoji_codes.get('down_arrow', '') * 3}\n\n"
                 f"<a href=\"{links['instructions']['add_chat']['ru']}\">Открыть подробную инструкцию</a>"
+        },
+        'add_chat_reply_button_text': {
+            'en': "",
+            'ru': emoji_codes.get('heavy_check_mark', '') + " Или нажмите на кнопку ниже:"
+        },
+        'add_chat_reply_button': {
+            'en': "",
+            'ru': emoji_codes.get('magic_wand', '') + " Выбрать группу"
         },
         'success': {
             'en': "",

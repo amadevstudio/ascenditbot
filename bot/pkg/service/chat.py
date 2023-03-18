@@ -30,6 +30,10 @@ class Chat(Service):
     def find(chat_id: int) -> ModeratedChatInterface | None:
         return chat_repository.find(chat_id)
 
+    @staticmethod
+    def find_by(chat: ModeratedChatInterface) -> ModeratedChatInterface | None:
+        return chat_repository.find_by(chat)
+
     @classmethod
     async def _get_chat_member(cls, chat_service_id: int, user_id: int) \
             -> telegram_types.ChatMember | ErrorDictInterface:

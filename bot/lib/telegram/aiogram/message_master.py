@@ -9,6 +9,8 @@ from framework.system import telegram_types
 import aiogram
 from aiogram.utils import keyboard
 
+from lib.python.dict_interface import validate_typed_dict_interface
+
 
 def get_timeout_from_error_bot(error):
     result = re.search(r'Too Many Requests: retry after ([0-9]+)', str(error))
@@ -32,9 +34,25 @@ class MasterMessages(enum.Enum):
 LOADING_TYPE = MasterMessages.text.value
 
 
-class ButtonData(TypedDict):
+class InlineButtonData(TypedDict):
     text: str
     callback_data: str | dict[str, Any]
+
+
+class ChatAdministratorData(TypedDict):
+    can_delete_messages: Optional[bool]
+
+
+class ButtonRequestChatData(TypedDict):
+    text: str
+    request_id: int
+    chat_is_channel: bool
+    chat_is_forum: Optional[bool]
+    chat_has_username: Optional[bool]
+    chat_is_created: Optional[bool]
+    user_administrator_rights: Optional[ChatAdministratorData]
+    bot_administrator_rights: Optional[ChatAdministratorData]
+    bot_is_member: Optional[bool]
 
 
 message_types = Literal['text', 'image']
@@ -42,8 +60,9 @@ message_types = Literal['text', 'image']
 
 class MessageStructuresInterface(TypedDict, total=False):
     type: message_types
+    markup_type: Literal['inline', 'reply']
     text: str
-    reply_markup: list[list[ButtonData]]
+    reply_markup: list[list[InlineButtonData | ButtonRequestChatData]]
     parse_mode: Literal['MarkdownV2', 'HTML'] | None
     disable_web_page_preview: bool
     image: str | telegram_types.FSInputFile
@@ -64,26 +83,63 @@ def build_new_prev_message_structure(message_id: int,
     return result
 
 
-def build_markup(markup: list[list[ButtonData]] | None):
-    if markup is None:
+def build_markup(message_structure: MessageStructuresInterface):
+    markup = message_structure.get('reply_markup', None)
+    if markup is None or len(markup) == 0:
         return None
 
-    keyboard_builder = keyboard.InlineKeyboardBuilder()
-    for row in markup:
-        row_buttons = []
-        for button_data in row:
-            if isinstance(button_data['callback_data'], str):
-                callback_data = button_data['callback_data']
-            elif isinstance(button_data['callback_data'], dict):
-                callback_data = json.dumps(button_data['callback_data'])
-            else:
-                callback_data = None
+    # Inline markup
+    if message_structure.get('markup_type', 'inline') == 'inline':
+        keyboard_builder = keyboard.InlineKeyboardBuilder()
+        for row in markup:
+            row_buttons = []
+            for button_data in row:
+                # button_data = cast(InlineButtonData, button_data)
+                # if validate_typed_dict_interface(button_data, InlineButtonData):
+                if isinstance(button_data['callback_data'], str):
+                    callback_data = button_data['callback_data']
+                elif isinstance(button_data['callback_data'], dict):
+                    callback_data = json.dumps(button_data['callback_data'])
+                else:
+                    callback_data = None
 
-            row_buttons.append(keyboard.InlineKeyboardButton(
-                text=button_data.get('text', ''),
-                callback_data=callback_data))
+                row_buttons.append(keyboard.InlineKeyboardButton(
+                    text=button_data.get('text', ''),
+                    callback_data=callback_data))
 
-        keyboard_builder.row(*row_buttons)
+            keyboard_builder.row(*row_buttons)
+
+    # Reply markup
+    else:
+        keyboard_builder = keyboard.ReplyKeyboardBuilder()
+        for row in markup:
+            row_buttons = []
+            for button_data in row:
+                button_data = cast(InlineButtonData, button_data)
+                if validate_typed_dict_interface(button_data, ButtonRequestChatData):
+                    button_data = cast(ButtonRequestChatData, button_data)
+
+                    user_administrator_rights, bot_administrator_rights = [telegram_types.ChatAdministratorRights(
+                        can_delete_messages=rights.get('can_delete_messages', None)
+                    ) if rights is not None else None for rights in [
+                        button_data.get('user_administrator_rights', None),
+                        button_data.get('bot_administrator_rights', None)]]
+
+                    row_buttons.append(keyboard.KeyboardButton(
+                        text=button_data.get('text', ''),
+                        request_chat=telegram_types.KeyboardButtonRequestChat(
+                            request_id=button_data['request_id'],
+                            chat_is_channel=button_data['chat_is_channel'],
+                            chat_is_forum=button_data.get('chat_is_forum', None),
+                            chat_has_username=button_data.get('chat_has_username', None),
+                            chat_is_created=button_data.get('chat_is_created', None),
+                            user_administrator_rights=user_administrator_rights,
+                            bot_administrator_rights=bot_administrator_rights,
+                            bot_is_member=button_data.get('bot_is_member', None)
+                        )
+                    ))
+
+            keyboard_builder.row(*row_buttons)
     return keyboard_builder.as_markup()
 
 
@@ -152,7 +208,7 @@ async def message_master(
     for message_to_edit_id in messages_to_edit:
         message_structure = messages_to_edit[message_to_edit_id]
 
-        reply_markup = build_markup(message_structure.get('reply_markup', None))
+        reply_markup = build_markup(message_structure)
 
         if message_structure['type'] == MasterMessages.text.value:
             result = await bot.edit_message_text(
@@ -185,7 +241,7 @@ async def message_master(
     for message_to_send in messages_to_send:
         message_structure = message_to_send
 
-        reply_markup = build_markup(message_structure.get('reply_markup', None))
+        reply_markup = build_markup(message_structure)
 
         if message_structure['type'] == MasterMessages.text.value:
             result = await aiogram_message.answer(
@@ -205,7 +261,11 @@ async def message_master(
             result = None
 
         if result is not None:
+            message_type = \
+                message_structure['type'] if message_structure.get('markup_type', 'inline') != 'reply' \
+                else f"{message_structure['type']}_reply"
+
             new_message_structures.append(
-                build_new_prev_message_structure(result.message_id, message_structure['type']))
+                build_new_prev_message_structure(result.message_id, message_type))
 
     return new_message_structures
