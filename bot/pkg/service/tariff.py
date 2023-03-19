@@ -130,7 +130,7 @@ class Tariff(Service):
                 if user_subscription['end_date'] is None:
                     days_left = constants.tariff_duration_days
                 else:
-                    days_left = user_subscription['end_date'] - datetime.datetime.now()
+                    days_left = (user_subscription['end_date'] - datetime.datetime.now()).days
 
                 if days_left > 0:
                     # Change sum is positive when chosen tariff is more expensive
