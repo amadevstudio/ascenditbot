@@ -23,11 +23,19 @@ class Logger:
 
     def __init_logger(self):
         if os.environ['ENVIRONMENT'] == "development":
-            logging.basicConfig(encoding='utf-8')  # , level=logging.DEBUG)
+            logging.basicConfig(
+                encoding='utf-8',
+                format='%(asctime)s %(levelname)-8s %(message)s',
+                datefmt='%Y-%m-%d %H:%M:%S %z')  # , level=logging.DEBUG)
         else:
             file_path = os.path.join(self.__logs_folder, self.__file)
             file_handler = TimedRotatingFileHandler(file_path, when='D', interval=1)
-            logging.basicConfig(encoding='utf-8', level='INFO', handlers=[file_handler])
+            logging.basicConfig(
+                encoding='utf-8',
+                format='%(asctime)s %(levelname)-8s %(message)s',
+                level='INFO',
+                handlers=[file_handler],
+                datefmt='%Y-%m-%d %H:%M:%S %z')
         self.logger = logging.getLogger(self.__file)
 
     # [12:49:41 26.06.1998] LEVEL arg1 args2
@@ -35,8 +43,8 @@ class Logger:
         result = ""
 
         # # Logging module add datetime and level automatically
-        # now = datetime.datetime.now()
-        # human_now = "[" + now.strftime("%H:%M:%S %d.%m.%Y") + "]"
+        # now = datetime.datetime.now().astimezone()
+        # human_now = "[" + now.strftime("%H:%M:%S %d.%m.%Y %z") + "]"
         # result += human_now + " "
         # result += (self.LEVELS[level] if level in self.LEVELS else "EMLVL") + " "
 
@@ -45,10 +53,7 @@ class Logger:
                 result += str(arg) + " "
             result = result[0:-1]
 
-        if os.environ['ENVIRONMENT'] != "development" and self.__file is not None:
-            getattr(self.logger, level)(result)
-        else:
-            print(result, flush=True)
+        getattr(self.logger, level)(result)
 
     def log(self, *args):
         self.__out_log(*args, "\n", level="info")
