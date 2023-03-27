@@ -3,6 +3,7 @@ services:
   bot:
     build:
       target: prod
+    restart: always
     env_file:
       - env/.env
       - env/.env.prod
