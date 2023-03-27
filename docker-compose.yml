@@ -5,7 +5,7 @@ services:
       context: ./bot
       dockerfile: Dockerfile
       target: dev
-    restart: on-failure
+    restart: no
     volumes:
       - ./bot:/usr/src/bot
     networks:
