@@ -214,7 +214,8 @@ class Chat(Service):
         return chat_repository.switch_active(chat_id)
 
     @staticmethod
-    def add_to_whitelist(chat_id: int, user_nickname: str) -> ModeratedChatInterface | None | ErrorDictInterface:
+    def add_to_whitelist(chat_id: int, user_nickname: str) \
+            -> ModeratedChatInterface | None | TypedDict('AddToWhitelistError', {'error': Literal['unexpected']}):
         # chat_member = await Chat._get_chat_member(bot, chat_service_id, user_)
         # if "error" in chat_member:
         #     return {"error": chat_member["error"]}
