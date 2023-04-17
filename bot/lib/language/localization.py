@@ -1,11 +1,11 @@
 from pkg.config.config import empty_photo_link
 from project.i18n import routed_messages, local_lang_based_links
 
-# panic_language = "en"
-panic_language = "ru"
+panic_language = "en"
+# panic_language = "ru"
 
 
-def get_language(lang_code: str):
+def get_language(lang_code: str | None):
     # Иногда language_code может быть None
     if not lang_code:
         return panic_language
@@ -13,12 +13,12 @@ def get_language(lang_code: str):
     if "-" in lang_code:
         lang_code = lang_code.split("-")[0]
 
-    lang_codes = {
-        "ru": "ru",
-        # "en": "en"
-    }
+    lang_codes = [
+        "ru",
+        "en"
+    ]
     if lang_code in lang_codes:
-        return lang_codes[lang_code]
+        return lang_code
     else:
         return panic_language
 

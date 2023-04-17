@@ -215,8 +215,8 @@ routed_messages = {
                 },
                 'user_cant_edit_messages': {
                     'en':
-                        "You don't have permission to delete messages. Make sure you're forwarding a message from a chat,"
-                        "in which you have such rights.",
+                        "You don't have permission to delete messages. Make sure you're forwarding a message from a"
+                        " chat, in which you have such rights.",
                     'ru':
                         "У вас нет прав на удаление сообщений. Убедитесь, что пересылаете сообщение из чата, "
                         "в котором у вас есть такие права."
@@ -522,9 +522,8 @@ routed_messages = {
             'balance_warning': {
                 'en':
                     emoji_codes.get('warning_sign', '') + "Warning!"
-                    " Any currency on the balance in the bot system is virtual points, "
-                    "which are not considered real currency and belong to the owner of the bot"
-                ,
+                    " Any currency on the balance in the bot system is virtual points,"
+                    " which are not considered real currency and belong to the owner of the bot",
                 'ru':
                     emoji_codes.get('warning_sign', '') + " Внимание!"
                     " Любая валюта на балансе в системе бота – это виртуальные очки, "
