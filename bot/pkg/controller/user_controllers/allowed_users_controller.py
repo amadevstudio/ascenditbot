@@ -47,8 +47,8 @@ async def add_to_chat_whitelist(call: telegram_types.CallbackQuery, message: tel
     if 'error' in result_connection:
         if result_connection['error'] == 'unexpected':
             error_trace = ['errors', result_connection['error']]
-        else:
-            error_trace = ['chat', 'add_to_whitelist', 'errors', result_connection['error']]
+        # else:
+        #     error_trace = ['chat', 'add_to_whitelist', 'errors', result_connection['error']]
         await notify(
             call, message, localization.get_message(error_trace, message.from_user.language_code),
             alert=True, button_text='cancel')
