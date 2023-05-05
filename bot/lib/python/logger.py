@@ -64,12 +64,15 @@ class Logger:
     # works only in error
     # args (for self.__out_log) = [arg1, arg2, | Details:, exc_type, exc_obj, fename, :, exc_tb.tb_lineno]
     def err(self, *args):
-        exc_type, exc_obj, exc_tb = sys.exc_info()
+        if os.environ['ENVIRONMENT'] == "production":
+            exc_type, exc_obj, exc_tb = sys.exc_info()
 
-        details = str(exc_type) + " " + str(exc_obj)
-        if exc_tb is not None:
-            fename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            details += " " + str(fename) + ":" + str(exc_tb.tb_lineno)
+            details = str(exc_type) + " " + str(exc_obj)
+            if exc_tb is not None:
+                fename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                details += " " + str(fename) + ":" + str(exc_tb.tb_lineno)
 
-        self.__out_log(
-            *args, "| Details:", details, "\n", level="err")
+            self.__out_log(
+                *args, "| Details:", details, "\n", level="err")
+        else:
+            raise(args[0])
