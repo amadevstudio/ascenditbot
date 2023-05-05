@@ -63,7 +63,7 @@ async def event_wrapper(
     succeed = await RouteMap.get_route_prop(route_type, 'method')(construct_params(call, message))
 
     if succeed is not False:
-        UserStorage.change_page(message.chat.id, routes.RouteMap.type(route_type)
+        UserStorage.change_page(message.chat.id, routes.RouteMap.type(route_type))
 
 
 async def event_action_wrapper(
