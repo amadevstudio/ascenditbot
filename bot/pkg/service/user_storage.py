@@ -32,10 +32,10 @@ class UserStorage(Service):
 
     @staticmethod
     def get_user_prev_state(chat_id: int):
-        return user_storage_repository.get_user_curr_state(chat_id)
+        return user_storage_repository.get_user_prev_state(chat_id)
 
     @staticmethod
-    def prev_curr_states(chat_id: int):
+    def prev_curr_states(chat_id: int) -> tuple[str | None, str | None] | list:
         states = user_storage_repository.get_user_prev_curr_states(chat_id)
         if isinstance(states, list):
             if len(states) == 2:
@@ -77,5 +77,5 @@ class UserStorage(Service):
         return user_storage_repository.get_user_state_data(chat_id, state)
 
     @staticmethod
-    def add_user_state_data(chat_id: int, state: str, state_data: dict):
+    def add_user_state_data(chat_id: int, state: str, state_data: dict[any, any]):
         user_storage_repository.add_user_state_data(chat_id, state, state_data)

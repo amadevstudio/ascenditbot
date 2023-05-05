@@ -5,7 +5,7 @@ from framework.system import telegram_types, telegram_exceptions
 
 import pkg.repository.allowed_user_repository
 import pkg.repository.chat_repository
-from pkg.controller.bot_setup import bot
+from framework.system.bot_setup import bot
 from pkg.repository import chat_repository
 from pkg.service.service import Service
 from pkg.service.tariff import Tariff

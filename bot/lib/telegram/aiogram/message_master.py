@@ -227,7 +227,7 @@ async def message_master(
         return image_message_structure.get('file_id', image_message_structure['image'])
 
     for message_to_edit_id in messages_to_edit:
-        message_structure = messages_to_edit[message_to_edit_id]
+        message_structure: MessageStructuresInterface = messages_to_edit[message_to_edit_id]
 
         reply_markup = build_markup(message_structure)
 

@@ -1,5 +1,6 @@
 import json
 
+from framework.controller.types import ControllerParams
 from framework.system import telegram_types
 
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
@@ -30,7 +31,19 @@ def user_state(entity: telegram_types.Message | telegram_types.CallbackQuery):
     return UserStorage.curr_state(chat_id)
 
 
-async def event_wrapper(route_type: AvailableRoutes, entity: telegram_types.Message | telegram_types.CallbackQuery, *args, **kwargs):
+def construct_params(call, message) -> ControllerParams:
+    # TODO: get call data here
+    return {
+        'call': call,
+        'message': message,
+        'language_code': call.from_user.language_code if call is not None else message.from_user.language_code,
+        # 'call_data': state_data.get_state_data(call, message, current_type)
+    }
+
+
+async def event_wrapper(
+        route_type: AvailableRoutes, entity: telegram_types.Message | telegram_types.CallbackQuery,
+        *args, **kwargs):
     # Args: manual
     # Kwargs: bot, event_from_user, ...
 
@@ -47,10 +60,20 @@ async def event_wrapper(route_type: AvailableRoutes, entity: telegram_types.Mess
     if call is None and message.text is not None and message.text[0] == '/':
         UserStorage.new_navigation_journey(message.chat.id, routes.RouteMap.type('menu'))
 
-    await RouteMap.get_route_prop(route_type, 'method')(call, message)
+    succeed = await RouteMap.get_route_prop(route_type, 'method')(construct_params(call, message))
+
+    if succeed is not False:
+        UserStorage.change_page(message.chat.id, routes.RouteMap.type(route_type)
 
 
 async def event_action_wrapper(
         route_type: AvailableRoutes, action_type: str, call: telegram_types.CallbackQuery, *args, **kwargs):
     call, message = call_and_message_accessed_processor(call)
-    await RouteMap.get_route_action_prop(route_type, action_type, 'method')(call, message)
+
+    params: ControllerParams = {
+        'call': call,
+        'message': message,
+        'language_code': call.from_user.language_code
+    }
+
+    await RouteMap.get_route_action_prop(route_type, action_type, 'method')(construct_params(call, message))

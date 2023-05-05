@@ -33,8 +33,8 @@ def user_router():
         F.chat_shared, ChatTypeFilter(PRIVATE_CHAT),
         CurrentStateMessageFilter(['add_chat']))
     async def add_chat_result(message: telegram_types.Message):
-        handlerv = partial(event_wrapper, RouteMap.type('add_chat'))
-        await handlerv(message)
+        handler = partial(event_wrapper, RouteMap.type('add_chat'))
+        await handler(message)
 
     route: AvailableRoutes
     for route in RouteMap.ROUTES:

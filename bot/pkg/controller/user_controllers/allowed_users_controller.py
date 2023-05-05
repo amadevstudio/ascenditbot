@@ -1,6 +1,4 @@
-import json
-
-from framework.system import telegram_types
+from framework.controller.types import ControllerParams
 
 from framework.controller.message_tools import notify, message_sender, is_call_or_command, go_back_inline_markup, \
     go_back_inline_button, determine_search_query
@@ -16,18 +14,17 @@ from pkg.service.user_storage import UserStorage
 
 
 # Add user to whitelist
-async def add_to_chat_whitelist(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
+async def add_to_chat_whitelist(params: ControllerParams):
+    call, message = params['call'], params['message']
+
     if is_call_or_command(call, message):
         message_structures = [{
             'type': 'text',
-            'text': localization.get_message(['chat', 'add_to_whitelist', 'text'], message.from_user.language_code),
-            'reply_markup': go_back_inline_markup(message.from_user.language_code),
+            'text': localization.get_message(['chat', 'add_to_whitelist', 'text'], params['language_code']),
+            'reply_markup': go_back_inline_markup(params['language_code']),
             'parse_mode': 'HTML'
         }]
         await message_sender(message, resending=call is None, message_structures=message_structures)
-
-        if change_user_state:
-            UserStorage.change_page(message.chat.id, routes.RouteMap.type('add_to_chat_whitelist'))
 
         return
 
@@ -45,27 +42,30 @@ async def add_to_chat_whitelist(call: telegram_types.CallbackQuery, message: tel
     result_connection = Chat.add_to_whitelist(chat_state_data['id'], user_nickname)
 
     if 'error' in result_connection:
-        if result_connection['error'] == 'unexpected':
-            error_trace = ['errors', result_connection['error']]
+        error_trace = ['errors', result_connection['error']]  # == 'unexpected'
+        # if result_connection['error'] == 'unexpected':
+        #     error_trace = ['errors', result_connection['error']]
         # else:
         #     error_trace = ['chat', 'add_to_whitelist', 'errors', result_connection['error']]
         await notify(
-            call, message, localization.get_message(error_trace, message.from_user.language_code),
+            call, message, localization.get_message(error_trace, params['language_code']),
             alert=True, button_text='cancel')
-        return
+        return False
 
     message_structures = [{
         'type': 'text',
         'text': localization.get_message(
-            ['chat', 'add_to_whitelist', 'success'], message.from_user.language_code).format(nickname=user_nickname),
-        'reply_markup': go_back_inline_markup(message.from_user.language_code)
+            ['chat', 'add_to_whitelist', 'success'], params['language_code']).format(nickname=user_nickname),
+        'reply_markup': go_back_inline_markup(params['language_code'])
     }]
 
     await message_sender(message, resending=call is None, message_structures=message_structures)
 
 
 # Show chat whitelist
-async def chat_whitelist(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
+async def chat_whitelist(params: ControllerParams):
+    call, message = params['call'], params['message']
+
     current_type = routes.RouteMap.type('chat_whitelist')
 
     # Getting data and full navigation setup
@@ -78,7 +78,7 @@ async def chat_whitelist(call: telegram_types.CallbackQuery, message: telegram_t
     chat_info = await Chat.load_info(str(channel_state_data['service_id']))
 
     current_page, chat_whitelist_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
-        call, message, whitelist_state_data, current_type, message.from_user.language_code,
+        call, message, whitelist_state_data, current_type, params['language_code'],
 
         Chat.whitelist_data_provider, [channel_state_data['id'], search_query],
         Chat.whitelist_data_count_provider, [channel_state_data['id'], search_query],
@@ -91,20 +91,20 @@ async def chat_whitelist(call: telegram_types.CallbackQuery, message: telegram_t
             error = chat_whitelist_page_data['error'] if search_query is None else 'empty_search'
             error_message = localization.get_message(
                 ['whitelist', 'errors', error],
-                message.from_user.language_code,
+                params['language_code'],
                 command=routes.RouteMap.get_route_main_command('add_chat'))
         else:
             error_message = localization.get_message(
                 ['navigation_builder', 'errors', chat_whitelist_page_data['error']],
-                message.from_user.language_code)
+                params['language_code'])
         await notify(
             call, message, error_message, alert=True)
-        return
+        return False
 
     # Building message
-    message_text = localization.get_message(['whitelist', 'list', 'text'], message.from_user.language_code)
+    message_text = localization.get_message(['whitelist', 'list', 'text'], params['language_code'])
     message_text += " " + localization.get_message(
-        ['chat', 'show', 'text'], message.from_user.language_code, chat_name=chat_info['title'])
+        ['chat', 'show', 'text'], params['language_code'], chat_name=chat_info['title'])
     message_text += '\n' + routing_helper_message
 
     # Chat buttons
@@ -112,14 +112,14 @@ async def chat_whitelist(call: telegram_types.CallbackQuery, message: telegram_t
     for whitelist_data in chat_whitelist_page_data['data']:
         button_text = localization.get_message(
             ['whitelist', 'list', 'button', 'active' if whitelist_data['active'] else 'inactive'],
-            message.from_user.language_code, nickname=whitelist_data['nickname'])
+            params['language_code'], nickname=whitelist_data['nickname'])
 
         reply_markup.append([{
             'text': button_text, 'callback_data': {'tp': 'allowed_user', 'id': whitelist_data['id']}}])
 
     if search_query is not None:
         reply_markup.append([{
-            'text': localization.get_message(['buttons', 'clear_search'], message.from_user.language_code),
+            'text': localization.get_message(['buttons', 'clear_search'], params['language_code']),
             'callback_data': {'tp': current_type, 'p': 1, 'search_query': None}}])
 
     # Navigation markup
@@ -133,36 +133,36 @@ async def chat_whitelist(call: telegram_types.CallbackQuery, message: telegram_t
     }]
     await message_sender(message, resending=call is None, message_structures=message_structures)
 
-    if change_user_state:
-        UserStorage.change_page(message.chat.id, current_type)
-        UserStorage.add_user_state_data(message.chat.id, current_type, {**whitelist_state_data, 'p': current_page})
+    UserStorage.add_user_state_data(message.chat.id, current_type, {**whitelist_state_data, 'p': current_page})
 
 
 # Show allowed user
-async def show(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True, ignore_callback_data=False):
-    allowed_user_state_data = state_data.get_state_data(
-        call if not ignore_callback_data else None, message, routes.RouteMap.type('allowed_user'))
+async def show(params: ControllerParams):
+    call, message = params['call'], params['message']
+
+    allowed_user_state_data = state_data.get_state_data(call, message, routes.RouteMap.type('allowed_user'))
     chat_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('chat'))
 
     if not len(allowed_user_state_data) or not len(chat_state_data):
         await notify(
-            None, message, localization.get_message(['errors', 'state_data_none'], message.from_user.language_code))
-        return
+            None, message, localization.get_message(['errors', 'state_data_none'], params['language_code']))
+        return False
 
     allowed_user_data = AllowedUser.find(allowed_user_state_data['id'])
     if allowed_user_data is None:
         await notify(
-            call, message, localization.get_message(['chat', 'errors', 'not_found'], message.from_user.language_code))
-        return
+            call, message, localization.get_message(['chat', 'errors', 'not_found'], params['language_code']))
+        return False
 
     chat_info = await Chat.load_info(str(chat_state_data['service_id']))
 
     if 'error' in chat_info:
         await notify(call, message, localization.get_message(
-            ['chat', 'errors', 'not_found_tg'], message.from_user.language_code))
+            ['chat', 'errors', 'not_found_tg'], params['language_code']))
+        return False
 
     message_text = localization.get_message(
-        ['allowed_user', 'show', 'text'], message.from_user.language_code,
+        ['allowed_user', 'show', 'text'], params['language_code'],
         chat_name=chat_info['title'], nickname=allowed_user_data['nickname'])
 
     reply_markup = []
@@ -170,7 +170,7 @@ async def show(call: telegram_types.CallbackQuery, message: telegram_types.Messa
     state_button = {
         'text': localization.get_message(
             ['allowed_user', 'show', 'active_button', 'active' if allowed_user_data['active'] else 'inactive'],
-            message.from_user.language_code,
+            params['language_code'],
         ), 'callback_data': {'tp': 'switch_active'}}
     reply_markup.append([state_button])
 
@@ -179,10 +179,10 @@ async def show(call: telegram_types.CallbackQuery, message: telegram_types.Messa
             [
                 'allowed_user', 'show', 'delete_button',
                 'initial' if 'deleting' not in allowed_user_state_data else 'deleting'],
-            message.from_user.language_code),
+            params['language_code']),
         'callback_data': {'tp': 'delete'}}])
 
-    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
+    reply_markup.append([go_back_inline_button(params['language_code'])])
 
     message_structures = [{
         'type': 'text',
@@ -191,12 +191,12 @@ async def show(call: telegram_types.CallbackQuery, message: telegram_types.Messa
     }]
     await message_sender(message, message_structures=message_structures)
 
-    if change_user_state:
-        UserStorage.change_page(message.chat.id, routes.RouteMap.type('allowed_user'))
-        UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_state_data | allowed_user_data)
+    UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_state_data | allowed_user_data)
 
 
-async def switch_active(call: telegram_types.CallbackQuery, message: telegram_types.Message):
+async def switch_active(params: ControllerParams):
+    call, message = params['call'], params['message']
+
     allowed_user_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('allowed_user'))
     if allowed_user_state_data is None:
         await raise_error(None, message, 'state_data_none')
@@ -210,11 +210,12 @@ async def switch_active(call: telegram_types.CallbackQuery, message: telegram_ty
     allowed_user_state_data['active'] = new_active_values
     UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_state_data)
 
-    # Tell show method to take data from state
-    await show(call, message, change_user_state=False, ignore_callback_data=True)
+    await show(params)
 
 
-async def delete(call: telegram_types.CallbackQuery, message: telegram_types.Message):
+async def delete(params: ControllerParams):
+    call, message = params['call'], params['message']
+
     allowed_user_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('allowed_user'))
     if allowed_user_state_data is None:
         await raise_error(None, message, 'state_data_none')
@@ -224,7 +225,7 @@ async def delete(call: telegram_types.CallbackQuery, message: telegram_types.Mes
     if 'deleting' in allowed_user_state_data:
         deleted_id = AllowedUser.delete(allowed_user_state_data['id'])
         if deleted_id is not None:
-            await chat_whitelist(call, message, change_user_state=False)
+            await chat_whitelist(params)
             UserStorage.go_back(message.chat.id, 'allowed_user')
             return
 
@@ -232,6 +233,6 @@ async def delete(call: telegram_types.CallbackQuery, message: telegram_types.Mes
     UserStorage.add_user_state_data(message.chat.id, 'allowed_user', allowed_user_state_data)
 
     await notify(call, message, localization.get_message(
-        ['allowed_user', 'delete', 'confirm'], message.from_user.language_code), alert=True)
+        ['allowed_user', 'delete', 'confirm'], params['language_code']), alert=True)
 
-    await show(call, message)
+    await show(params)

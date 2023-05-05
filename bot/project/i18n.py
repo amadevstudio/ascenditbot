@@ -19,7 +19,8 @@ emoji_codes = {
     'gear': '⚙️',
     'email': '📧',
     'CL': '🆑',
-    'magic_wand': '🪄'
+    'magic_wand': '🪄',
+    'hourglass': '⌛️'
 }
 
 local_lang_based_links = {

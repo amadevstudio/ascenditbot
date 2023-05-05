@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, Type
 
 
 def validate_structure(struct, conf):
@@ -18,5 +18,5 @@ def validate_structure(struct, conf):
         return False
 
 
-def validate_typed_dict_interface(dictionary: dict, interface: TypedDict):
+def validate_typed_dict_interface(dictionary: dict, interface: Type[TypedDict]):
     return isinstance(dictionary, dict) and all(key in interface.__annotations__ for key in dictionary.keys())

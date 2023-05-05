@@ -26,6 +26,7 @@ class RouteInterface(TypedDict, total=False):
     states_for_input: list[AvailableRoutes]  # States for message input (for example, its own name)
     actions: Dict[str, RouteActionsInterface]
     validator: Callable
+    have_under_keyboard: bool | None
 
 
 class RoutesInterface(TypedDict):
@@ -76,6 +77,7 @@ class RouteMap:
             'method': chats_controller.add_chat,
             'available_from': ['command', 'message', 'call'],
             'wait_for_input': True,
+            'have_under_keyboard': True
         },
         'my_chats': {
             'method': chats_controller.my_chats,

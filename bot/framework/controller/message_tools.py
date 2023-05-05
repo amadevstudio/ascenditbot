@@ -1,5 +1,4 @@
 import copy
-import json
 import time
 from typing import Literal, Any
 from framework.system import telegram_types
@@ -8,11 +7,11 @@ import aiogram
 
 from framework.system import telegram_exceptions
 from lib.language import localization
-from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages, \
+from lib.telegram.aiogram.message_master import message_master, MasterMessages, \
     MessageStructuresInterface, InlineButtonData
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg import config
-from pkg.controller.bot_setup import bot
+from framework.system.bot_setup import bot
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 
@@ -33,8 +32,7 @@ def image_link_or_object(path: str):
     return path
 
 
-async def chat_id_sender(
-        bot: aiogram.Bot, user_chat_id: int, message_structures: list[MessageStructuresInterface] = None):
+async def chat_id_sender(user_chat_id: int, message_structures: list[MessageStructuresInterface] = None):
     for message_to_send in message_structures:
         message_structure = message_to_send
 

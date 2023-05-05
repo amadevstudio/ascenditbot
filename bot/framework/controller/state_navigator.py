@@ -1,3 +1,4 @@
+from framework.controller.router_tools import event_wrapper, construct_params
 from framework.system import telegram_types
 
 from pkg.config import routes
@@ -17,7 +18,7 @@ async def go_back(call: telegram_types.CallbackQuery):
             # TODO: show error
             return
 
-        await method(call, call.message, change_user_state=False)
+        await method(construct_params(call, call.message))
 
         if curr is None:
             curr = routes.RouteMap.main_route()
