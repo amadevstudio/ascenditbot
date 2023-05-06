@@ -1,16 +1,10 @@
-from typing import Any, TypedDict, Callable, List, Dict, Literal
+from typing import Any, TypedDict, Callable, Dict, Literal
 
+from pkg.config.routes_dict import AvailableCommands, AvailableRoutes
 from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller, \
     subscription_controller, settings_controller
 from pkg.controller.user_controllers.validators.chat_access_validator import chat_access_validator
 from pkg.controller.user_controllers.validators.user_validator import email_presence_validator
-
-AvailableCommands = Literal['start', 'menu', 'add_chat', 'my_chats', 'subscription']
-AvailableRoutes = Literal[
-    'start', 'menu', 'add_chat', 'my_chats', 'chat',
-    'add_to_chat_whitelist', 'chat_whitelist', 'allowed_user',
-    'subscription', 'tariffs', 'fund', 'fund_amount',
-    'nowhere']
 
 
 class RouteActionsInterface(TypedDict):
@@ -175,30 +169,30 @@ class RouteMap:
     def main_route():
         return list(RouteMap.ROUTES.keys())[0]
 
+    # Returns route description
     @staticmethod
-    def find_route(route: str, routes=None):
+    def find_route(route_name: AvailableRoutes, routes=None) -> RouteInterface | None:
         if routes is None:
             routes = RouteMap.ROUTES
 
         for key in routes:
-            if key == route:
+            if key == route_name:
                 return routes[key]
 
         return None
 
+    # Get route property
     @staticmethod
-    def get_route_prop(route_name: str, key: str = None) -> Any:
+    def get_route_prop(route_name: AvailableRoutes, key: str) -> Any:
         route = RouteMap.find_route(route_name)
         if route is None:
-            return None
-
-        if key is None:
-            return None
+            raise ValueError('Route not found')
 
         return route.get(key, None)
 
+    # Get property of route's action
     @staticmethod
-    def get_route_action_prop(route_name: str, action_name: str, key: str = None):
+    def get_route_action_prop(route_name: AvailableRoutes, action_name: str, key: str) -> Any:
         actions: dict = RouteMap.get_route_prop(route_name, 'actions')
         if actions is None:
             return None
@@ -208,34 +202,32 @@ class RouteMap:
 
         return actions[action_name][key]
 
+
+    # Get route commands
     @staticmethod
-    def get_route_commands(route_name: str):
+    def get_route_commands(route_name: AvailableRoutes):
         route = RouteMap.find_route(route_name)
         if route is None or 'commands' not in route:
             return ['menu']
 
         return route['commands']
 
+    # Get first route command
     @staticmethod
-    def get_route_main_command(route_name: str):
+    def get_route_main_command(route_name: AvailableRoutes):
         return RouteMap.get_route_commands(route_name)[0]
 
-    # Get action type
+    # Get action type (or base)
     @staticmethod
-    def type(route_type: str):
+    def type(route_type: AvailableRoutes) -> AvailableRoutes:
         if route_type not in RouteMap.ROUTES:
             return 'menu'
 
         return route_type
 
-    # Get state from state list
-    @staticmethod
-    def state(route_state: str):
-        return RouteMap.type(route_state)
-
     # Get inline action type
     @staticmethod
-    def action_type(route_state: str, action: str):
+    def action_type(route_state: AvailableRoutes, action: str):
         actions = RouteMap.get_route_prop(route_state, 'actions')
         if actions is None:
             return None
@@ -244,3 +236,20 @@ class RouteMap:
             return None
 
         return action
+
+    @staticmethod
+    def child_routes(route_name: AvailableRoutes) -> list[AvailableRoutes] | None:
+        child_routes = []
+        child_routes_stack = [*RouteMap.get_route_prop(route_name, 'routes')]
+
+        while len(child_routes_stack) > 0:
+            curr_route_name = child_routes_stack.pop()
+            curr_route = RouteMap.find_route(curr_route_name)
+            if curr_route is None:
+                continue
+
+            child_routes_stack.extend(curr_route.get('routes', []))
+
+            child_routes.append(curr_route_name)
+
+        return child_routes

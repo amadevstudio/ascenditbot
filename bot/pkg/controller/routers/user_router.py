@@ -9,7 +9,8 @@ from framework.controller import state_navigator
 from framework.controller.router_tools import event_wrapper, event_action_wrapper
 from framework.controller.filters.chat_type import ChatTypeFilter
 
-from pkg.config.routes import RouteMap, AvailableRoutes
+from pkg.config.routes import RouteMap
+from pkg.config.routes_dict import AvailableRoutes
 from pkg.controller.middlewares.middlewares import NoWhereInputProcessorMiddleware, ReplyMarkupCleaner
 from pkg.controller.filters.current_state import CurrentStateMessageFilter, CurrentStateActionFilter
 from pkg.controller.filters.callback_button_type import CallbackButtonTypeFilter, BackButtonHandler

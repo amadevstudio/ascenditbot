@@ -18,5 +18,12 @@ def validate_structure(struct, conf):
         return False
 
 
-def validate_typed_dict_interface(dictionary: dict, interface: Type[TypedDict]):
-    return isinstance(dictionary, dict) and all(key in interface.__annotations__ for key in dictionary.keys())
+def validate_typed_dict_interface(dictionary: dict, interface: Type[TypedDict], total=False) -> bool:
+    dict_is_dict = isinstance(dictionary, dict)
+    base_check = all(key in interface.__annotations__ for key in dictionary.keys())
+    if total:
+        total_check = all(key in dictionary.keys() for key in interface.__annotations__)
+    else:
+        total_check = True
+
+    return dict_is_dict and base_check and total_check

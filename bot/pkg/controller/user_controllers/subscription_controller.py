@@ -98,9 +98,9 @@ async def tariffs(params: ControllerParams):
 
 
 async def change_tariff(params: ControllerParams):
-    call, message = params['call'], params['message']
+    call, message, current_state_data = params['call'], params['message'], params['state_data']
 
-    chosen_tariff_id = state_data.decode_call_data(call).get('id', None)
+    chosen_tariff_id = current_state_data.get('id', None)
 
     user_id = User.get_id_by_service_id(message.chat.id)
 

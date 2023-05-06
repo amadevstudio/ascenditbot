@@ -2,7 +2,8 @@ from aiogram.filters import BaseFilter
 from aiogram.types import CallbackQuery
 
 from framework.controller.router_tools import get_type
-from pkg.config.routes import RouteMap, AvailableRoutes
+from pkg.config.routes import RouteMap
+from pkg.config.routes_dict import AvailableRoutes
 
 
 class BackButtonHandler(BaseFilter):

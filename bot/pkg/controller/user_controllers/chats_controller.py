@@ -1,14 +1,18 @@
+import typing
+
 from framework.controller.types import ControllerParams
 
 from framework.controller import state_data
 from lib.language import localization
 from framework.controller.message_tools import message_sender, go_back_inline_markup, is_call_or_command, \
     image_link_or_object, notify, go_back_inline_button, determine_search_query
+from lib.python.dict_interface import validate_typed_dict_interface
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
 from pkg.controller.user_controllers.common_controller import chat_access_denied, raise_error
 from pkg.service.user_storage import UserStorage
 from pkg.service.chat import Chat
+from project.types import ModeratedChatInterface
 
 _PER_PAGE = 5
 
@@ -81,18 +85,13 @@ async def add_chat(params: ControllerParams):
 
 
 async def my_chats(params: ControllerParams):
-    call, message = params['call'], params['message']
-
-    current_type = routes.RouteMap.type('my_chats')
-
-    # Getting data and full navigation setup
-    current_state_data = state_data.get_state_data(call, message, current_type)
+    call, message, current_state_data = params['call'], params['message'], params['state_data']
 
     current_state_data = determine_search_query(call, message, current_state_data)
     search_query = current_state_data.get('search_query', None)
 
     current_page, user_chat_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
-        call, message, current_state_data, current_type, params['language_code'],
+        call, message, current_state_data, params['route_name'], params['language_code'],
 
         Chat.data_provider_by_service_id, [message.chat.id, search_query],
         Chat.data_count_provider_by_service_id, [message.chat.id, search_query],
@@ -145,7 +144,7 @@ async def my_chats(params: ControllerParams):
     if search_query is not None:
         reply_markup.append([{
             'text': localization.get_message(['buttons', 'clear_search'], params['language_code']),
-            'callback_data': {'tp': current_type, 'p': 1, 'search_query': None}
+            'callback_data': {'tp': params['route_name'], 'p': 1, 'search_query': None}
         }])
 
     # Navigation markup
@@ -159,7 +158,7 @@ async def my_chats(params: ControllerParams):
     }]
     await message_sender(message, resending=call is None, message_structures=message_structures)
 
-    UserStorage.add_user_state_data(message.chat.id, current_type, {**current_state_data, 'p': current_page})
+    UserStorage.add_user_state_data(message.chat.id, params['route_name'], {**current_state_data, 'p': current_page})
 
     await Chat.update_names(message.chat.id)
 
@@ -167,13 +166,16 @@ async def my_chats(params: ControllerParams):
 async def show(params: ControllerParams):
     call, message = params['call'], params['message']
 
-    chat_income_data = state_data.get_state_data(call, message, 'chat')
-
-    if not len(chat_income_data):
+    if not len(params['state_data']):
         await raise_error(None, message, 'state_data_none')
         return
 
-    chat_data = Chat.find(chat_income_data['id'])
+    # State data already have chat data
+    if validate_typed_dict_interface(params['state_data'], ModeratedChatInterface, total=True):
+        chat_data = params['state_data']
+    else:
+        chat_data = Chat.find(params['state_data']['id'])
+
     if chat_data is None:
         await notify(
             call, message, localization.get_message(['chat', 'errors', 'not_found'], params['language_code']))
@@ -221,25 +223,26 @@ async def show(params: ControllerParams):
     }]
     await message_sender(message, message_structures=message_structures)
 
-    UserStorage.add_user_state_data(message.chat.id, 'chat', chat_data)
+    UserStorage.add_user_state_data(message.chat.id, 'chat', {**params['state_data'], **chat_data})
 
 
 async def switch_active(params: ControllerParams):
-    call, message = params['call'], params['message']
+    call, message, current_state_data = params['call'], params['message'], params['state_data']
 
-    chat_state_data = state_data.get_local_state_data(message, 'chat')
-    if chat_state_data is None:
+    if current_state_data is None:
         await notify(
             call, message, localization.get_message(['errors', 'state_data_none'], params['language_code']))
         return False
 
-    new_active_values = Chat.switch_active(chat_state_data['id'])
+    new_active_values = Chat.switch_active(current_state_data['id'])
 
-    if new_active_values is None or new_active_values == chat_state_data['active']:
+    if new_active_values is None or new_active_values == current_state_data['active']:
         return
 
-    chat_state_data['active'] = new_active_values
-    UserStorage.add_user_state_data(message.chat.id, 'chat', chat_state_data)
+    current_state_data['active'] = new_active_values
+
+    params['state_data'] = current_state_data
+    UserStorage.add_user_state_data(message.chat.id, 'chat', params['state_data'])
 
     # Tell show method to take data from state
     await show(params)

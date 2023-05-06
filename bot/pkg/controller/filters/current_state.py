@@ -3,7 +3,8 @@ from aiogram.types import Message, CallbackQuery
 
 from framework.controller.router_tools import message_route_validator, user_state, get_type
 
-from pkg.config.routes import AvailableRoutes, RouteMap
+from pkg.config.routes import RouteMap
+from pkg.config.routes_dict import AvailableRoutes
 
 
 class CurrentStateMessageFilter(BaseFilter):
@@ -21,5 +22,5 @@ class CurrentStateActionFilter(BaseFilter):
 
     async def __call__(self, call: CallbackQuery) -> bool:
         return (
-            user_state(call) == RouteMap.state(self.route)
+            user_state(call) == self.route
             and get_type(call) == RouteMap.action_type(self.route, self.action))

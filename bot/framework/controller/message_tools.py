@@ -98,10 +98,14 @@ async def message_sender(
 
 
 async def notify(
-        call: telegram_types.CallbackQuery | None, message: telegram_types.Message, text: str,
-        alert: bool = False, button_text: Literal['back', 'cancel'] = 'back'
+        call: telegram_types.CallbackQuery | None,
+        message: telegram_types.Message, text: str,
+        alert: bool = False,
+        force_message: bool = False,
+        save_state: bool = False,
+        button_text: Literal['back', 'cancel'] = 'back'
 ):
-    if call is not None:
+    if not force_message and call is not None:
         await bot.answer_callback_query(
             callback_query_id=call.id, show_alert=alert, text=text)
         return
@@ -111,8 +115,10 @@ async def notify(
         'text': text,
         'reply_markup': go_back_inline_markup(message.from_user.language_code, button_text=button_text)
     }]
-    await message_sender(message, resending=alert, message_structures=message_structures)
-    UserStorage.change_page(message.chat.id, config.routes.RouteMap.type('nowhere'))
+    await message_sender(message, message_structures=message_structures)
+
+    if not save_state:
+        UserStorage.change_page(message.chat.id, config.routes.RouteMap.type('nowhere'))
 
 
 def is_command(message_text: str) -> bool:
@@ -131,7 +137,8 @@ def is_call_or_command(call: telegram_types.CallbackQuery = None, message: teleg
 
 
 def determine_search_query(
-        call: telegram_types.CallbackQuery | None, message: telegram_types.Message, state_data: dict[str, Any]) -> dict[str, Any]:
+        call: telegram_types.CallbackQuery | None,
+        message: telegram_types.Message, state_data: dict[str, Any]) -> dict[str, Any]:
     local_state_data = copy.deepcopy(state_data)
 
     if call is None and message.text != '':
