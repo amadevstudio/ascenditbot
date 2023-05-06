@@ -70,6 +70,7 @@ async def event_wrapper(
     # Clear state on commands
     if call is None and message.text is not None and message.text[0] == '/':
         UserStorage.new_navigation_journey(message.chat.id, menu_route)
+        UserStorage.set_resend(message.chat.id)
 
     method = RouteMap.get_route_prop(route_name, 'method')
     succeed = await method(construct_params(call, message, route_name))

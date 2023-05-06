@@ -101,6 +101,7 @@ async def notify(
         call: telegram_types.CallbackQuery | None,
         message: telegram_types.Message, text: str,
         alert: bool = False,
+        resending: bool = False,
         force_message: bool = False,
         save_state: bool = False,
         button_text: Literal['back', 'cancel'] = 'back'
@@ -115,7 +116,7 @@ async def notify(
         'text': text,
         'reply_markup': go_back_inline_markup(message.from_user.language_code, button_text=button_text)
     }]
-    await message_sender(message, message_structures=message_structures)
+    await message_sender(message, resending=resending, message_structures=message_structures)
 
     if not save_state:
         UserStorage.change_page(message.chat.id, config.routes.RouteMap.type('nowhere'))
@@ -141,7 +142,7 @@ def determine_search_query(
         message: telegram_types.Message, state_data: dict[str, Any]) -> dict[str, Any]:
     local_state_data = copy.deepcopy(state_data)
 
-    if call is None and message.text != '':
+    if call is None and message.text != '' and not is_command(message.text):
         try:
             int(message.text)
         except ValueError:

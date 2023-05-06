@@ -87,10 +87,9 @@ async def chat_whitelist(params: ControllerParams):
     # Error processing
     if 'error' in chat_whitelist_page_data:
         if chat_whitelist_page_data['error'] in ['empty']:
-            print("h1", flush=True)
+
             # Returning from user and something changed (for example, after delete)
             if params['is_step_back']:
-                print("h2", flush=True)
                 # 1. search result gives nothing – just try again with new state without search query
                 if search_query is not None:
                     UserStorage.del_user_state_data(message.chat.id, params['route_name'])

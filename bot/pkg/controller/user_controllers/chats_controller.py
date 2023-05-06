@@ -110,8 +110,8 @@ async def my_chats(params: ControllerParams):
             error_message = localization.get_message(
                 ['navigation_builder', 'errors', user_chat_page_data['error']],
                 params['language_code'])
-        await notify(
-            call, message, error_message, alert=True)
+
+        await notify(call, message, error_message, alert=True, resending=True)
         return False
 
     # Building message

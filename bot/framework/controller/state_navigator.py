@@ -12,7 +12,7 @@ async def go_back(call: telegram_types.CallbackQuery, custom_prev: AvailableRout
         # try:
         # lastText = storage.get_user_last_text(call.message.chat.id)
         prev, curr = UserStorage.prev_curr_states(call.message.chat.id)
-        print(prev, curr, flush=True)
+
         active_prev = prev if custom_prev is None else custom_prev
         if active_prev is None:
             return
@@ -22,13 +22,13 @@ async def go_back(call: telegram_types.CallbackQuery, custom_prev: AvailableRout
             # TODO: show error
             return
 
+        await method(construct_params(call, call.message, active_prev, is_step_back=True))
+
         all_states = UserStorage.all_states(call.message.chat.id)
         for state in reversed(all_states):
             if state == prev:
                 break
             UserStorage.go_back(call.message.chat.id)
-
-        await method(construct_params(call, call.message, active_prev, is_step_back=True))
 
         for child_route in RouteMap.child_routes(active_prev):
             UserStorage.del_user_state_data(call.message.chat.id, child_route)
