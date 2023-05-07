@@ -3,7 +3,7 @@ import datetime
 
 from aiogram import Bot
 
-from framework import controller
+from framework.controller.message_tools import message_sender
 from pkg.service.tariff import Tariff
 from pkg.system.logger import logger
 from pkg.template.tariff import auto_update
@@ -37,15 +37,14 @@ async def subscription_handler(bot: Bot):
                     'text': message_text,
                     'parse_mode': 'HTML'
                 }]
-                await controller.message_tools.chat_id_sender(int(user['service_id']),
-                                                              message_structures=message_structures)
+                await message_sender(int(user['service_id']), resending=True, message_structures=message_structures)
 
         # Notify about days left
         notify_about_days = 1
         logger.log("NOTIFYING expiring USERS")
         for user in Tariff.users_with_remaining_days(notify_about_days):
             logger.log(f"NOTIFYING USER {user}")
-            await controller.message_tools.chat_id_sender(int(user['service_id']), message_structures=[{
+            await message_sender(int(user['service_id']), resending=True, message_structures=[{
                 'type': 'text',
                 'text': auto_update.remaining_days_left_message(
                     user['id'], user['language_code'], notify_about_days),
