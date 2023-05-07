@@ -30,18 +30,24 @@ Additional steps for production:
   - `python -m pip install virtualenv`
   - `deactivate`
 
-### Fast developing (deprecated because auto-reload added)
-Run compose and stop the bot container  
-`docker compose up`  
-Then in new terminal run  
-`docker compose stop -t 1 bot && docker compose run --rm -p 3000:3000 bot`  
-works like a ⚡️
+### ~~Fast developing~~
+<details>
+  <summary>Deprecated due to the addition of auto-reload</summary>
+  Run compose and stop the bot container<br>
+  <code>docker compose up</code><br>
+  Then in new terminal run<br>
+  <code>docker compose stop -t 1 bot && docker compose run --rm -p 3000:3000 bot</code><br>  
+  Works like a ⚡️
+</details>
 
 ### After generate files using Docker
-Because Docker runs as root, you must take ownership of the project files after generating them from containers.  
-For example, when creating a new migration with migrator.  
-To do so, use  
-`./scripts/own_project.sh`
+<details>
+  <summary>Required depending on environment</summary>
+  Because Docker may run as root, you may need to take ownership of the project files after they are created from containers.<br>
+  For example, when creating a new migration with migrator.<br>
+  To do so, use  
+  <code>./scripts/own_project.sh</code>
+</details>
 
 ## Migrations
 Using [dbmate](https://github.com/amacneil/dbmate)

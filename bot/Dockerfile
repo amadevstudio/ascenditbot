@@ -4,10 +4,10 @@ FROM python:3.11 as base
 WORKDIR /usr/src/bot/
 # copy project
 COPY . /usr/src/bot/
-# install dependencies
-RUN pip install -r requirements.txt
 
-RUN pip-upgrade --skip-virtualenv-check
+RUN pip install -r requirements.txt # Install packages from requirements.txt
+
+RUN pip-upgrade --skip-virtualenv-check # Interactively upgrade packages from requirements file, and also update the pinned version from requirements file(s).
 
 # RUN apt update
 
