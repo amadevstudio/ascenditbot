@@ -34,7 +34,7 @@ def user_router():
         F.chat_shared, ChatTypeFilter(PRIVATE_CHAT),
         CurrentStateMessageFilter(['add_chat']))
     async def add_chat_result(message: telegram_types.Message):
-        handler = partial(event_wrapper, RouteMap.type('add_chat'))
+        handler = partial(event_wrapper, 'add_chat')
         await handler(message)
 
     route: AvailableRoutes
@@ -43,7 +43,7 @@ def user_router():
             continue
 
         route_params = RouteMap.ROUTES[route]
-        handler = partial(event_wrapper, RouteMap.type(route))
+        handler = partial(event_wrapper, route)
 
         if 'command' in route_params['available_from']:
             router.message.register(
@@ -60,8 +60,7 @@ def user_router():
 
         if 'actions' in route_params:
             for action in route_params['actions']:
-                action_handler = partial(
-                    event_action_wrapper, RouteMap.type(route), RouteMap.action_type(route, action))
+                action_handler = partial(event_action_wrapper, route, action)
                 router.callback_query.register(
                     action_handler, ChatTypeFilter(PRIVATE_CHAT),
                     CurrentStateActionFilter(route, action))

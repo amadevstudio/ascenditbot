@@ -102,11 +102,10 @@ async def notify(
         message: telegram_types.Message, text: str,
         alert: bool = False,
         resending: bool = False,
-        force_message: bool = False,
         save_state: bool = False,
         button_text: Literal['back', 'cancel'] = 'back'
 ):
-    if not force_message and call is not None:
+    if call is not None:
         await bot.answer_callback_query(
             callback_query_id=call.id, show_alert=alert, text=text)
         return

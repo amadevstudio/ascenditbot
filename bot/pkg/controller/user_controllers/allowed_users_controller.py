@@ -95,7 +95,7 @@ async def chat_whitelist(params: ControllerParams):
                     UserStorage.del_user_state_data(message.chat.id, params['route_name'])
                     params['state_data'] = {}
                     return await chat_whitelist(params)
-                # 2. Act like message, will resend
+                # 2. Act like message, use message notification approach
                 else:
                     call = None
 
@@ -106,7 +106,9 @@ async def chat_whitelist(params: ControllerParams):
                 command=routes.RouteMap.get_route_main_command('add_chat'))
 
             # When already opened, message (or go_back without search) and not results at all, save state
-            await notify(call, message, error_message, alert=True, save_state=search_query is None)
+            await notify(
+                call, message, error_message,
+                alert=True, save_state=search_query is None)
 
         else:
             error_message = localization.get_message(

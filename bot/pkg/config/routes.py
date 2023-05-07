@@ -239,8 +239,10 @@ class RouteMap:
 
     @staticmethod
     def child_routes(route_name: AvailableRoutes) -> list[AvailableRoutes] | None:
-        child_routes = []
-        child_routes_stack = [*RouteMap.get_route_prop(route_name, 'routes')]
+        all_child_routes = []
+
+        curr_route = RouteMap.find_route(route_name)
+        child_routes_stack = [*curr_route.get('routes', [])]
 
         while len(child_routes_stack) > 0:
             curr_route_name = child_routes_stack.pop()
@@ -250,6 +252,6 @@ class RouteMap:
 
             child_routes_stack.extend(curr_route.get('routes', []))
 
-            child_routes.append(curr_route_name)
+            all_child_routes.append(curr_route_name)
 
-        return child_routes
+        return all_child_routes
