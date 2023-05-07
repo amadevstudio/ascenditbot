@@ -150,7 +150,8 @@ def build_markup(message_structure: MessageStructuresInterface):
 # resending: позволяет принудительно отправить сообщение повторно
 # postloading: обработка случаев, когда до это отправляется сообщение "загрузка"
 async def message_master(
-        bot: aiogram.Bot, aiogram_message: telegram_types.Message,
+        bot: aiogram.Bot,
+        chat_id: int,
         resending=False,
         message_structures=None,
         previous_message_structures=None
@@ -215,7 +216,7 @@ async def message_master(
 
     for message_to_delete in messages_to_delete:
         try:
-            await bot.delete_message(aiogram_message.chat.id, message_to_delete['id'])
+            await bot.delete_message(chat_id, message_to_delete['id'])
         except Exception:
             messages_to_send = message_structures
             messages_to_edit = []
@@ -234,7 +235,7 @@ async def message_master(
         if message_structure['type'] == MasterMessages.text.value:
             result = await bot.edit_message_text(
                 text=message_structure.get('text', None),
-                chat_id=aiogram_message.chat.id,
+                chat_id=chat_id,
                 message_id=message_to_edit_id,
                 parse_mode=message_structure.get('parse_mode', None),
                 reply_markup=reply_markup,
@@ -243,10 +244,10 @@ async def message_master(
         elif message_structure['type'] == MasterMessages.image.value:
             result = await bot.edit_message_media(
                 media=image_digger(message_structure),
-                chat_id=aiogram_message.chat.id,
+                chat_id=chat_id,
                 message_id=message_to_edit_id)
             await bot.edit_message_caption(
-                chat_id=aiogram_message.chat.id,
+                chat_id=chat_id,
                 message_id=message_to_edit_id,
                 caption=message_structure.get('text', None),
                 parse_mode=message_structure.get('parse_mode', None),
@@ -265,14 +266,16 @@ async def message_master(
         reply_markup = build_markup(message_structure)
 
         if message_structure['type'] == MasterMessages.text.value:
-            result = await aiogram_message.answer(
+            result = await bot.send_message(
+                chat_id=chat_id,
                 text=message_structure.get('text', None),
                 parse_mode=message_structure.get('parse_mode', None),
                 reply_markup=reply_markup,
                 disable_web_page_preview=message_structure.get('disable_web_page_preview', None))
 
         elif message_structure['type'] == MasterMessages.image.value:
-            result = await aiogram_message.answer_photo(
+            result = await bot.send_photo(
+                chat_id=chat_id,
                 photo=image_digger(message_structure),
                 caption=message_structure.get('text', None),
                 parse_mode=message_structure.get('parse_mode', None),

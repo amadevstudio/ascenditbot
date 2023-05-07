@@ -20,7 +20,7 @@ async def page(params: ControllerParams):
         'text': localization.get_message(['settings', 'page'], params['language_code']),
         'reply_markup': reply_markup,
     }]
-    await message_sender(message, message_structures=message_structures)
+    await message_sender(message.chat.id, message_structures=message_structures)
 
 
 async def email(params: ControllerParams):
@@ -40,4 +40,4 @@ async def email(params: ControllerParams):
             )),
         'reply_markup': go_back_inline_markup(params['language_code']),
     }]
-    await message_sender(message, message_structures=message_structures)
+    await message_sender(message.chat.id, message_structures=message_structures)

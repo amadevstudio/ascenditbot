@@ -26,9 +26,7 @@ async def start(params: ControllerParams):
         'text': localization.get_message(['welcome', 'introduction'], params['language_code']),
         'reply_markup': markup,
     }]
-    await message_sender(
-        message,
-        message_structures=message_structures)
+    await message_sender(message.chat.id, message_structures=message_structures)
 
     if registration_result is not None and registration_result.get('refer', None) is not None:
         refer: UserInterface = registration_result['refer']
@@ -73,14 +71,13 @@ async def menu(params: ControllerParams):
         'parse_mode': 'HTML'
     })
 
-    await message_sender(
-        message, message_structures=answer_messages)
+    await message_sender(message.chat.id, message_structures=answer_messages)
 
 
 async def help_page(params: ControllerParams):
     call, message = params['call'], params['message']
 
-    await message_sender(message, message_structures=[{
+    await message_sender(message.chat.id, message_structures=[{
         'type': 'text',
         'text': localization.get_message(['help', 'text'], params['language_code']),
         'reply_markup': go_back_inline_markup(params['language_code'])

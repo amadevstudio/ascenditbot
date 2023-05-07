@@ -46,7 +46,7 @@ async def page(params: ControllerParams):
         'parse_mode': 'HTML',
         'disable_web_page_preview': True
     }]
-    await message_sender(message, message_structures=message_structures)
+    await message_sender(message.chat.id, message_structures=message_structures)
 
 
 async def tariffs(params: ControllerParams):
@@ -89,7 +89,7 @@ async def tariffs(params: ControllerParams):
 
     reply_markup.append([go_back_inline_button(params['language_code'])])
 
-    await message_sender(message, message_structures=[{
+    await message_sender(message.chat.id, message_structures=[{
         'type': 'text',
         'text': tariffs_message,
         'reply_markup': reply_markup,
@@ -160,7 +160,7 @@ async def fund_balance_page(params: ControllerParams):
 
     reply_markup.append([go_back_inline_button(params['language_code'])])
 
-    await message_sender(message, message_structures=[{
+    await message_sender(message.chat.id, message_structures=[{
         'type': 'text',
         'text': message_text,
         'reply_markup': reply_markup,
@@ -200,7 +200,7 @@ async def fund_link_page(params: ControllerParams):
     message_text = localization.get_message(
             ['subscription', 'fund', 'fund_link_message'], params['language_code'], link=fund_link)
 
-    await message_sender(message, message_structures=[{
+    await message_sender(message.chat.id, message_structures=[{
         'type': 'text',
         'text': message_text,
         'reply_markup': go_back_inline_markup(params['language_code'])
