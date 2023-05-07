@@ -46,7 +46,7 @@ async def page(params: ControllerParams):
         'parse_mode': 'HTML',
         'disable_web_page_preview': True
     }]
-    await message_sender(message, resending=call is None, message_structures=message_structures)
+    await message_sender(message, message_structures=message_structures)
 
 
 async def tariffs(params: ControllerParams):
@@ -204,4 +204,4 @@ async def fund_link_page(params: ControllerParams):
         'type': 'text',
         'text': message_text,
         'reply_markup': go_back_inline_markup(params['language_code'])
-    }], resending=call is None)
+    }])

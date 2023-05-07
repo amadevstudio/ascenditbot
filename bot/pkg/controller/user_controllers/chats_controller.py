@@ -40,7 +40,7 @@ async def add_chat(params: ControllerParams):
             'reply_markup': go_back_inline_markup(params['language_code']),
             'parse_mode': 'HTML'
         }, reply_add_chat_structure]
-        await message_sender(message, resending=call is None, message_structures=message_structures)
+        await message_sender(message, message_structures=message_structures)
 
         return
 
@@ -81,7 +81,7 @@ async def add_chat(params: ControllerParams):
         'reply_markup': reply_markup
     }, reply_add_chat_structure]
 
-    await message_sender(message, resending=call is None, message_structures=message_structures)
+    await message_sender(message, message_structures=message_structures)
 
 
 async def my_chats(params: ControllerParams):
@@ -111,7 +111,7 @@ async def my_chats(params: ControllerParams):
                 ['navigation_builder', 'errors', user_chat_page_data['error']],
                 params['language_code'])
 
-        await notify(call, message, error_message, alert=True, resending=True)
+        await notify(call, message, error_message, alert=True)
         return False
 
     # Building message
@@ -156,7 +156,7 @@ async def my_chats(params: ControllerParams):
         'text': message_text,
         'reply_markup': reply_markup
     }]
-    await message_sender(message, resending=call is None, message_structures=message_structures)
+    await message_sender(message, message_structures=message_structures)
 
     UserStorage.add_user_state_data(message.chat.id, params['route_name'], {**current_state_data, 'p': current_page})
 

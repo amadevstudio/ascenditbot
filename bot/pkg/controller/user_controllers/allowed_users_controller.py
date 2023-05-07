@@ -26,7 +26,7 @@ async def add_to_chat_whitelist(params: ControllerParams):
             'reply_markup': go_back_inline_markup(params['language_code']),
             'parse_mode': 'HTML'
         }]
-        await message_sender(message, resending=call is None, message_structures=message_structures)
+        await message_sender(message, message_structures=message_structures)
 
         return
 
@@ -61,7 +61,7 @@ async def add_to_chat_whitelist(params: ControllerParams):
         'reply_markup': go_back_inline_markup(params['language_code'])
     }]
 
-    await message_sender(message, resending=call is None, message_structures=message_structures)
+    await message_sender(message, message_structures=message_structures)
 
 
 # Show chat whitelist
@@ -148,7 +148,7 @@ async def chat_whitelist(params: ControllerParams):
         'text': message_text,
         'reply_markup': reply_markup
     }]
-    await message_sender(message, resending=call is None, message_structures=message_structures)
+    await message_sender(message, message_structures=message_structures)
 
     UserStorage.add_user_state_data(message.chat.id, params['route_name'], {**current_state_data, 'p': current_page})
 

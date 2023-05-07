@@ -27,7 +27,7 @@ async def start(params: ControllerParams):
         'reply_markup': markup,
     }]
     await message_sender(
-        message, resending=call is None,
+        message,
         message_structures=message_structures)
 
     if registration_result is not None and registration_result.get('refer', None) is not None:
@@ -74,13 +74,13 @@ async def menu(params: ControllerParams):
     })
 
     await message_sender(
-        message, resending=call is None, message_structures=answer_messages)
+        message, message_structures=answer_messages)
 
 
 async def help_page(params: ControllerParams):
     call, message = params['call'], params['message']
 
-    await message_sender(message, resending=call is None, message_structures=[{
+    await message_sender(message, message_structures=[{
         'type': 'text',
         'text': localization.get_message(['help', 'text'], params['language_code']),
         'reply_markup': go_back_inline_markup(params['language_code'])
