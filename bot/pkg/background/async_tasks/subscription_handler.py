@@ -11,14 +11,6 @@ from pkg.template.tariff import auto_update
 
 async def subscription_handler(bot: Bot):
     while True:
-        # Wait to the next hour
-        delta = datetime.timedelta(hours=1)
-        now = datetime.datetime.now()
-        next_hour = (now + delta).replace(microsecond=0, second=0, minute=0)
-        wait_seconds = (next_hour - now).seconds
-        await asyncio.sleep(wait_seconds)
-        await asyncio.sleep(1)  # Ensure unique per interval
-
         # await asyncio.sleep(5)
         logger.log('--- Subscription Handler')
         logger.log(datetime.datetime.now())
@@ -62,5 +54,13 @@ async def subscription_handler(bot: Bot):
             logger.log("NOTIFIED!")
 
         logger.log('===\n')
+
+        # Wait to the next hour
+        delta = datetime.timedelta(hours=1)
+        now = datetime.datetime.now()
+        next_hour = (now + delta).replace(microsecond=0, second=0, minute=0)
+        wait_seconds = (next_hour - now).seconds
+        await asyncio.sleep(wait_seconds)
+        await asyncio.sleep(1)  # Ensure unique per interval
 
 # TODO: notify about 1 day left, maybe using redis to cache notified today users
