@@ -9,7 +9,7 @@ Telegram whitelist bot for a chats
 - `docker compose build`
 - `docker compose up`
 - `docker compose run migrator -e POSTGRES_URL up`
-- `sudo chmod u+x scripts/own_project.sh && ./scripts/own_project.sh`
+- If necessary, `sudo chmod u+x scripts/own_project.sh && ./scripts/own_project.sh`
 
 Additional steps for production:
 - Create administrator user and perform all steps from him
