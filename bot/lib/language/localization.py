@@ -1,5 +1,5 @@
 from pkg.config.config import empty_photo_link
-from project.i18n import routed_messages, local_lang_based_links
+from project.i18n import routed_messages, local_lang_based_links, emoji_codes
 
 panic_language = "en"
 # panic_language = "ru"
@@ -124,3 +124,7 @@ def get_link(link_route: [str | int], lang_code: str):
         link = empty_photo_link
 
     return link
+
+
+def get_emoji(name):
+    return emoji_codes.get(name, name)

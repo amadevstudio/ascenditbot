@@ -19,7 +19,8 @@ emoji_codes = {
     'gear': '⚙️',
     'email': '📧',
     'CL': '🆑',
-    'magic_wand': '🪄'
+    'magic_wand': '🪄',
+    'hourglass': '⌛️'
 }
 
 local_lang_based_links = {
@@ -318,7 +319,7 @@ routed_messages = {
                 'ru': "У вас нет групп, добавьте первую с помощью пункта меню 'Добавить группу'"
             },
             'empty_search': {
-                'en': "chats not found, narrow your search",
+                'en': "Chats not found, narrow your search",
                 'ru': "Групп не найдено, сузьте поиск"
             }
         }

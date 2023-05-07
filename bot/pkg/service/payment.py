@@ -3,7 +3,7 @@ from lib.language import localization
 from lib.payment.payment import CallableInterface, PaymentProcessor
 from lib.payment.services import robokassa
 from pkg.config.config import environment
-from pkg.controller.bot_setup import bot
+from framework.system.bot_setup import bot
 from pkg.service.service import Service
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
@@ -30,14 +30,13 @@ class BalanceHandler(Service):
 
         # An error occurred
         if 'error' in result:
-            await chat_id_sender(
-                cls.BOT, int(user['service_id']), message_structures=[{
-                    'type': 'text',
-                    'text': localization.get_message(
-                        ['subscription', 'fund', 'errors', 'wrong_signature'], language_code),
-                    'parse_mode': 'HTML',
-                    'reply_markup': markup
-                }])
+            await chat_id_sender(int(user['service_id']), message_structures=[{
+                'type': 'text',
+                'text': localization.get_message(
+                    ['subscription', 'fund', 'errors', 'wrong_signature'], language_code),
+                'parse_mode': 'HTML',
+                'reply_markup': markup
+            }])
             logger.warn('Error wrong_signature', result, user, result['error'])
             return
 
@@ -45,14 +44,13 @@ class BalanceHandler(Service):
 
         # Wrong currency
         if user_tariff_info is None or user_tariff_info['currency_code'] != result['currency']:
-            await chat_id_sender(
-                cls.BOT, int(user['service_id']), message_structures=[{
-                    'type': 'text',
-                    'text': localization.get_message(
-                        ['subscription', 'fund', 'errors', 'wrong_currency_income'], language_code),
-                    'parse_mode': 'HTML',
-                    'reply_markup': markup
-                }])
+            await chat_id_sender(int(user['service_id']), message_structures=[{
+                'type': 'text',
+                'text': localization.get_message(
+                    ['subscription', 'fund', 'errors', 'wrong_currency_income'], language_code),
+                'parse_mode': 'HTML',
+                'reply_markup': markup
+            }])
             logger.warn('Error wrong_currency_income', result, user, user_tariff_info)
             return
 
@@ -78,17 +76,16 @@ class BalanceHandler(Service):
             'parse_mode': 'HTML',
             'reply_markup': markup
         }]
-        await chat_id_sender(
-            cls.BOT, int(user['service_id']), message_structures=message_structures)
+        await chat_id_sender(int(user['service_id']), message_structures=message_structures)
 
         # Notify admins
         telegram_admin_group_id = environment.get('TELEGRAM_ADMIN_GROUP_ID', None)
         if telegram_admin_group_id is not None:
-            await chat_id_sender(cls.BOT, int(telegram_admin_group_id), message_structures=[{
+            await chat_id_sender(int(telegram_admin_group_id), message_structures=[{
                 'type': 'text',
                 'text':
-                        f"New payment from user {user['id']}, email: {user['email']}, amount {result['amount']},"
-                        f" new balance {new_balance} (bd: {new_user_tariff_info['balance']})"
+                    f"New payment from user {user['id']}, email: {user['email']}, amount {result['amount']},"
+                    f" new balance {new_balance} (bd: {new_user_tariff_info['balance']})"
             }])
 
         # Check referrer
@@ -143,8 +140,7 @@ class BalanceHandler(Service):
             'parse_mode': 'HTML',
             'reply_markup': markup
         }]
-        await chat_id_sender(
-            cls.BOT, int(referrer['service_id']), message_structures=message_structures)
+        await chat_id_sender(int(referrer['service_id']), message_structures=message_structures)
 
 
 payment_processors: dict[str, PaymentProcessor] = {

@@ -1,5 +1,4 @@
 import copy
-import json
 import time
 from typing import Literal, Any
 from framework.system import telegram_types
@@ -8,11 +7,11 @@ import aiogram
 
 from framework.system import telegram_exceptions
 from lib.language import localization
-from lib.telegram.aiogram.message_master import message_master, get_timeout_from_error_bot, MasterMessages, \
+from lib.telegram.aiogram.message_master import message_master, MasterMessages, \
     MessageStructuresInterface, InlineButtonData
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg import config
-from pkg.controller.bot_setup import bot
+from framework.system.bot_setup import bot
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 
@@ -33,8 +32,7 @@ def image_link_or_object(path: str):
     return path
 
 
-async def chat_id_sender(
-        bot: aiogram.Bot, user_chat_id: int, message_structures: list[MessageStructuresInterface] = None):
+async def chat_id_sender(user_chat_id: int, message_structures: list[MessageStructuresInterface] = None):
     for message_to_send in message_structures:
         message_structure = message_to_send
 
@@ -100,8 +98,12 @@ async def message_sender(
 
 
 async def notify(
-        call: telegram_types.CallbackQuery | None, message: telegram_types.Message, text: str,
-        alert: bool = False, button_text: Literal['back', 'cancel'] = 'back'
+        call: telegram_types.CallbackQuery | None,
+        message: telegram_types.Message, text: str,
+        alert: bool = False,
+        resending: bool = False,
+        save_state: bool = False,
+        button_text: Literal['back', 'cancel'] = 'back'
 ):
     if call is not None:
         await bot.answer_callback_query(
@@ -113,8 +115,10 @@ async def notify(
         'text': text,
         'reply_markup': go_back_inline_markup(message.from_user.language_code, button_text=button_text)
     }]
-    await message_sender(message, resending=alert, message_structures=message_structures)
-    UserStorage.change_page(message.chat.id, config.routes.RouteMap.type('nowhere'))
+    await message_sender(message, resending=resending, message_structures=message_structures)
+
+    if not save_state:
+        UserStorage.change_page(message.chat.id, config.routes.RouteMap.type('nowhere'))
 
 
 def is_command(message_text: str) -> bool:
@@ -133,10 +137,11 @@ def is_call_or_command(call: telegram_types.CallbackQuery = None, message: teleg
 
 
 def determine_search_query(
-        call: telegram_types.CallbackQuery | None, message: telegram_types.Message, state_data: dict[str, Any]) -> dict[str, Any]:
+        call: telegram_types.CallbackQuery | None,
+        message: telegram_types.Message, state_data: dict[str, Any]) -> dict[str, Any]:
     local_state_data = copy.deepcopy(state_data)
 
-    if call is None and message.text != '':
+    if call is None and message.text != '' and not is_command(message.text):
         try:
             int(message.text)
         except ValueError:

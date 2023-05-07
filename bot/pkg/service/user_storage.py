@@ -23,19 +23,17 @@ class UserStorage(Service):
     @staticmethod
     def go_back(chat_id: int, state: str = None):
         user_storage_repository.del_user_curr_state(chat_id)
-        if state is not None:
-            user_storage_repository.del_user_state_data(chat_id, state)
 
     @staticmethod
     def curr_state(chat_id: int):
         return user_storage_repository.get_user_curr_state(chat_id)
 
     @staticmethod
-    def get_user_prev_state(chat_id: int):
-        return user_storage_repository.get_user_curr_state(chat_id)
+    def prev_state(chat_id: int):
+        return user_storage_repository.get_user_prev_state(chat_id)
 
     @staticmethod
-    def prev_curr_states(chat_id: int):
+    def prev_curr_states(chat_id: int) -> tuple[str | None, str | None] | list:
         states = user_storage_repository.get_user_prev_curr_states(chat_id)
         if isinstance(states, list):
             if len(states) == 2:
@@ -77,5 +75,9 @@ class UserStorage(Service):
         return user_storage_repository.get_user_state_data(chat_id, state)
 
     @staticmethod
-    def add_user_state_data(chat_id: int, state: str, state_data: dict):
+    def add_user_state_data(chat_id: int, state: str, state_data: dict[str, any]):
         user_storage_repository.add_user_state_data(chat_id, state, state_data)
+
+    @staticmethod
+    def del_user_state_data(chat_id: int, state: str):
+        user_storage_repository.del_user_state_data(chat_id, state)

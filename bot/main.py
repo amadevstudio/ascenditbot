@@ -5,7 +5,7 @@ from lib.payment.payment import PaymentServer
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.background.async_tasks.main_handler import on_bot_startup, before_bot_startup
 from pkg.config.config import environment
-from pkg.controller.bot_setup import bot, dispatcher
+from framework.system.bot_setup import bot, dispatcher
 
 from pkg.controller.router import init_routes
 

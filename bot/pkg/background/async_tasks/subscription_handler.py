@@ -45,22 +45,20 @@ async def subscription_handler(bot: Bot):
                     'text': message_text,
                     'parse_mode': 'HTML'
                 }]
-                await controller.message_tools.chat_id_sender(
-                    bot, int(user['service_id']), message_structures=message_structures)
+                await controller.message_tools.chat_id_sender(int(user['service_id']),
+                                                              message_structures=message_structures)
 
         # Notify about days left
         notify_about_days = 1
         logger.log("NOTIFYING expiring USERS")
         for user in Tariff.users_with_remaining_days(notify_about_days):
             logger.log(f"NOTIFYING USER {user}")
-            await controller.message_tools.chat_id_sender(
-                bot, int(user['service_id']),
-                message_structures=[{
-                    'type': 'text',
-                    'text': auto_update.remaining_days_left_message(
-                        user['id'], user['language_code'], notify_about_days),
-                    'parse_mode': 'HTML'
-                }])
+            await controller.message_tools.chat_id_sender(int(user['service_id']), message_structures=[{
+                'type': 'text',
+                'text': auto_update.remaining_days_left_message(
+                    user['id'], user['language_code'], notify_about_days),
+                'parse_mode': 'HTML'
+            }])
             logger.log("NOTIFIED!")
 
         logger.log('===\n')

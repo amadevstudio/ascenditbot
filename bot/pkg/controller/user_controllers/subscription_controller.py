@@ -1,47 +1,43 @@
-import json
-
-from framework.system import telegram_types
-
-from framework.controller.message_tools import message_sender, go_back_inline_button, notify, go_back_inline_markup
 from framework.controller import state_data
+from framework.controller.message_tools import message_sender, go_back_inline_button, notify, go_back_inline_markup
+from framework.controller.types import ControllerParams
 from lib.language import localization
-from lib.payment.services.robokassa import RobokassaPaymentProcessor
-from pkg.config import routes
 from pkg.controller.user_controllers.common_controller import raise_error
 from pkg.service.payment import Payment
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
-from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 from pkg.template.tariff.common import build_subscription_info, channels_count_text
 from project import constants
 
 
-async def page(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
+async def page(params: ControllerParams):
+    call, message = params['call'], params['message']
+
     user_id = User.get_id_by_service_id(message.chat.id)
 
-    tariff_message = localization.get_message(['subscription', 'show', 'text'], message.from_user.language_code)
+    tariff_message = localization.get_message(['subscription', 'show', 'text'], params['language_code'])
     tariff_message += "\n\n" + localization.get_message(
-        ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
+        ['subscription', 'show', 'balance_warning'], params['language_code'])
 
     referral_link = User.generate_referral_link(message.chat.id)
     tariff_message += "\n\n" + localization.get_message(
-        ['subscription', 'referral'], message.from_user.language_code, referral_link=referral_link)
+        ['subscription', 'referral'], params['language_code'], referral_link=referral_link)
 
-    tariff_message += "\n\n" + localization.get_message(['tariffs', 'current'], message.from_user.language_code)
+    tariff_message += "\n\n" + localization.get_message(['tariffs', 'current'], params['language_code'])
     user_tariff_info = Tariff.user_tariff_info(user_id)
-    tariff_message += "\n\n" + build_subscription_info(user_tariff_info, message.from_user.language_code)
+    tariff_message += "\n\n" + build_subscription_info(user_tariff_info, params['language_code'])
 
     reply_markup = []
     choose_tariff_button = {
-        'text': localization.get_message(['subscription', 'buttons', 'choose_tariff'], message.from_user.language_code),
+        'text': localization.get_message(['subscription', 'buttons', 'choose_tariff'], params['language_code']),
         'callback_data': {'tp': 'tariffs'}}
     reply_markup.append([choose_tariff_button])
     replenish_button = {
-        'text': localization.get_message(['subscription', 'buttons', 'fund'], message.from_user.language_code),
+        'text': localization.get_message(['subscription', 'buttons', 'fund'], params['language_code']),
         'callback_data': {'tp': 'fund'}}
     reply_markup.append([replenish_button])
-    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
+    reply_markup.append([go_back_inline_button(params['language_code'])])
 
     message_structures = [{
         'type': 'text',
@@ -50,48 +46,48 @@ async def page(call: telegram_types.CallbackQuery, message: telegram_types.Messa
         'parse_mode': 'HTML',
         'disable_web_page_preview': True
     }]
-    await message_sender(message, resending=call is None, message_structures=message_structures)
-    if change_user_state:
-        UserStorage.change_page(message.chat.id, routes.RouteMap.type('subscription'))
+    await message_sender(message, message_structures=message_structures)
 
 
-async def tariffs(_, message: telegram_types.Message, change_user_state=True):
+async def tariffs(params: ControllerParams):
+    call, message = params['call'], params['message']
+
     user_id = User.get_id_by_service_id(message.chat.id)
     user_tariff_info = Tariff.user_tariff_info(user_id)
 
     available_tariffs = Tariff.tariffs_info(user_id)
 
-    tariffs_message = localization.get_message(['tariffs', 'index'], message.from_user.language_code)
+    tariffs_message = localization.get_message(['tariffs', 'index'], params['language_code'])
     reply_markup = []
 
     tariffs_message += "\n\n" + localization.get_message(
-        ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
+        ['subscription', 'show', 'balance_warning'], params['language_code'])
 
     for tariff in available_tariffs:
         if tariff['id'] != 0:
             tariff_info = localization.get_message(
-                ['tariffs', 'list', tariff['id']], message.from_user.language_code) + ", "
+                ['tariffs', 'list', tariff['id']], params['language_code']) + ", "
 
             per_days_message = f"/ {constants.tariff_duration_days} " + localization.get_numerical_declension_message(
-                ['subscription', 'info_block', 'days_countable'], message.from_user.language_code,
+                ['subscription', 'info_block', 'days_countable'], params['language_code'],
                 constants.tariff_duration_days)
 
             tariff_info += f"{Tariff.user_amount(tariff['price'])} {tariff['currency_code']} {per_days_message}, "
-            tariff_info += channels_count_text(tariff['channels_count'], message.from_user.language_code).lower()
+            tariff_info += channels_count_text(tariff['channels_count'], params['language_code']).lower()
             tariffs_message += "\n\n" + tariff_info
 
         tariff_button_text = localization.get_message(
-            ['tariffs', 'list', tariff['id']], message.from_user.language_code)
+            ['tariffs', 'list', tariff['id']], params['language_code'])
         if tariff['id'] == user_tariff_info['tariff_id']:
             tariff_button_text = '* ' + tariff_button_text + ' ' + localization.get_message(
-                ['tariffs', 'info', 'selected'], message.from_user.language_code)
+                ['tariffs', 'info', 'selected'], params['language_code'])
         reply_markup.append([{
             'text': tariff_button_text, 'callback_data': {'tp': 'change_tariff', 'id': tariff['id']}}])
 
-    tariffs_message += "\n\n" + localization.get_message(['tariffs', 'current'], message.from_user.language_code)
-    tariffs_message += "\n" + build_subscription_info(user_tariff_info, message.from_user.language_code)
+    tariffs_message += "\n\n" + localization.get_message(['tariffs', 'current'], params['language_code'])
+    tariffs_message += "\n" + build_subscription_info(user_tariff_info, params['language_code'])
 
-    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
+    reply_markup.append([go_back_inline_button(params['language_code'])])
 
     await message_sender(message, message_structures=[{
         'type': 'text',
@@ -100,12 +96,11 @@ async def tariffs(_, message: telegram_types.Message, change_user_state=True):
         'parse_mode': 'HTML'
     }])
 
-    if change_user_state:
-        UserStorage.change_page(message.chat.id, routes.RouteMap.type('tariffs'))
 
+async def change_tariff(params: ControllerParams):
+    call, message, current_state_data = params['call'], params['message'], params['state_data']
 
-async def change_tariff(call: telegram_types.CallbackQuery, message: telegram_types.Message):
-    chosen_tariff_id = state_data.decode_call_data(call).get('id', None)
+    chosen_tariff_id = current_state_data.get('id', None)
 
     user_id = User.get_id_by_service_id(message.chat.id)
 
@@ -121,15 +116,17 @@ async def change_tariff(call: telegram_types.CallbackQuery, message: telegram_ty
             await notify(
                 call, message,
                 localization.get_message(
-                    ['subscription', 'errors', user_tariff_connection['error']], message.from_user.language_code),
+                    ['subscription', 'errors', user_tariff_connection['error']], params['language_code']),
                 alert=True)
-        return
+        return False
 
-    await notify(call, message, localization.get_message(['subscription', 'updated'], message.from_user.language_code))
-    await tariffs(call, message, change_user_state=False)
+    await notify(call, message, localization.get_message(['subscription', 'updated'], params['language_code']))
+    await tariffs(params)
 
 
-async def fund_balance_page(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
+async def fund_balance_page(params: ControllerParams):
+    call, message = params['call'], params['message']
+
     user = User.find_by_service_id(message.chat.id)
     user_id = user['id']
 
@@ -137,9 +134,9 @@ async def fund_balance_page(call: telegram_types.CallbackQuery, message: telegra
     available_tariffs = Tariff.tariffs_info(user_id)
 
     message_text = localization.get_message(
-        ['subscription', 'fund', 'page'], message.from_user.language_code, email=user['email'])
+        ['subscription', 'fund', 'page'], params['language_code'], email=user['email'])
     message_text += "\n\n" + localization.get_message(
-        ['subscription', 'show', 'balance_warning'], message.from_user.language_code)
+        ['subscription', 'show', 'balance_warning'], params['language_code'])
 
     reply_markup = []
     reply_markup_row_buffer = []
@@ -161,7 +158,7 @@ async def fund_balance_page(call: telegram_types.CallbackQuery, message: telegra
     if len(reply_markup_row_buffer) > 0:
         reply_markup.append(reply_markup_row_buffer)
 
-    reply_markup.append([go_back_inline_button(message.from_user.language_code)])
+    reply_markup.append([go_back_inline_button(params['language_code'])])
 
     await message_sender(message, message_structures=[{
         'type': 'text',
@@ -170,11 +167,10 @@ async def fund_balance_page(call: telegram_types.CallbackQuery, message: telegra
         'parse_mode': 'HTML'
     }])
 
-    if change_user_state:
-        UserStorage.change_page(message.chat.id, routes.RouteMap.type('fund'))
 
+async def fund_link_page(params: ControllerParams):
+    call, message = params['call'], params['message']
 
-async def fund_link_page(call: telegram_types.CallbackQuery, message: telegram_types.Message, change_user_state=True):
     fund_service = Payment.get_fund_service()
 
     if call is not None:
@@ -183,13 +179,13 @@ async def fund_link_page(call: telegram_types.CallbackQuery, message: telegram_t
         summa = message.text  # Payment.is_test
 
     try:
-        amount = float(summa)
+        amount = float(summa)  # may raise ValueError
         if amount <= 0:
             raise ValueError("The amount must be greater than zero")
-    except Exception:
+    except ValueError:
         await notify(call, message, localization.get_message(
-            ['subscription', 'fund', 'errors', 'wrong_amount'], message.from_user.language_code))
-        return
+            ['subscription', 'fund', 'errors', 'wrong_amount'], params['language_code']))
+        return False
 
     user = User.find_by_service_id(message.chat.id)
     user_currency_code = Tariff.currency_code_for_user(user['id'])
@@ -197,18 +193,15 @@ async def fund_link_page(call: telegram_types.CallbackQuery, message: telegram_t
     fund_link = Payment.generate_payment_link(amount, user, user_currency_code, fund_service)
     if isinstance(fund_link, dict) and 'error' in fund_link:
         await notify(call, message, localization.get_message(
-            ['subscription', 'fund', 'errors', 'wrong_currency'], message.from_user.language_code))
+            ['subscription', 'fund', 'errors', 'wrong_currency'], params['language_code']))
         logger.warn(f"Wrong currency for user with id #{user['id']}, #{user_currency_code}")
-        return
+        return False
 
     message_text = localization.get_message(
-            ['subscription', 'fund', 'fund_link_message'], message.from_user.language_code, link=fund_link)
+            ['subscription', 'fund', 'fund_link_message'], params['language_code'], link=fund_link)
 
     await message_sender(message, message_structures=[{
         'type': 'text',
         'text': message_text,
-        'reply_markup': go_back_inline_markup(message.from_user.language_code)
-    }], resending=call is None)
-
-    if change_user_state:
-        UserStorage.change_page(message.chat.id, routes.RouteMap.type('fund_amount'))
+        'reply_markup': go_back_inline_markup(params['language_code'])
+    }])
