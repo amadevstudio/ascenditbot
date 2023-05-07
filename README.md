@@ -22,7 +22,7 @@ Additional steps for production:
 - And run in background `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
 
 ### Pycharm
-- Set bot folder: RClick on bot -> Mark directory as -> Mark as Sources Root
+- Set bot folder: RClick on ./bot -> Mark directory as -> Mark as Sources Root
 - For Community version you can use local packages environment for packages mapping:
   - `cd bot && python -m venv venv`
   - In Pycharm set Python Interpreter as existing Virtual Environment using venv
