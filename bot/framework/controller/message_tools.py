@@ -3,8 +3,6 @@ import time
 from typing import Literal, Any
 from framework.system import telegram_types
 
-import aiogram
-
 from framework.system import telegram_exceptions
 from lib.language import localization
 from lib.telegram.aiogram.message_master import message_master, MasterMessages, \
@@ -56,21 +54,21 @@ async def chat_id_sender(user_chat_id: int, message_structures: list[MessageStru
 
 
 async def message_sender(
-        message: telegram_types.Message, resending=False,
+        chat_id: int, resending=False,
         message_structures: list[MessageStructuresInterface] = None):
 
     if message_structures is None:
         message_structures = []
 
-    resending |= UserStorage.should_resend(message.chat.id)
+    resending |= UserStorage.should_resend(chat_id)
 
-    previous_message_structures = UserStorage.get_message_structures(message.chat.id) if resending is False else []
+    previous_message_structures = UserStorage.get_message_structures(chat_id) if resending is False else []
 
     new_message_structures = None
 
     try:
         new_message_structures = await message_master(
-            bot, message, resending=resending, message_structures=message_structures,
+            bot, chat_id, resending=resending, message_structures=message_structures,
             previous_message_structures=previous_message_structures)
 
     except telegram_exceptions.TelegramBadRequest as e:
@@ -83,18 +81,21 @@ async def message_sender(
     except telegram_exceptions.TelegramRetryAfter as e:
         time.sleep(e.retry_after)
         await message_master(
-            bot, message, resending=resending, message_structures=message_structures,
+            bot, chat_id, resending=resending, message_structures=message_structures,
             previous_message_structures=previous_message_structures)
         return
 
+    except telegram_exceptions.TelegramForbiddenError as e:
+        # TODO: bot_blocked_reaction(e, chat_id)
+        logger.log(e)
+
     except Exception as e:
         logger.err(e)
-        # TODO: bot_blocked_reaction(e, chat_id)
 
     if new_message_structures is not None:
-        UserStorage.set_message_structures(message.chat.id, new_message_structures)
+        UserStorage.set_message_structures(chat_id, new_message_structures)
 
-    UserStorage.set_resend(message.chat.id, False)
+    UserStorage.set_resend(chat_id, False)
 
 
 async def notify(
@@ -115,7 +116,7 @@ async def notify(
         'text': text,
         'reply_markup': go_back_inline_markup(message.from_user.language_code, button_text=button_text)
     }]
-    await message_sender(message, resending=resending, message_structures=message_structures)
+    await message_sender(message.chat.id, resending=resending, message_structures=message_structures)
 
     if not save_state:
         UserStorage.change_page(message.chat.id, config.routes.RouteMap.type('nowhere'))
