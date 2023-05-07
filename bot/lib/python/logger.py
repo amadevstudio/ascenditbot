@@ -39,7 +39,7 @@ class Logger:
         self.logger = logging.getLogger(self.__file)
 
     # [12:49:41 26.06.1998] LEVEL arg1 args2
-    def __out_log(self, *args, level="log"):
+    def __out_log(self, *args, level="info"):
         result = ""
 
         # # Logging module add datetime and level automatically
@@ -53,7 +53,10 @@ class Logger:
                 result += str(arg) + " "
             result = result[0:-1]
 
-        getattr(self.logger, level)(result)
+        if os.environ['ENVIRONMENT'] == 'development':
+            print(f"{level}:", result, flush=True)
+        else:
+            getattr(self.logger, level)(result)
 
     def log(self, *args):
         self.__out_log(*args, "\n", level="info")
@@ -64,7 +67,7 @@ class Logger:
     # works only in error
     # args (for self.__out_log) = [arg1, arg2, | Details:, exc_type, exc_obj, fename, :, exc_tb.tb_lineno]
     def err(self, *args):
-        if os.environ['ENVIRONMENT'] == "production":
+        if os.environ['ENVIRONMENT'] == 'production':
             exc_type, exc_obj, exc_tb = sys.exc_info()
 
             details = str(exc_type) + " " + str(exc_obj)
@@ -73,6 +76,6 @@ class Logger:
                 details += " " + str(fename) + ":" + str(exc_tb.tb_lineno)
 
             self.__out_log(
-                *args, "| Details:", details, "\n", level="err")
+                *args, "| Details:", details, "\n", level="error")
         else:
             raise(args[0])
