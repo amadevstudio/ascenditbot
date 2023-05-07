@@ -5,6 +5,7 @@ from aiogram import Bot
 
 from framework.controller.message_tools import message_sender
 from pkg.service.tariff import Tariff
+from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 from pkg.template.tariff import auto_update
 
@@ -17,7 +18,7 @@ async def subscription_handler(bot: Bot):
 
         # Prolong or disable users
         for process_subscription_data in Tariff.process_all_subscription_validity():
-            logger.log(process_subscription_data)
+            logger.log("Subscription processing", process_subscription_data)
             user = process_subscription_data['user']
 
             if process_subscription_data['action'] == 'prolonged':
@@ -38,10 +39,10 @@ async def subscription_handler(bot: Bot):
                     'parse_mode': 'HTML'
                 }]
                 await message_sender(int(user['service_id']), resending=True, message_structures=message_structures)
+                UserStorage.set_resend(int(user['service_id']))
 
         # Notify about days left
         notify_about_days = 1
-        logger.log("NOTIFYING expiring USERS")
         for user in Tariff.users_with_remaining_days(notify_about_days):
             logger.log(f"NOTIFYING USER {user}")
             await message_sender(int(user['service_id']), resending=True, message_structures=[{
@@ -50,7 +51,7 @@ async def subscription_handler(bot: Bot):
                     user['id'], user['language_code'], notify_about_days),
                 'parse_mode': 'HTML'
             }])
-            logger.log("NOTIFIED!")
+            UserStorage.set_resend(int(user['service_id']))
 
         logger.log('===\n')
 
