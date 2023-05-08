@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import time
 from typing import Literal, Any
@@ -10,6 +11,7 @@ from lib.telegram.aiogram.message_master import message_master, MasterMessages, 
 from lib.telegram.aiogram.message_processor import call_and_message_accessed_processor
 from pkg import config
 from framework.system.bot_setup import bot
+from pkg.service.user import User
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 
@@ -79,15 +81,13 @@ async def message_sender(
         logger.log(e)
 
     except telegram_exceptions.TelegramRetryAfter as e:
-        time.sleep(e.retry_after)
-        await message_master(
+        await asyncio.sleep(e.retry_after)
+        new_message_structures = await message_master(
             bot, chat_id, resending=resending, message_structures=message_structures,
             previous_message_structures=previous_message_structures)
-        return
 
-    except telegram_exceptions.TelegramForbiddenError as e:
-        # TODO: bot_blocked_reaction(e, chat_id)
-        logger.log(e)
+    except telegram_exceptions.TelegramForbiddenError:
+        User.bot_is_blocked(chat_id)
 
     except Exception as e:
         logger.err(e)

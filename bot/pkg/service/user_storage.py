@@ -11,17 +11,17 @@ class UserStorage(Service):
         user_storage_repository.add_user_state(chat_id, initial_page)
 
     @staticmethod
-    def change_page(service_chat_id: int, state: str, data: dict[str, Any] = None):
-        curr_state = user_storage_repository.get_user_curr_state(service_chat_id)
+    def change_page(chat_id: int, state: str, data: dict[str, Any] = None):
+        curr_state = user_storage_repository.get_user_curr_state(chat_id)
         if curr_state == state:
             return
 
-        user_storage_repository.add_user_state(service_chat_id, state)
+        user_storage_repository.add_user_state(chat_id, state)
         if data is not None:
-            user_storage_repository.add_user_state_data(service_chat_id, state, data)
+            user_storage_repository.add_user_state_data(chat_id, state, data)
 
     @staticmethod
-    def go_back(chat_id: int, state: str = None):
+    def go_back(chat_id: int):
         user_storage_repository.del_user_curr_state(chat_id)
 
     @staticmethod
@@ -48,6 +48,10 @@ class UserStorage(Service):
     @staticmethod
     def all_states(chat_id: int):
         return user_storage_repository.get_user_states(chat_id)
+
+    @staticmethod
+    def clear_storage(chat_id: int):
+        user_storage_repository.clear_user_storage(chat_id)
 
     @staticmethod
     def should_resend(chat_id: int) -> bool:

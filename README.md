@@ -9,7 +9,7 @@ Telegram whitelist bot for a chats
 - `docker compose build`
 - `docker compose up`
 - `docker compose run migrator -e POSTGRES_URL up`
-- `sudo chmod u+x scripts/own_project.sh && ./scripts/own_project.sh`
+- If necessary, `sudo chmod u+x scripts/own_project.sh && ./scripts/own_project.sh`
 
 Additional steps for production:
 - Create administrator user and perform all steps from him
@@ -22,7 +22,7 @@ Additional steps for production:
 - And run in background `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
 
 ### Pycharm
-- Set bot folder: RClick on bot -> Mark directory as -> Mark as Sources Root
+- Set bot folder: RClick on ./bot -> Mark directory as -> Mark as Sources Root
 - For Community version you can use local packages environment for packages mapping:
   - `cd bot && python -m venv venv`
   - In Pycharm set Python Interpreter as existing Virtual Environment using venv
@@ -30,18 +30,24 @@ Additional steps for production:
   - `python -m pip install virtualenv`
   - `deactivate`
 
-### Fast developing (deprecated because auto-reload added)
-Run compose and stop the bot container  
-`docker compose up`  
-Then in new terminal run  
-`docker compose stop -t 1 bot && docker compose run --rm -p 3000:3000 bot`  
-works like a ⚡️
+### ~~Fast developing~~
+<details>
+  <summary>Deprecated due to the addition of auto-reload</summary>
+  Run compose and stop the bot container<br>
+  <code>docker compose up</code><br>
+  Then in new terminal run<br>
+  <code>docker compose stop -t 1 bot && docker compose run --rm -p 3000:3000 bot</code><br>  
+  Works like a ⚡️
+</details>
 
 ### After generate files using Docker
-Because Docker runs as root, you must take ownership of the project files after generating them from containers.  
-For example, when creating a new migration with migrator.  
-To do so, use  
-`./scripts/own_project.sh`
+<details>
+  <summary>Required depending on environment</summary>
+  Because Docker may run as root, you may need to take ownership of the project files after they are created from containers.<br>
+  For example, when creating a new migration with migrator.<br>
+  To do so, use  
+  <code>./scripts/own_project.sh</code>
+</details>
 
 ## Migrations
 Using [dbmate](https://github.com/amacneil/dbmate)

@@ -1,6 +1,5 @@
 from framework.controller.message_tools import chat_id_sender
 from pkg.config.config import environment
-from framework.system.bot_setup import bot
 
 
 class MessageSender:

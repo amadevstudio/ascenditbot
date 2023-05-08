@@ -3,6 +3,7 @@ from typing import TypedDict
 from pkg.repository import user_repository
 from pkg.service.service import Service
 from pkg.service.tariff import Tariff
+from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 from project import constants
 from project.types import UserInterface, UserTariffConnectionInterface
@@ -35,6 +36,15 @@ class User(Service):
         result = {**result, 'subscription': tariff_initiation_result}
 
         return result
+
+    @classmethod
+    def bot_is_blocked(cls, chat_id: int):
+        user_id = User.get_id_by_service_id(chat_id)
+        Tariff.change(user_id, 0, force=True)
+
+        UserStorage.clear_storage(chat_id)
+
+        # TODO: add block flag?
 
     # TODO: Analytics on every income message
     # def in_message(chat_id: int):
