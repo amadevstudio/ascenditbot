@@ -24,7 +24,7 @@ async def incoming_chat_message(message: telegram_types.Message):
         return
 
     # Validate allowed to write
-    allowed: bool = AllowedUser.check_privilege(nickname, str(chat_service_id))
+    allowed: bool = AllowedUser.can_write_to_chat(nickname, str(chat_service_id))
     if allowed:
         return
 
