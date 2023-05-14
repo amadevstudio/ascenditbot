@@ -78,7 +78,7 @@ async def message_sender(
         if 'message is not modified' in str(e):  # except utils.exceptions.MessageNotModified:
             return
 
-        logger.log(e)
+        logger.info(e)
 
     except telegram_exceptions.TelegramRetryAfter as e:
         await asyncio.sleep(e.retry_after)
@@ -90,7 +90,7 @@ async def message_sender(
         User.bot_is_blocked(chat_id)
 
     except Exception as e:
-        logger.err(e)
+        logger.error(e)
 
     if new_message_structures is not None:
         UserStorage.set_message_structures(chat_id, new_message_structures)

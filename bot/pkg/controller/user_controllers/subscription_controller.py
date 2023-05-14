@@ -194,7 +194,7 @@ async def fund_link_page(params: ControllerParams):
     if isinstance(fund_link, dict) and 'error' in fund_link:
         await notify(call, message, localization.get_message(
             ['subscription', 'fund', 'errors', 'wrong_currency'], params['language_code']))
-        logger.warn(f"Wrong currency for user with id #{user['id']}, #{user_currency_code}")
+        logger.warning(f"Wrong currency for user with id #{user['id']}, #{user_currency_code}")
         return False
 
     message_text = localization.get_message(

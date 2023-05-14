@@ -82,7 +82,7 @@ class Database(metaclass=Singleton):
 
         except psycopg2.DatabaseError as e:
             self.connection.rollback()
-            logger.err(f"Can't commit: {e}")
+            logger.error(f"Can't commit: {e}")
             return None
 
         finally:
@@ -103,7 +103,7 @@ class Database(metaclass=Singleton):
             elif cursor_method == 'fetchmany':
                 return cursor
         except Exception as e:
-            logger.err(e)
+            logger.error(e)
             self.connection.rollback()
             return None
         finally:

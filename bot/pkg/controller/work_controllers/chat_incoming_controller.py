@@ -37,4 +37,4 @@ async def incoming_chat_message(message: telegram_types.Message):
         if "message to delete not found" in str(e):
             return
 
-        logger.err(e)
+        logger.error(e)

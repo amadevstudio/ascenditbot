@@ -1,9 +1,6 @@
 import asyncio
-import concurrent
-import json
 from abc import ABC, abstractmethod
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from typing import Callable, NoReturn, Literal, TypedDict, Awaitable
+from typing import Callable, NoReturn, TypedDict, Awaitable
 from aiohttp import web
 
 from lib.python.logger import Logger
@@ -34,9 +31,9 @@ class PaymentProcessor(ABC):
 
     def log(self, *args):
         if self.logger is not None:
-            self.logger.warn(str(self.__class__), *args)
+            self.logger.warning(str(self.__class__), *args)
         else:
-            print(str(self.__class__), *args)
+            print(str(self.__class__), *args, flush=True)
 
     # Validate package belongs to service
     @abstractmethod

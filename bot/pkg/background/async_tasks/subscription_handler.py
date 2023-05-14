@@ -11,7 +11,7 @@ from pkg.template.tariff import auto_update
 async def subscription_handler():
     while True:
         # await asyncio.sleep(5)
-        logger.log("Subscription Handler:", datetime.datetime.now())
+        logger.info("Subscription Handler:", datetime.datetime.now())
 
         # Prolong or disable users
         await subscription_handler_action()
@@ -24,14 +24,14 @@ async def subscription_handler():
         now = datetime.datetime.now()
         next_hour = (now + delta).replace(microsecond=0, second=0, minute=0)
         wait_seconds = (next_hour - now).seconds
-        logger.log("Subscription Handler:", f"Sleeping for {wait_seconds}")
+        logger.info("Subscription Handler:", f"Sleeping for {wait_seconds}")
         await asyncio.sleep(wait_seconds)
         await asyncio.sleep(1)  # Ensure unique per interval
 
 
 async def subscription_handler_action():
     for process_subscription_data in Tariff.process_all_subscription_validity():
-        logger.log("Subscription Handler:", "Processing ", process_subscription_data)
+        logger.info("Subscription Handler:", "Processing ", process_subscription_data)
 
         user = process_subscription_data['user']
 
@@ -59,7 +59,7 @@ async def subscription_handler_action():
 async def subscription_handler_notifier():
     notify_about_days = 1
     for user in Tariff.users_with_remaining_days(notify_about_days):
-        logger.log("Subscription Handler:", f"Notifying {user['id']}")
+        logger.info("Subscription Handler:", f"Notifying {user['id']}")
 
         await message_sender(int(user['service_id']), resending=True, message_structures=[{
             'type': 'text',

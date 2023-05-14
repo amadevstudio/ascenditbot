@@ -5,6 +5,7 @@ import datetime
 # import threading
 import logging
 from logging.handlers import TimedRotatingFileHandler
+from typing import Literal
 
 
 class Logger:
@@ -39,7 +40,7 @@ class Logger:
         self.logger = logging.getLogger(self.__file)
 
     # [12:49:41 26.06.1998] LEVEL arg1 args2
-    def __out_log(self, *args, level="info"):
+    def __out_log(self, *args, level: Literal['info', 'warning', 'error'] = "info"):
         result = ""
 
         # # Logging module add datetime and level automatically
@@ -58,10 +59,10 @@ class Logger:
         else:
             getattr(self.logger, level)(result)
 
-    def log(self, *args):
+    def info(self, *args):
         self.__out_log(*args, "\n", level="info")
 
-    def warn(self, *args):
+    def warning(self, *args):
         self.__out_log(*args, "\n", level="warning")
 
     # works only in error
@@ -72,8 +73,8 @@ class Logger:
 
             details = str(exc_type) + " " + str(exc_obj)
             if exc_tb is not None:
-                fename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                details += " " + str(fename) + ":" + str(exc_tb.tb_lineno)
+                error_file_name = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                details += " " + str(error_file_name) + ":" + str(exc_tb.tb_lineno)
 
             self.__out_log(
                 *args, "| Details:", details, "\n", level="error")

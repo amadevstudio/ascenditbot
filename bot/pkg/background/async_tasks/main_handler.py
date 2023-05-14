@@ -15,7 +15,7 @@ async def before_bot_startup() -> None:
 
     if environment['ENVIRONMENT'] != 'development':
         await MessageSender.notify_admins('The tasks are started')
-    logger.log("The tasks are started")
+    logger.info("The tasks are started")
 
     # The loop is starts by aiogram
     # loop.run_forever()
@@ -24,4 +24,4 @@ async def before_bot_startup() -> None:
 async def on_bot_startup(bot: Bot) -> None:
     if environment['ENVIRONMENT'] != 'development':
         await MessageSender.notify_admins('The bot is started')
-    logger.log("The bot is started")
+    logger.info("The bot is started")

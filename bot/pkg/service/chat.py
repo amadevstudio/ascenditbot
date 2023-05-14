@@ -45,7 +45,7 @@ class Chat(Service):
         except telegram_exceptions.TelegramBadRequest:
             return {'error': 'not_found'}
         except Exception as e:
-            logger.err(e)
+            logger.error(e)
             return {'error': 'unknown'}
 
     @staticmethod
@@ -170,7 +170,7 @@ class Chat(Service):
             if "error" in result_connection:
                 return result_connection
         except Exception as e:
-            logger.err(e)
+            logger.error(e)
             return {"error": "unexpected"}
 
         return result_connection
@@ -223,7 +223,7 @@ class Chat(Service):
         try:
             result_whitelisted = chat_repository.add_to_whitelist(chat_id, user_nickname)
         except Exception as e:
-            logger.err(e)
+            logger.error(e)
             return {"error": "unexpected"}
 
         return result_whitelisted
