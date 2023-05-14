@@ -39,7 +39,7 @@ init_routes(dp)
 
 async def run():
     server = PaymentServer(3000, list(payment_processors.values()))
-    await before_bot_startup(bot)
+    await before_bot_startup()
 
     await bot.delete_webhook(drop_pending_updates=False)
     await dp.start_polling(bot)  # , on_startup=on_bot_startup)
