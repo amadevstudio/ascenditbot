@@ -60,14 +60,14 @@ class Logger:
             getattr(self.logger, level)(result)
 
     def info(self, *args):
-        self.__out_log(*args, "\n", level="info")
+        self.__out_log(*args, level="info")
 
     def warning(self, *args):
-        self.__out_log(*args, "\n", level="warning")
+        self.__out_log(*args, level="warning")
 
     # works only in error
     # args (for self.__out_log) = [arg1, arg2, | Details:, exc_type, exc_obj, fename, :, exc_tb.tb_lineno]
-    def err(self, *args):
+    def error(self, *args):
         if os.environ['ENVIRONMENT'] == 'production':
             exc_type, exc_obj, exc_tb = sys.exc_info()
 
@@ -77,6 +77,6 @@ class Logger:
                 details += " " + str(error_file_name) + ":" + str(exc_tb.tb_lineno)
 
             self.__out_log(
-                *args, "| Details:", details, "\n", level="error")
+                *args, "| Details:", details, level="error")
         else:
             raise(args[0])
