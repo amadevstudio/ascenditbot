@@ -5,6 +5,7 @@ import datetime
 # import threading
 import logging
 from logging.handlers import TimedRotatingFileHandler
+from typing import Literal
 
 
 class Logger:
@@ -39,7 +40,7 @@ class Logger:
         self.logger = logging.getLogger(self.__file)
 
     # [12:49:41 26.06.1998] LEVEL arg1 args2
-    def __out_log(self, *args, level="info"):
+    def __out_log(self, *args, level: Literal['info', 'warning', 'error'] = "info"):
         result = ""
 
         # # Logging module add datetime and level automatically
@@ -58,24 +59,24 @@ class Logger:
         else:
             getattr(self.logger, level)(result)
 
-    def log(self, *args):
-        self.__out_log(*args, "\n", level="info")
+    def info(self, *args):
+        self.__out_log(*args, level="info")
 
-    def warn(self, *args):
-        self.__out_log(*args, "\n", level="warning")
+    def warning(self, *args):
+        self.__out_log(*args, level="warning")
 
     # works only in error
     # args (for self.__out_log) = [arg1, arg2, | Details:, exc_type, exc_obj, fename, :, exc_tb.tb_lineno]
-    def err(self, *args):
+    def error(self, *args):
         if os.environ['ENVIRONMENT'] == 'production':
             exc_type, exc_obj, exc_tb = sys.exc_info()
 
             details = str(exc_type) + " " + str(exc_obj)
             if exc_tb is not None:
-                fename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                details += " " + str(fename) + ":" + str(exc_tb.tb_lineno)
+                error_file_name = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                details += " " + str(error_file_name) + ":" + str(exc_tb.tb_lineno)
 
             self.__out_log(
-                *args, "| Details:", details, "\n", level="error")
+                *args, "| Details:", details, level="error")
         else:
             raise(args[0])

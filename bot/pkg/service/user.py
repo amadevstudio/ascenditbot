@@ -86,6 +86,6 @@ class User(Service):
                 params = {**params, param_name: param_value}
 
         except Exception as e:
-            logger.err(e)
+            logger.error(e)
 
         return params

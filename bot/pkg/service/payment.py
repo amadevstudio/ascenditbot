@@ -37,7 +37,7 @@ class BalanceHandler(Service):
                 'parse_mode': 'HTML',
                 'reply_markup': markup
             }])
-            logger.warn('Error wrong_signature', result, user, result['error'])
+            logger.warning('Error wrong_signature', result, user, result['error'])
             return
 
         user_tariff_info = Tariff.user_tariff_info(user['id'])
@@ -51,7 +51,7 @@ class BalanceHandler(Service):
                 'parse_mode': 'HTML',
                 'reply_markup': markup
             }])
-            logger.warn('Error wrong_currency_income', result, user, user_tariff_info)
+            logger.warning('Error wrong_currency_income', result, user, user_tariff_info)
             return
 
         # Funding
