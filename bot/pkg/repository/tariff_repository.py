@@ -194,11 +194,13 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
     users_set: List[ProlongableUserWithTariffIdInterface]
     tariffs = tariffs_model_hash()
 
+    python_now = datetime.datetime.now()
+
     prolongable_conditions = ["<", ">="]
     update_actions = [
         "SET tariff_id = 0, end_date = NULL",
 
-        f"SET end_date = NOW() + interval '{constants.tariff_duration_days} day',"
+        f"SET end_date = %(now)s + interval '{constants.tariff_duration_days} day',"
         + "balance = balance - subscription_filter.tariff_price"
     ]
 
@@ -214,15 +216,15 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
                     INNER JOIN tariff_prices AS tp ON (tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
                 WHERE utc.tariff_id != 0
                     AND utc.balance {prolongable_condition} tp.price
-                    AND utc.end_date < NOW()
+                    AND utc.end_date < %(now)s
             ) AS subscription_filter ON (u.id = subscription_filter.user_id)
             WHERE
                 utc.user_id = subscription_filter.user_id
             RETURNING u.id, u.service_id, u.language_code, subscription_filter.prolongable, utc.tariff_id
         """.format(
-            update_action=update_actions[i], tariff_duration_days=constants.tariff_duration_days,
+            update_action=update_actions[i],
             prolongable_condition=prolongable_conditions[i]
-        ), 100):
+        ), 100, {'now': python_now}):
 
             for user in users_set:
                 update_user_moderated_chats(user['id'], tariffs[user['tariff_id']]['channels_count'])
@@ -302,6 +304,9 @@ def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, 
         f"{utc['end_date'] > db_now + datetime.timedelta(days=1) - datetime.timedelta(hours=1)}"
         f" AND {utc['end_date'] < db_now + datetime.timedelta(days=1)}")
 
+    python_now = datetime.datetime.now()
+    logger.info("Python now:", python_now)
+
     query = """
         SELECT u.*
         FROM users AS u
@@ -310,12 +315,12 @@ def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, 
             INNER JOIN tariff_prices AS tp ON (tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
         WHERE utc.tariff_id != 0
             AND utc.balance < tp.price
-            AND utc.end_date > NOW() + interval '%s day' - interval '1 hour'
-            AND utc.end_date < NOW() + interval '%s day'
+            AND utc.end_date > %s + interval '%s day' - interval '1 hour'
+            AND utc.end_date < %s + interval '%s day'
     """
     logger.info("Performing sql", query)
     logger.info("with params", days_left)
-    for users_set in db.fetchmany(query, 100, (days_left, days_left,)):
+    for users_set in db.fetchmany(query, 100, (python_now, days_left, python_now, days_left,)):
         logger.info("Found users set", users_set)
         for user in users_set:
             logger.info(f"Found user #{user}")

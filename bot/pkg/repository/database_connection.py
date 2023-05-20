@@ -90,7 +90,7 @@ class Database(metaclass=Singleton):
                 cursor.close()
 
     def _query_executor(
-            self, cursor_method: Literal['fetchone', 'fetchall', 'fetchmany'], query: str, params: tuple
+            self, cursor_method: Literal['fetchone', 'fetchall', 'fetchmany'], query: str, params: tuple | dict
     ) -> Any:  # List[Dict], Dict, Cursor, None,
         cursor = None
         try:
@@ -110,15 +110,15 @@ class Database(metaclass=Singleton):
             if cursor is not None and cursor_method != 'fetchmany':
                 cursor.close()
 
-    def fetchall(self, query: str, params: tuple = None):
+    def fetchall(self, query: str, params: tuple | dict = None):
         result = self._query_executor('fetchall', query, params)
         return result if result is not None else []
 
-    def fetchone(self, query: str, params: tuple = None):
+    def fetchone(self, query: str, params: tuple | dict = None):
         result = self._query_executor('fetchone', query, params)
         return result
 
-    def fetchmany(self, query: str, per: int, params: tuple = None):
+    def fetchmany(self, query: str, per: int, params: tuple | dict = None):
         cursor = self._query_executor('fetchmany', query, params)
         while True:
             result = cursor.fetchmany(per)
