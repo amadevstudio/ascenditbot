@@ -3,6 +3,7 @@ from typing import TypedDict, Generator, Literal, List
 
 from pkg.repository import database_helpers
 from pkg.repository.database_connection import Database
+from pkg.system.logger import logger
 from project import constants
 from project.constants import default_currency
 from project.types import TariffInterface, UserTariffConnectionInterface, TariffInfoInterface, UserInterface, \
@@ -133,7 +134,6 @@ def user_subscription(user_id: int) -> UserTariffConnectionInterface | None:
 
 def update_subscription(subscription: UserTariffConnectionInterface, create: bool = False) \
         -> UserTariffConnectionInterface:
-
     if create:
         result = db.insert_model('user_tariff_connections', subscription)
     else:
@@ -286,7 +286,23 @@ def update_user_moderated_chats(user_id: int, offset: int | None):
 
 
 def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, None]:
-    for users_set in db.fetchmany("""
+    utc: UserTariffConnectionInterface = db.find_model('user_tariff_connections', {'user_id': 1})
+    logger.info("Tariff connection:", utc)
+    db_now: datetime.datetime = db.fetchone("SELECT NOW()")['now'].replace(tzinfo=None)
+    logger.info("NOW() is:", db_now)
+
+    tariff = db.find_model('tariff_prices', {'tariff_id': utc['tariff_id']})
+
+    logger.info(f"Utc with tid {utc['tariff_id']} != 0 balance vs tariff price: {utc['balance']} <? {tariff['price']}")
+    logger.info(utc['tariff_id'] != 0, utc['balance'] < tariff['price'])
+    logger.info(f"End date condition:"
+                f"{utc['end_date']} > {db_now + datetime.timedelta(days=1) - datetime.timedelta(hours=1)} "
+                f"AND {utc['end_date']} < {db_now + datetime.timedelta(days=1)}")
+    logger.info(
+        f"{utc['end_date'] > db_now + datetime.timedelta(days=1) - datetime.timedelta(hours=1)}"
+        f" AND {utc['end_date'] < db_now + datetime.timedelta(days=1)}")
+
+    query = """
         SELECT u.*
         FROM users AS u
             INNER JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
@@ -296,8 +312,13 @@ def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, 
             AND utc.balance < tp.price
             AND utc.end_date > NOW() + interval '%s day' - interval '1 hour'
             AND utc.end_date < NOW() + interval '%s day'
-    """, 100, (days_left, days_left,)):
+    """
+    logger.info("Performing sql", query)
+    logger.info("with params", days_left)
+    for users_set in db.fetchmany(query, 100, (days_left, days_left,)):
+        logger.info("Found users set", users_set)
         for user in users_set:
+            logger.info(f"Found user #{user}")
             yield user
 
 

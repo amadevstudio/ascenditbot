@@ -4,6 +4,7 @@ from typing import Generator
 from pkg.repository import tariff_repository, chat_repository
 from pkg.repository.tariff_repository import UserTariffInfoInterface, TariffInfoInterface, ProcessSubscriptionInterface
 from pkg.service.service import Service
+from pkg.system.logger import logger
 
 from project import constants
 from project.types import UserTariffConnectionInterface, ErrorDictInterface, PaymentHistoryInterface, UserInterface
@@ -185,9 +186,11 @@ class Tariff(Service):
 
     @staticmethod
     def users_with_remaining_days(notify_about_days: int) -> Generator[UserInterface, None, None]:
-        user: ProcessSubscriptionInterface
+        user: UserInterface
 
+        logger.info("Getting users with remaining days")
         for user in tariff_repository.users_with_remaining_days(notify_about_days):
+            logger.info(f"Found user {user['id']}")
             yield user
 
     @staticmethod

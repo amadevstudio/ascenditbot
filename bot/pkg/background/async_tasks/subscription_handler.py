@@ -30,7 +30,7 @@ async def subscription_handler():
 
 
 async def subscription_handler_action():
-    logger.info("Subscription Handler: performing action part")
+    logger.info("Subscription Handler: action part")
     for process_subscription_data in Tariff.process_all_subscription_validity():
         logger.info("Subscription Handler:", "Processing ", process_subscription_data)
 
@@ -63,7 +63,7 @@ async def subscription_handler_action():
 
 async def subscription_handler_notifier():
     notify_about_days = 1
-    logger.info(f"Subscription Handler, performing notify, days left: {notify_about_days}")
+    logger.info(f"Subscription Handler, notify part with days: {notify_about_days}")
     for user in Tariff.users_with_remaining_days(notify_about_days):
         logger.info("Subscription Handler:", f"Notifying {user['id']}")
 
