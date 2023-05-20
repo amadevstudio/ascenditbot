@@ -291,7 +291,8 @@ def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, 
     utc: UserTariffConnectionInterface = db.find_model('user_tariff_connections', {'user_id': 1})
     logger.info("Tariff connection:", utc)
     db_now: datetime.datetime = db.fetchone("SELECT NOW()")['now'].replace(tzinfo=None)
-    logger.info("NOW() is:", db_now)
+    db_now_clean: datetime.datetime = db.fetchone("SELECT NOW()")['now']
+    logger.info("NOW() is:", db_now, "OR", db_now_clean)
 
     tariff = db.find_model('tariff_prices', {'tariff_id': utc['tariff_id']})
 
