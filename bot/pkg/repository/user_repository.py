@@ -15,21 +15,17 @@ def register_or_update_by_service_id(user_data: UserInterface, referral_service_
         -> NewUserRegisterResultInterface:
     user = db.fetchone("""
         SELECT id FROM users WHERE service_id = %s
-    """, (user_data["service_id"],))
+    """, (user_data["service_id"],))\
 
     if user is None:
-        user = db.insert_model('users', user_data)
-
         if referral_service_id is not None:
             ref_user_id = get_id_by_service_id(str(referral_service_id))
             user_data = {**user, 'ref_id': ref_user_id}
-            user = db.update_model('users', user_data)
-
+        user = db.insert_model('users', user_data)
         return {'user': user, 'is_new': True}
 
     user_data['id'] = user['id']
     user = db.update_model('users', user_data)
-
     return {'user': user, 'is_new': False}
 
 
