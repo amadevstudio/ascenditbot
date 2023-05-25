@@ -1,6 +1,6 @@
 from typing import List, Any, Literal
 
-from pkg.repository.database_connection import Database
+from pkg.repository.database_connection import Database, DatabaseContextManager
 from project.types import ModeratedChatInterface, ErrorDictInterface, AllowedUserInterface, \
     UserModeratedChatConnectionInterface, UserInterface
 
@@ -58,22 +58,20 @@ def create(chat_service_id: str, user_service_id: str, is_owner: bool) -> Modera
         SELECT id FROM moderated_chats WHERE service_id = %s
     """, (chat_service_id,))
 
-    if chat is None:
-        chat_data = {'service_id': chat_service_id}
-        cursor = db.build_cursor()
-        chat = db.insert_model('moderated_chats', chat_data, commit=False, cursor=cursor)
-    else:
-        user_chat = db.fetchone("""
-            SELECT * FROM user_moderated_chat_connections WHERE user_id = %s AND moderated_chat_id = %s
-        """, (user['id'], chat['id'],))
-        if user_chat is not None:
-            return {'error': 'connection_exists', 'connection': user_chat}
+    with DatabaseContextManager(db) as connection:
+        if chat is None:
+            chat_data = {'service_id': chat_service_id}
+            chat = db.insert_model('moderated_chats', chat_data, connection=connection)
+        else:
+            user_chat = db.fetchone("""
+                SELECT * FROM user_moderated_chat_connections WHERE user_id = %s AND moderated_chat_id = %s
+            """, (user['id'], chat['id'],))
+            if user_chat is not None:
+                return {'error': 'connection_exists', 'connection': user_chat}
 
-        cursor = None
-
-    user_chat_data: UserModeratedChatConnectionInterface = \
-        {'user_id': user["id"], 'moderated_chat_id': chat["id"], 'owner': is_owner}
-    user_chat = db.insert_model('user_moderated_chat_connections', user_chat_data, cursor=cursor)
+        user_chat_data: UserModeratedChatConnectionInterface = \
+            {'user_id': user["id"], 'moderated_chat_id': chat["id"], 'owner': is_owner}
+        user_chat = db.insert_model('user_moderated_chat_connections', user_chat_data, connection=connection)
 
     return user_chat
 

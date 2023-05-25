@@ -188,9 +188,7 @@ class Tariff(Service):
     def users_with_remaining_days(notify_about_days: int) -> Generator[UserInterface, None, None]:
         user: UserInterface
 
-        logger.info("Getting users with remaining days")
         for user in tariff_repository.users_with_remaining_days(notify_about_days):
-            logger.info(f"Found user {user['id']}")
             yield user
 
     @staticmethod

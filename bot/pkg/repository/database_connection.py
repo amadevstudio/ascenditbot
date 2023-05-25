@@ -1,7 +1,9 @@
+import time
 from datetime import datetime, timezone
 from typing import Any, Literal
 
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 
 from lib.python.singleton import Singleton
@@ -10,35 +12,59 @@ from pkg.system.logger import logger
 
 class Database(metaclass=Singleton):
     def __init__(self):
-        self.connection = None
+        self.connection_pool: psycopg2.pool.SimpleConnectionPool | None = None
 
     def connect(self, config: dict[str, str] = None):
         if config is not None:
-            self.connection = psycopg2.connect(
+            self.connection_pool = psycopg2.pool.SimpleConnectionPool(
+                minconn=1,
+                maxconn=20,
                 host=config['host'],
                 database=config['database'],
                 user=config['user'],
                 password=config['password'])
         else:
-            self.connection = psycopg2.connect()
+            self.connection_pool = psycopg2.pool.SimpleConnectionPool(minconn=1, maxconn=1)
 
-    def build_cursor(self):
-        return self.connection.cursor(cursor_factory=RealDictCursor)
+    def build_connection(self) -> psycopg2.extensions.connection:
+        while True:
+            try:
+                return self.connection_pool.getconn()
+            except psycopg2.pool.PoolError:
+                time.sleep(1)  # TODO: migrate to asyncio wrapper?
+
+    def __build_cursor(self, connection: psycopg2.extensions.connection) -> psycopg2.extensions.cursor:
+        return connection.cursor(cursor_factory=RealDictCursor)
+
+    def close(self, connection: psycopg2.extensions.connection):
+        try:
+            self.connection_pool.putconn(connection)
+        except Exception as e:
+            logger.error(e)
+
+    def commit_and_close(self, connection: psycopg2.extensions.connection):
+        try:
+            connection.commit()
+            self.connection_pool.putconn(connection)
+        except Exception as e:
+            logger.error(e)
+
+    def rollback_and_close(self, connection: psycopg2.extensions.connection):
+        try:
+            connection.rollback()
+            self.connection_pool.putconn(connection)
+        except Exception as e:
+            logger.error(e)
 
     @staticmethod
-    def close_cursor(cursor):
-        if cursor is not None:
-            cursor.close()
-
-    @staticmethod
-    def _preset_key_fields(key_fields: list[str] | None):
+    def __preset_key_fields(key_fields: list[str] | None):
         if key_fields is None:
             return ['id']
 
         return key_fields
 
     @staticmethod
-    def _key_fields_values(filled_key_fields: list[str], model_data: dict[str, Any]):
+    def __key_fields_values(filled_key_fields: list[str], model_data: dict[str, Any]):
         key_fields_values = []
         for key_field in filled_key_fields:
             key_fields_values.append(model_data[key_field])
@@ -56,93 +82,95 @@ class Database(metaclass=Singleton):
         model['created_at'] = model['updated_at']
         return model
 
-    def execute(
-            self, query: str, params: tuple = None, commit=True, cursor=None,
-            returning=None) -> dict | None:
-        keep_cursor = not commit
+    def __query_executor(
+            self, cursor_method: Literal['fetchone', 'fetchall'], query: str, params: tuple | dict
+    ) -> Any:  # List[Dict], Dict, Cursor, None,
+        connection = self.build_connection()
+        try:
+            with self.__build_cursor(connection) as cursor:
+                cursor.execute(query, params)
+                if cursor_method == 'fetchone':
+                    return cursor.fetchone()
+                elif cursor_method == 'fetchall':
+                    return cursor.fetchall()
+        except Exception as e:
+            logger.error(e)
+            if cursor is not None:
+                connection.rollback()
+            return None
+        finally:
+            self.close(connection)
 
-        if cursor is None:
-            cursor = self.build_cursor()
+    def fetchall(self, query: str, params: tuple | dict = None):
+        result = self.__query_executor('fetchall', query, params)
+        return result if result is not None else []
+
+    def fetchone(self, query: str, params: tuple | dict = None):
+        result = self.__query_executor('fetchone', query, params)
+        return result
+
+    def fetchmany(self, query: str, per: int, params: tuple | dict = None):
+        connection = self.build_connection()
+        with self.__build_cursor(connection) as cursor:
+            cursor.execute(query, params)
+            while True:
+                result = cursor.fetchmany(per)
+                yield result
+                if not result:
+                    self.close(connection)
+                    break
+
+    def execute(
+            self, query: str, params: tuple = None, returning: str = None,
+            connection: psycopg2.extensions.connection | None = None) -> dict | None:
+
+        if connection is None:
+            commit = True
+            connection = self.build_connection()
+        else:
+            commit = False
 
         if returning is not None:
             query += f" RETURNING {returning}"
 
-        try:
-            cursor.execute(query, params)
+        with self.__build_cursor(connection) as cursor:
+            try:
+                cursor.execute(query, params)
 
-            if returning is not None:
-                row_returning = cursor.fetchone()
-            else:
-                row_returning = None
+                if returning is not None:
+                    row_returning = cursor.fetchone()
+                else:
+                    row_returning = None
 
-            if commit:
-                self.connection.commit()
+                return row_returning
 
-            return row_returning
+            except psycopg2.DatabaseError as e:
+                logger.error(e)
+                if commit:
+                    self.rollback_and_close(connection)
+                return None
 
-        except psycopg2.DatabaseError as e:
-            self.connection.rollback()
-            logger.error(f"Can't commit: {e}")
-            return None
-
-        finally:
-            if not keep_cursor:
-                cursor.close()
-
-    def _query_executor(
-            self, cursor_method: Literal['fetchone', 'fetchall', 'fetchmany'], query: str, params: tuple | dict
-    ) -> Any:  # List[Dict], Dict, Cursor, None,
-        cursor = None
-        try:
-            cursor = self.build_cursor()
-            cursor.execute(query, params)
-            if cursor_method == 'fetchone':
-                return cursor.fetchone()
-            elif cursor_method == 'fetchall':
-                return cursor.fetchall()
-            elif cursor_method == 'fetchmany':
-                return cursor
-        except Exception as e:
-            logger.error(e)
-            self.connection.rollback()
-            return None
-        finally:
-            if cursor is not None and cursor_method != 'fetchmany':
-                cursor.close()
-
-    def fetchall(self, query: str, params: tuple | dict = None):
-        result = self._query_executor('fetchall', query, params)
-        return result if result is not None else []
-
-    def fetchone(self, query: str, params: tuple | dict = None):
-        result = self._query_executor('fetchone', query, params)
-        return result
-
-    def fetchmany(self, query: str, per: int, params: tuple | dict = None):
-        cursor = self._query_executor('fetchmany', query, params)
-        while True:
-            result = cursor.fetchmany(per)
-            yield result
-            if not result:
-                cursor.close()
-                break
+            finally:
+                if commit:
+                    self.commit_and_close(connection)
 
     def find_model(self, model_name: str, model_data: dict[str, Any]):
         key_fields = list(model_data.keys())
 
-        filled_key_fields = Database._preset_key_fields(key_fields)
+        filled_key_fields = Database.__preset_key_fields(key_fields)
 
         query = "SELECT * FROM {model_name} WHERE {key_fields}".format(
             model_name=model_name,
             key_fields=(' AND '.join([f"{c} = %s" for c in filled_key_fields]))
         )
 
-        key_fields_values = Database._key_fields_values(filled_key_fields, model_data)
+        key_fields_values = Database.__key_fields_values(filled_key_fields, model_data)
 
         return self.fetchone(query, tuple(key_fields_values))
 
     def insert_model(  # or update on conflict
-            self, model_name: str, model_data: dict[str, Any], commit: bool = True, cursor=None,
+            self, model_name: str, model_data: dict[str, Any],
+            connection: psycopg2.extensions.connection | None = None,
             conflict_unique_fields: list[str] | None = None):
 
         model_data = self.__class__.inject_timestamps(model_data)
@@ -163,18 +191,18 @@ class Database(metaclass=Singleton):
                 columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])))
             query_values *= 2
 
-        return self.execute(query, query_values, commit=commit, cursor=cursor, returning='*')
+        return self.execute(query, query_values, returning='*', connection=connection)
 
     def update_model(
             self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None,
-            commit: bool = True, cursor=None):
+            connection: psycopg2.extensions.connection | None = None):
         model_data = self.__class__.inject_updated_at(model_data)
 
         # Set keyfields as ['id'] if empty
-        filled_key_fields = Database._preset_key_fields(key_fields)
+        filled_key_fields = Database.__preset_key_fields(key_fields)
 
         # Get key fields values
-        key_fields_values = Database._key_fields_values(filled_key_fields, model_data)
+        key_fields_values = Database.__key_fields_values(filled_key_fields, model_data)
 
         # Remove key fields from update list
         model_data_without_keyfields = {**model_data}
@@ -190,11 +218,12 @@ class Database(metaclass=Singleton):
         )
 
         return self.execute(
-            query, tuple(model_data_without_keyfields.values()) + tuple(key_fields_values),
-            commit=commit, cursor=cursor, returning='*')
+            query, tuple(model_data_without_keyfields.values()) + tuple(key_fields_values), returning='*',
+            connection=connection)
 
-    def delete_model(self, model_name: str, model_keys_data: dict[str, Any], commit: bool = True, cursor=None):
-        filled_key_fields = Database._preset_key_fields(list(model_keys_data.keys()))
+    def delete_model(self, model_name: str, model_keys_data: dict[str, Any],
+                     commit: bool = True, connection: psycopg2.extensions.connection | None = None):
+        filled_key_fields = Database.__preset_key_fields(list(model_keys_data.keys()))
 
         query = """
             DELETE FROM {model_name} WHERE {key_fields}
@@ -203,7 +232,22 @@ class Database(metaclass=Singleton):
             key_fields=(' AND '.join([f"{c} = %s" for c in filled_key_fields]))
         )
 
-        key_fields_values = Database._key_fields_values(filled_key_fields, model_keys_data)
+        key_fields_values = Database.__key_fields_values(filled_key_fields, model_keys_data)
 
         return self.execute(
-            query, tuple(key_fields_values), commit=commit, cursor=cursor, returning='*')
+            query, tuple(key_fields_values), returning='*', connection=connection)
+
+
+class DatabaseContextManager:
+    def __init__(self, db: Database):
+        self.db = db
+
+    def __enter__(self):
+        self.connection = self.db.build_connection()
+        return self.connection
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_val:  # Error occurred
+            self.db.rollback_and_close(connection=self.connection)
+        else:
+            self.db.commit_and_close(connection=self.connection)
