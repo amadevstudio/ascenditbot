@@ -1,4 +1,4 @@
-from typing import List, Any, Literal
+from typing import List, Literal
 
 from pkg.repository.database_connection import Database, DatabaseContextManager
 from project.types import ModeratedChatInterface, ErrorDictInterface, AllowedUserInterface, \
@@ -163,9 +163,9 @@ def is_active_by_service_id(chat_service_id: str) -> bool:
 
 
 def switch_active(chat_id: int) -> bool:
-    return db.execute("""
+    return db.execute_single_model("""
         UPDATE moderated_chats SET active = NOT active WHERE id = %s
-    """, (chat_id,), commit=True, returning='active')['active']
+    """, (chat_id,), returning='active')['active']
 
 
 def add_to_whitelist(chat_id: int, user_nickname: str) -> ModeratedChatInterface | None:

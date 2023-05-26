@@ -1,6 +1,6 @@
 import time
 from datetime import datetime, timezone
-from typing import Any, Literal
+from typing import Any, Literal, Generator
 
 import psycopg2
 from psycopg2 import pool
@@ -33,7 +33,8 @@ class Database(metaclass=Singleton):
             except psycopg2.pool.PoolError:
                 time.sleep(1)  # TODO: migrate to asyncio wrapper?
 
-    def __build_cursor(self, connection: psycopg2.extensions.connection) -> psycopg2.extensions.cursor:
+    @staticmethod
+    def __build_cursor(connection: psycopg2.extensions.connection) -> psycopg2.extensions.cursor:
         return connection.cursor(cursor_factory=RealDictCursor)
 
     def close(self, connection: psycopg2.extensions.connection):
@@ -120,7 +121,33 @@ class Database(metaclass=Singleton):
                     self.close(connection)
                     break
 
-    def execute(
+    def update_many(self, query: str, per: int, params: tuple | dict = None,
+                    connection: psycopg2.extensions.connection | None = None) -> Generator[Any, None, None]:
+        if connection is None:
+            commit = True
+            connection = self.build_connection()
+        else:
+            commit = False
+
+        try:
+            with self.__build_cursor(connection) as cursor:
+                cursor.execute(query, params)
+                while True:
+                    result = cursor.fetchmany(per)
+                    yield result
+                    if not result:
+                        break
+
+        except psycopg2.DatabaseError as e:
+            logger.error(e)
+            if commit:
+                self.rollback_and_close(connection)
+            return None
+        finally:
+            if commit:
+                self.commit_and_close(connection)
+
+    def execute_single_model(
             self, query: str, params: tuple = None, returning: str = None,
             connection: psycopg2.extensions.connection | None = None) -> dict | None:
 
@@ -133,8 +160,8 @@ class Database(metaclass=Singleton):
         if returning is not None:
             query += f" RETURNING {returning}"
 
-        with self.__build_cursor(connection) as cursor:
-            try:
+        try:
+            with self.__build_cursor(connection) as cursor:
                 cursor.execute(query, params)
 
                 if returning is not None:
@@ -144,15 +171,15 @@ class Database(metaclass=Singleton):
 
                 return row_returning
 
-            except psycopg2.DatabaseError as e:
-                logger.error(e)
-                if commit:
-                    self.rollback_and_close(connection)
-                return None
+        except psycopg2.DatabaseError as e:
+            logger.error(e)
+            if commit:
+                self.rollback_and_close(connection)
+            return None
 
-            finally:
-                if commit:
-                    self.commit_and_close(connection)
+        finally:
+            if commit:
+                self.commit_and_close(connection)
 
     def find_model(self, model_name: str, model_data: dict[str, Any]):
         key_fields = list(model_data.keys())
@@ -191,38 +218,38 @@ class Database(metaclass=Singleton):
                 columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])))
             query_values *= 2
 
-        return self.execute(query, query_values, returning='*', connection=connection)
+        return self.execute_single_model(query, query_values, returning='*', connection=connection)
 
     def update_model(
             self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None,
             connection: psycopg2.extensions.connection | None = None):
         model_data = self.__class__.inject_updated_at(model_data)
 
-        # Set keyfields as ['id'] if empty
+        # Set key fields as ['id'] if empty
         filled_key_fields = Database.__preset_key_fields(key_fields)
 
         # Get key fields values
         key_fields_values = Database.__key_fields_values(filled_key_fields, model_data)
 
         # Remove key fields from update list
-        model_data_without_keyfields = {**model_data}
+        model_data_without_key_fields = {**model_data}
         for key_field in filled_key_fields:
-            model_data_without_keyfields.pop(key_field)
+            model_data_without_key_fields.pop(key_field)
 
         query = """
             UPDATE {model_name} SET {columns_equal_values} WHERE {key_fields}
         """.format(
             model_name=model_name,
-            columns_equal_values=(', '.join([f"{c} = %s" for c in model_data_without_keyfields.keys()])),
+            columns_equal_values=(', '.join([f"{c} = %s" for c in model_data_without_key_fields.keys()])),
             key_fields=(' AND '.join([f"{c} = %s" for c in filled_key_fields]))
         )
 
-        return self.execute(
-            query, tuple(model_data_without_keyfields.values()) + tuple(key_fields_values), returning='*',
+        return self.execute_single_model(
+            query, tuple(model_data_without_key_fields.values()) + tuple(key_fields_values), returning='*',
             connection=connection)
 
     def delete_model(self, model_name: str, model_keys_data: dict[str, Any],
-                     commit: bool = True, connection: psycopg2.extensions.connection | None = None):
+                     connection: psycopg2.extensions.connection | None = None):
         filled_key_fields = Database.__preset_key_fields(list(model_keys_data.keys()))
 
         query = """
@@ -234,7 +261,7 @@ class Database(metaclass=Singleton):
 
         key_fields_values = Database.__key_fields_values(filled_key_fields, model_keys_data)
 
-        return self.execute(
+        return self.execute_single_model(
             query, tuple(key_fields_values), returning='*', connection=connection)
 
 

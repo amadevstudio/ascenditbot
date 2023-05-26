@@ -3,7 +3,6 @@ from typing import TypedDict, Generator, Literal, List
 
 from pkg.repository import database_helpers
 from pkg.repository.database_connection import Database, DatabaseContextManager
-from pkg.system.logger import logger
 from project import constants
 from project.constants import default_currency
 from project.types import TariffInterface, UserTariffConnectionInterface, TariffInfoInterface, UserInterface, \
@@ -203,7 +202,7 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
     ]
 
     for i in range(2):
-        for users_set in db.fetchmany("""
+        for users_set in db.update_many("""
             UPDATE user_tariff_connections AS utc
             {update_action}
             FROM users AS u
@@ -223,7 +222,6 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
             update_action=update_actions[i],
             prolongable_condition=prolongable_conditions[i]
         ), 100):
-
             for user in users_set:
                 update_user_moderated_chats(user['id'], tariffs[user['tariff_id']]['channels_count'])
 
@@ -241,7 +239,7 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
 def update_user_moderated_chats(user_id: int, offset: int | None):
     # All enabled
     if offset is None:
-        db.execute("""
+        db.execute_single_model("""
             UPDATE moderated_chats AS mc
             SET disabled = FALSE
             FROM user_moderated_chat_connections AS umcc
@@ -254,7 +252,7 @@ def update_user_moderated_chats(user_id: int, offset: int | None):
 
     with DatabaseContextManager(db) as connection:
         # Disable after offset
-        db.execute("""
+        db.execute_single_model("""
             UPDATE moderated_chats AS mc
             SET disabled = TRUE
             WHERE mc.id IN (
@@ -269,7 +267,7 @@ def update_user_moderated_chats(user_id: int, offset: int | None):
         """, (user_id, offset,), connection=connection)
 
         # Enable before offset
-        db.execute("""
+        db.execute_single_model("""
             UPDATE moderated_chats AS mc
             SET disabled = FALSE
             WHERE mc.id IN (
@@ -301,7 +299,7 @@ def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, 
 
 
 def increase_amount(user_id: int, amount: int) -> int:
-    return db.execute("""
+    return db.execute_single_model("""
         UPDATE user_tariff_connections
         SET balance = balance + %s
         WHERE user_id = %s
@@ -309,7 +307,7 @@ def increase_amount(user_id: int, amount: int) -> int:
 
 
 def move_end_date(user_id: int, days: int) -> datetime:
-    return db.execute("""
+    return db.execute_single_model("""
         UPDATE user_tariff_connections
         SET end_date = end_date + interval '%s day'
         WHERE user_id = %s
