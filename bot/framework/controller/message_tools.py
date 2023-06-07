@@ -87,7 +87,10 @@ async def message_sender(
             previous_message_structures=previous_message_structures)
 
     except telegram_exceptions.TelegramForbiddenError:
-        User.bot_is_blocked(chat_id)
+        try:
+            User.bot_is_blocked(chat_id)
+        except Exception as e:
+            logger.error(e)
 
     except Exception as e:
         logger.error(e)
