@@ -78,7 +78,7 @@ async def message_sender(
         if 'message is not modified' in str(e):  # except utils.exceptions.MessageNotModified:
             return
 
-        logger.info(e)
+        logger.error(e)
 
     except telegram_exceptions.TelegramRetryAfter as e:
         await asyncio.sleep(e.retry_after)
