@@ -24,7 +24,7 @@ class Database(metaclass=Singleton):
                 user=config['user'],
                 password=config['password'])
         else:
-            self.connection_pool = psycopg2.pool.SimpleConnectionPool(minconn=1, maxconn=1)
+            self.connection_pool = psycopg2.pool.SimpleConnectionPool(minconn=2, maxconn=10)
 
     def build_connection(self) -> psycopg2.extensions.connection:
         while True:
