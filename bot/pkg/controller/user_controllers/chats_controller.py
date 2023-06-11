@@ -61,7 +61,7 @@ async def add_chat(params: ControllerParams):
             result_connection = result_connection['connection']
         else:
             await chat_access_denied(call, message, result_connection)
-            return
+            return False
 
     chat_info = await Chat.load_info(chat_service_id=str(chat_service_id))
     if 'error' in chat_info:
