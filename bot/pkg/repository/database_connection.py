@@ -44,7 +44,12 @@ class Database(metaclass=Singleton):
         "  select %s from %s  " -> "select $1 from $2"
         @param query: Sql query
         """
-        return ''.join([(r + f"${i + 1}") if r != "" else "" for i, r in enumerate(query.strip().split("%s"))])
+        # query = query.replace("\r", "").replace("\n", "")
+        query = query.strip().split("%s")
+        if len(query) == 1:
+            return query[0]
+
+        return ''.join([(r + f"${i + 1}") if r != "" else "" for i, r in enumerate(query)])
 
     # Data helpers
 
