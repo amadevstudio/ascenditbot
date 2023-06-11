@@ -237,7 +237,7 @@ routed_messages = {
                 'subscription_limit_violation': {
                     'en':
                         "Sorry, your subscription level is not sufficient for this chat to work."
-                        "More details on the page Subscription /subscription",
+                        " More details on the page Subscription /subscription",
                     'ru':
                         "К сожалению, ваш уровень подписки недостаточен, чтобы это группа работала."
                         " Подробнее на странице Подписка /subscription"
