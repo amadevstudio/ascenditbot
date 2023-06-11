@@ -27,7 +27,8 @@ class NavigationBuilder(metaclass=Singleton):
 
     # возвращает текущую страницу
     @staticmethod
-    def get_state_page(call: telegram_types.CallbackQuery | None, message: telegram_types.Message, state_data: dict[str, Any]) -> int:
+    def get_state_page(call: telegram_types.CallbackQuery | None, message: telegram_types.Message,
+                       state_data: dict[str, Any]) -> int:
         try:
             if call is not None:
                 try:
@@ -53,14 +54,14 @@ class NavigationBuilder(metaclass=Singleton):
 
     # возвращает данные из бд на нужной странице и общее количество
     @staticmethod
-    def load_page_data(
+    async def load_page_data(
             data_provider: Callable, data_params: list, data_count_provider: Callable, data_count_params: list,
             curr_page: int, per_page: int, order_field: str) -> PageDataInterface:
 
         if curr_page < 1:
             curr_page = 1
 
-        count = data_count_provider(*data_count_params)
+        count = await data_count_provider(*data_count_params)
 
         if count == 0:
             return {
@@ -73,7 +74,7 @@ class NavigationBuilder(metaclass=Singleton):
 
         offset = per_page * (curr_page - 1)
 
-        data = data_provider(*data_params, order_field, per_page, offset)
+        data = await data_provider(*data_params, order_field, per_page, offset)
 
         return {
             'data': data,
@@ -107,8 +108,8 @@ class NavigationBuilder(metaclass=Singleton):
     # возвращает сообщение "x страница из y"
     def _get_page_of_pages(self, curr_page, page_count, language_code):
         return str(curr_page) + " " \
-               + self.get_message(["actions", "page"], language_code).lower() + " " \
-               + self.get_message(["actions", "of"], language_code).lower() + " " + str(page_count)
+            + self.get_message(["actions", "page"], language_code).lower() + " " \
+            + self.get_message(["actions", "of"], language_code).lower() + " " + str(page_count)
 
     def get_routing_helper_message(
             self, curr_page, page_count, language_code, with_tip=True, divider=None
@@ -124,10 +125,11 @@ class NavigationBuilder(metaclass=Singleton):
                 result = divider + result
             return result
 
-    def full_message_setup(self, call, message, state_data, current_type, language_code,
-                           data_provider, data_params, data_count_provider, data_count_params, per_page, order_field):
+    async def full_message_setup(self, call, message, state_data, current_type, language_code,
+                                 data_provider, data_params, data_count_provider, data_count_params, per_page,
+                                 order_field):
         current_page = self.__class__.get_state_page(call, message, state_data)
-        user_chat_page_data = self.__class__.load_page_data(
+        user_chat_page_data = await self.__class__.load_page_data(
             data_provider, data_params, data_count_provider, data_count_params, current_page, per_page, order_field)
         if "error" in user_chat_page_data:
             return current_page, user_chat_page_data, None, None

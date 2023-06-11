@@ -29,7 +29,6 @@ database_configuration = {
     "user": environment["POSTGRES_USER"],
     "password": environment["POSTGRES_PASSWORD"]
 }
-database_connection = Database().connect(database_configuration)
 
 NavigationBuilder(localization.get_message, ["navigation_builder"])
 
@@ -38,6 +37,8 @@ init_routes(dp)
 
 
 async def run():
+    await Database().connect(database_configuration)
+
     server = PaymentServer(3000, list(payment_processors.values()))
     await before_bot_startup()
 

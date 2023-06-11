@@ -21,7 +21,7 @@ class BalanceHandler(Service):
     # asyncio.run(BalanceHandler.funding({'amount': 50000, 'currency': 'rub', 'user_id': 12, 'service': 'robokassa'}))
     @classmethod
     async def funding(cls, result: CallableInterface):
-        user: UserInterface = User.get_by_id(result['user_id'])
+        user: UserInterface = await User.get_by_id(result['user_id'])
         language_code = user['language_code']
 
         markup = [[{
@@ -40,7 +40,7 @@ class BalanceHandler(Service):
             logger.warning('Error wrong_signature', result, user, result['error'])
             return
 
-        user_tariff_info = Tariff.user_tariff_info(user['id'])
+        user_tariff_info = await Tariff.user_tariff_info(user['id'])
 
         # Wrong currency
         if user_tariff_info is None or user_tariff_info['currency_code'] != result['currency']:
@@ -55,14 +55,14 @@ class BalanceHandler(Service):
             return
 
         # Funding
-        new_balance = Tariff.add_amount(user['id'], result['amount'])
-        Tariff.add_payment_history({
+        new_balance = await Tariff.add_amount(user['id'], result['amount'])
+        await Tariff.add_payment_history({
             'user_id': user['id'],
             'payment_service': result['service'],
             'amount': result['amount'],
             'currency_code': result['currency']})
 
-        new_user_tariff_info = Tariff.user_tariff_info(user['id'])
+        new_user_tariff_info = await Tariff.user_tariff_info(user['id'])
         if new_user_tariff_info['balance'] != new_balance:
             new_user_tariff_info = {**new_user_tariff_info, 'balance': new_balance}
 
@@ -96,18 +96,18 @@ class BalanceHandler(Service):
         if referral['ref_id'] is None:
             return
 
-        referrer = User.get_by_id(referral['ref_id'])
+        referrer = await User.get_by_id(referral['ref_id'])
         if referrer is None:
             return
 
-        referrer_tariff_info = Tariff.user_tariff_info(referrer['id'])
+        referrer_tariff_info = await Tariff.user_tariff_info(referrer['id'])
 
         # Promote tariff if disabled
         if referrer_tariff_info['tariff_id'] == 0:
-            Tariff.change(referrer['id'], constants.tariff_free_trail_id, force=True)
-            referrer_tariff_info = Tariff.user_tariff_info(referrer['id'])
+            await Tariff.change(referrer['id'], constants.tariff_free_trail_id, force=True)
+            referrer_tariff_info = await Tariff.user_tariff_info(referrer['id'])
 
-        tariff_as_referral = Tariff.tariff_info(referrer_tariff_info['tariff_id'], referral['id'])
+        tariff_as_referral = await Tariff.tariff_info(referrer_tariff_info['tariff_id'], referral['id'])
 
         # Reward as part of incoming sum
         reward_days = int(amount * constants.tariff_duration_days / tariff_as_referral['price'])
@@ -118,9 +118,9 @@ class BalanceHandler(Service):
         if reward_days == 0:
             return
 
-        new_end_date = Tariff.prolong(referrer['id'], reward_days)
+        new_end_date = await Tariff.prolong(referrer['id'], reward_days)
 
-        new_user_tariff_info = Tariff.user_tariff_info(referrer['id'])
+        new_user_tariff_info = await Tariff.user_tariff_info(referrer['id'])
         if new_user_tariff_info['end_date'] != new_end_date:
             new_user_tariff_info = {**new_user_tariff_info, 'end_date': new_end_date}
 

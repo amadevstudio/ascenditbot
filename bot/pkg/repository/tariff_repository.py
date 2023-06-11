@@ -1,8 +1,9 @@
 import datetime
 from typing import TypedDict, Generator, Literal, List
 
+from framework.repository.database_executor import databaseExecutor
 from pkg.repository import database_helpers
-from pkg.repository.database_connection import Database, DatabaseContextManager
+from pkg.repository.database_connection import Database, Connection
 from project import constants
 from project.constants import default_currency
 from project.types import TariffInterface, UserTariffConnectionInterface, TariffInfoInterface, UserInterface, \
@@ -33,8 +34,8 @@ class ProcessSubscriptionInterface(TypedDict):
     prolongable: bool
 
 
-def find(tariff_id: int) -> TariffInterface | None:
-    return db.find_model('tariffs', {'id': tariff_id})
+# async def find(tariff_id: int) -> TariffInterface | None:
+#     return await databaseExecutor.run(db.find_model, 'tariffs', {'id': tariff_id})
 
 
 def _tariff_prices_for_user_selection() -> str:
@@ -50,8 +51,8 @@ def _tariff_prices_for_user_selection() -> str:
     """
 
 
-def currency_code_for_user(user_id: int) -> str:
-    result = db.fetchone(f"""
+async def currency_code_for_user(user_id: int) -> str:
+    result = await databaseExecutor.run(db.fetchone, f"""
         SELECT tp.currency_code
         FROM tariff_prices AS tp
         INNER JOIN users AS u ON (u.id = %s)
@@ -68,8 +69,8 @@ def currency_code_for_user(user_id: int) -> str:
 
 
 # Tariff info based on user currency
-def tariff_info(tariff_id: int, user_id: int) -> TariffInfoInterface | None:
-    return db.fetchone(f"""
+async def tariff_info(tariff_id: int, user_id: int) -> TariffInfoInterface | None:
+    return await databaseExecutor.run(db.fetchone, f"""
         SELECT t.id, t.channels_count, tp.currency_code, tp.price
         FROM tariffs AS t
         LEFT JOIN users AS u ON (u.id = %s)
@@ -84,8 +85,8 @@ def tariff_info(tariff_id: int, user_id: int) -> TariffInfoInterface | None:
 
 
 # User tariff and connection
-def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
-    return db.fetchone(f"""
+async def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
+    return await databaseExecutor.run(db.fetchone, f"""
         SELECT t.channels_count,
             (CASE WHEN utc.currency_code IS NOT NULL THEN utc.currency_code ELSE lccc.currency_code END) 
                 AS currency_code,
@@ -104,8 +105,8 @@ def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
 
 
 # Get all tariffs with user-based currencies
-def tariffs_info(user_id: int) -> list[TariffInfoInterface | None]:
-    return db.fetchall(f"""
+async def tariffs_info(user_id: int) -> list[TariffInfoInterface | None]:
+    return await databaseExecutor.run(db.fetchall, f"""
         SELECT t.id, t.channels_count, tp.currency_code, tp.price
         FROM tariffs AS t
         LEFT JOIN users AS u ON (u.id = %s)
@@ -119,35 +120,36 @@ def tariffs_info(user_id: int) -> list[TariffInfoInterface | None]:
     """, (user_id,))
 
 
-def tariffs_model_hash() -> dict[int, TariffInfoInterface]:
-    return database_helpers.hashed_by_id(db.fetchall(f"""
+async def tariffs_model_hash() -> dict[int, TariffInfoInterface]:
+    return database_helpers.hashed_by_id(await databaseExecutor.run(db.fetchall, f"""
         SELECT t.*
         FROM tariffs AS t
         ORDER BY t.id ASC
     """))
 
 
-def user_subscription(user_id: int) -> UserTariffConnectionInterface | None:
-    return db.find_model('user_tariff_connections', {'user_id': user_id})
+async def user_subscription(user_id: int) -> UserTariffConnectionInterface | None:
+    return await databaseExecutor.run(db.find_model, 'user_tariff_connections', {'user_id': user_id})
 
 
-def update_subscription(subscription: UserTariffConnectionInterface, create: bool = False) \
+async def update_subscription(subscription: UserTariffConnectionInterface, create: bool = False) \
         -> UserTariffConnectionInterface:
     if create:
-        result = db.insert_model('user_tariff_connections', subscription)
+        result = await databaseExecutor.run(db.insert_model, 'user_tariff_connections', subscription)
     else:
-        result = db.update_model('user_tariff_connections', subscription, key_fields=['user_id'])
+        result = await databaseExecutor.run(
+            db.update_model, 'user_tariff_connections', subscription, key_fields=['user_id'])
 
-    tariff = db.find_model('tariffs', {'id': result['tariff_id']})
+    tariff = await databaseExecutor.run(db.find_model, 'tariffs', {'id': result['tariff_id']})
 
     if tariff is not None:
-        update_user_moderated_chats(subscription['user_id'], tariff['channels_count'])
+        await update_user_moderated_chats(subscription['user_id'], tariff['channels_count'])
 
     return result
 
 
-def get_currency_code_for_user(user_id: int) -> str:
-    currency_code_row = db.fetchone("""
+async def get_currency_code_for_user(user_id: int) -> str:
+    currency_code_row = await databaseExecutor.run(db.fetchone, """
             -- Take currency from user if connection not exists only
             SELECT (CASE WHEN utc.currency_code IS NOT NULL THEN utc.currency_code ELSE lccc.currency_code END)
                 AS currency_code
@@ -163,8 +165,8 @@ def get_currency_code_for_user(user_id: int) -> str:
 
 
 # If the user has fewer chats than in his subscription (5 < 6 -> true, 6 < 6 -> false)
-def chats_number_satisfactory(chat_id: str, strong: bool = True) -> bool:
-    return db.fetchone(f"""
+async def chats_number_satisfactory(chat_id: str, strong: bool = True) -> bool:
+    return (await databaseExecutor.run(db.fetchone, f"""
         SELECT
             CASE WHEN t.channels_count IS NULL
             THEN TRUE
@@ -186,12 +188,12 @@ def chats_number_satisfactory(chat_id: str, strong: bool = True) -> bool:
         INNER JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
         INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
         WHERE u.service_id = %s
-    """, (chat_id,))['satisfies']
+    """, (chat_id,)))['satisfies']
 
 
-def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, None]:
+async def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, None]:
     users_set: List[ProlongableUserWithTariffIdInterface]
-    tariffs = tariffs_model_hash()
+    tariffs = await tariffs_model_hash()
 
     prolongable_conditions = ["<", ">="]
     update_actions = [
@@ -202,7 +204,7 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
     ]
 
     for i in range(2):
-        for users_set in db.update_many("""
+        async for users_set in databaseExecutor.run_generator(db.update_many, """
             UPDATE user_tariff_connections AS utc
             {update_action}
             FROM users AS u
@@ -222,8 +224,10 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
             update_action=update_actions[i],
             prolongable_condition=prolongable_conditions[i]
         ), 100):
+            print("\n\n!!!>!>>!>!")
+            print(users_set, type(users_set))
             for user in users_set:
-                update_user_moderated_chats(user['id'], tariffs[user['tariff_id']]['channels_count'])
+                await update_user_moderated_chats(user['id'], tariffs[user['tariff_id']]['channels_count'])
 
                 yield {
                     'user': {
@@ -236,10 +240,10 @@ def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, Non
                 }
 
 
-def update_user_moderated_chats(user_id: int, offset: int | None):
+async def update_user_moderated_chats(user_id: int, offset: int | None):
     # All enabled
     if offset is None:
-        db.execute_single_model("""
+        await databaseExecutor.run(db.execute_single_model, """
             UPDATE moderated_chats AS mc
             SET disabled = FALSE
             FROM user_moderated_chat_connections AS umcc
@@ -250,40 +254,42 @@ def update_user_moderated_chats(user_id: int, offset: int | None):
         """, (user_id,))
         return
 
-    with DatabaseContextManager(db) as connection:
-        # Disable after offset
-        db.execute_single_model("""
-            UPDATE moderated_chats AS mc
-            SET disabled = TRUE
-            WHERE mc.id IN (
-                SELECT ummc.moderated_chat_id
-                FROM user_moderated_chat_connections AS ummc
-                WHERE
-                    ummc.user_id = %s
-                    AND ummc.owner = TRUE
-                ORDER BY id ASC
-                OFFSET %s
-            )
-        """, (user_id, offset,), connection=connection)
+    connection: Connection
+    async with db.get_connection() as connection:
+        async with connection.transaction():
+            # Disable after offset
+            await databaseExecutor.run(db.execute_single_model, """
+                UPDATE moderated_chats AS mc
+                SET disabled = TRUE
+                WHERE mc.id IN (
+                    SELECT ummc.moderated_chat_id
+                    FROM user_moderated_chat_connections AS ummc
+                    WHERE
+                        ummc.user_id = %s
+                        AND ummc.owner = TRUE
+                    ORDER BY id ASC
+                    OFFSET %s
+                )
+            """, (user_id, offset,), connection=connection)
 
-        # Enable before offset
-        db.execute_single_model("""
-            UPDATE moderated_chats AS mc
-            SET disabled = FALSE
-            WHERE mc.id IN (
-                SELECT ummc.moderated_chat_id
-                FROM user_moderated_chat_connections AS ummc
-                WHERE
-                    ummc.user_id = %s
-                    AND ummc.owner = TRUE
-                ORDER BY id ASC
-                LIMIT %s
-            )
-        """, (user_id, offset,), connection=connection)
+            # Enable before offset
+            await databaseExecutor.run(db.execute_single_model, """
+                UPDATE moderated_chats AS mc
+                SET disabled = FALSE
+                WHERE mc.id IN (
+                    SELECT ummc.moderated_chat_id
+                    FROM user_moderated_chat_connections AS ummc
+                    WHERE
+                        ummc.user_id = %s
+                        AND ummc.owner = TRUE
+                    ORDER BY id ASC
+                    LIMIT %s
+                )
+            """, (user_id, offset,), connection=connection)
 
 
-def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, None]:
-    for users_set in db.fetchmany("""
+async def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, None]:
+    async for users_set in databaseExecutor.run_generator(db.fetchmany, """
         SELECT u.*
         FROM users AS u
             INNER JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
@@ -298,21 +304,21 @@ def users_with_remaining_days(days_left: int) -> Generator[UserInterface, None, 
             yield user
 
 
-def increase_amount(user_id: int, amount: int) -> int:
-    return db.execute_single_model("""
+async def increase_amount(user_id: int, amount: int) -> int:
+    return (await databaseExecutor.run(db.execute_single_model, """
         UPDATE user_tariff_connections
         SET balance = balance + %s
         WHERE user_id = %s
-    """, (amount, user_id,), returning='balance')['balance']
+    """, (amount, user_id,), returning='balance'))['balance']
 
 
-def move_end_date(user_id: int, days: int) -> datetime:
-    return db.execute_single_model("""
+async def move_end_date(user_id: int, days: int) -> datetime:
+    return (await databaseExecutor.run(db.execute_single_model, """
         UPDATE user_tariff_connections
         SET end_date = end_date + interval '%s day'
         WHERE user_id = %s
-    """, (days, user_id,), returning='end_date')['end_date']
+    """, (days, user_id,), returning='end_date'))['end_date']
 
 
-def add_payment_history(payment_history_data: PaymentHistoryInterface) -> PaymentHistoryInterface:
-    return db.insert_model('payments_history', payment_history_data)
+async def add_payment_history(payment_history_data: PaymentHistoryInterface) -> PaymentHistoryInterface:
+    return await databaseExecutor.run(db.insert_model, 'payments_history', payment_history_data)

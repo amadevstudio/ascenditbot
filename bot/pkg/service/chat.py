@@ -27,12 +27,12 @@ class Chat(Service):
     BOT = bot
 
     @staticmethod
-    def find(chat_id: int) -> ModeratedChatInterface | None:
-        return chat_repository.find(chat_id)
+    async def find(chat_id: int) -> ModeratedChatInterface | None:
+        return await chat_repository.find(chat_id)
 
     @staticmethod
-    def find_by(chat: ModeratedChatInterface) -> ModeratedChatInterface | None:
-        return chat_repository.find_by(chat)
+    async def find_by(chat: ModeratedChatInterface) -> ModeratedChatInterface | None:
+        return await chat_repository.find_by(chat)
 
     @classmethod
     async def _get_chat_member(cls, chat_service_id: int, user_id: int) \
@@ -100,7 +100,7 @@ class Chat(Service):
             telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner,
             admin_rights_validation['administrator'])
 
-        chat_info = chat_repository.find_by({'service_id': str(chat_service_id)})
+        chat_info = await chat_repository.find_by({'service_id': str(chat_service_id)})
         exists_in_the_bot = chat_info is not None
 
         if not exists_in_the_bot:
@@ -110,7 +110,7 @@ class Chat(Service):
         return {'administrator': administrator, 'chat_info': chat_info}
 
     @staticmethod
-    def validate_subscription(
+    async def validate_subscription(
             administrator: telegram_types.ChatMemberAdministrator | telegram_types.ChatMemberOwner,
             user_service_id: int,
             chat_info: ModeratedChatInterface) -> ErrorDictInterface:
@@ -121,10 +121,10 @@ class Chat(Service):
             creator = None
 
             if administrator.status == 'creator':
-                creator = User.find_by_service_id(user_service_id)
+                creator = await User.find_by_service_id(user_service_id)
 
             if administrator.status != 'creator' or creator is None:
-                creator = chat_repository.chat_creator(chat_info['id'])
+                creator = await chat_repository.chat_creator(chat_info['id'])
 
             # Due to a possible random error, the chat may not have a creator
             if creator is None:
@@ -132,7 +132,7 @@ class Chat(Service):
 
         # Not exists in the bot
         else:
-            creator = User.find_by_service_id(user_service_id)
+            creator = await User.find_by_service_id(user_service_id)
             if creator is None:
                 return {'error': 'creator_must_add'}
 
@@ -144,7 +144,7 @@ class Chat(Service):
         # Creator is the user, check subscription limitation, chat not exists or not due a possible random error
         else:
             already_added = chat_info is not None
-            if not already_added and not Tariff.chats_number_satisfactory(int(creator['service_id'])):
+            if not already_added and not (await Tariff.chats_number_satisfactory(int(creator['service_id']))):
                 return {'error': 'subscription_limit_violation'}
 
         return {}
@@ -157,7 +157,7 @@ class Chat(Service):
         if 'error' in validate_access_result:
             return validate_access_result
 
-        validate_subscription_result = cls.validate_subscription(
+        validate_subscription_result = await cls.validate_subscription(
             validate_access_result['administrator'], user_service_id, validate_access_result['chat_info'])
         if 'error' in validate_subscription_result:
             return validate_subscription_result
@@ -165,7 +165,7 @@ class Chat(Service):
         is_creator = validate_access_result['administrator'].status == 'creator'
 
         try:
-            result_connection = chat_repository.create(
+            result_connection = await chat_repository.create(
                 str(chat_service_id), str(user_service_id), is_creator)
             if "error" in result_connection:
                 return result_connection
@@ -191,37 +191,37 @@ class Chat(Service):
         }
 
     @staticmethod
-    def data_count_provider(user_id: int) -> int | None:
-        return chat_repository.user_chats_count(str(user_id))
+    async def data_count_provider(user_id: int) -> int | None:
+        return await chat_repository.user_chats_count(str(user_id))
 
     @staticmethod
-    def data_count_provider_by_service_id(user_chat_id: int, search_query: str | None = None) -> int | None:
-        return chat_repository.user_chats_count_by_service_id(str(user_chat_id), search_query)
+    async def data_count_provider_by_service_id(user_chat_id: int, search_query: str | None = None) -> int | None:
+        return await chat_repository.user_chats_count_by_service_id(str(user_chat_id), search_query)
 
     @staticmethod
-    def data_provider(user_id: int, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
-        return chat_repository.user_chats(str(user_id), order_by, limit, offset)
+    async def data_provider(user_id: int, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
+        return await chat_repository.user_chats(str(user_id), order_by, limit, offset)
 
     @staticmethod
-    def data_provider_by_service_id(
+    async def data_provider_by_service_id(
             user_chat_id: int, search_query: str | None = None,
             order_by: Literal['name', 'created_at'] = 'name', limit: int | None = None, offset: int = 0)\
             -> List[ModeratedChatInterface]:
-        return chat_repository.user_chats_by_service_id(str(user_chat_id), search_query, order_by, limit, offset)
+        return await chat_repository.user_chats_by_service_id(str(user_chat_id), search_query, order_by, limit, offset)
 
     @staticmethod
-    def switch_active(chat_id: int) -> bool:
-        return chat_repository.switch_active(chat_id)
+    async def switch_active(chat_id: int) -> bool:
+        return await chat_repository.switch_active(chat_id)
 
     @staticmethod
-    def add_to_whitelist(chat_id: int, user_nickname: str) \
+    async def add_to_whitelist(chat_id: int, user_nickname: str) \
             -> ModeratedChatInterface | None | TypedDict('AddToWhitelistError', {'error': Literal['unexpected']}):
         # chat_member = await Chat._get_chat_member(bot, chat_service_id, user_)
         # if "error" in chat_member:
         #     return {"error": chat_member["error"]}
 
         try:
-            result_whitelisted = chat_repository.add_to_whitelist(chat_id, user_nickname)
+            result_whitelisted = await chat_repository.add_to_whitelist(chat_id, user_nickname)
         except Exception as e:
             logger.error(e)
             return {"error": "unexpected"}
@@ -229,22 +229,22 @@ class Chat(Service):
         return result_whitelisted
 
     @staticmethod
-    def whitelist_data_count_provider(chat_id: int, search_query: str | None = None) -> int:
-        return chat_repository.chat_whitelist_count(chat_id, search_query)
+    async def whitelist_data_count_provider(chat_id: int, search_query: str | None = None) -> int:
+        return await chat_repository.chat_whitelist_count(chat_id, search_query)
 
     @staticmethod
-    def whitelist_data_provider(
+    async def whitelist_data_provider(
             chat_id: int, search_query: str | None = None,
             order_by: Literal['created_at', 'nickname'] = 'nickname', limit: int | None = None, offset: int = 0) \
             -> list[AllowedUserInterface] | None:
-        return pkg.repository.chat_repository.chat_whitelist(chat_id, search_query, order_by, limit, offset)
+        return await pkg.repository.chat_repository.chat_whitelist(chat_id, search_query, order_by, limit, offset)
 
     @classmethod
     async def update_names(cls, user_service_id: int):
-        user_chats = cls.data_provider_by_service_id(user_service_id)
+        user_chats = await cls.data_provider_by_service_id(user_service_id)
         for chat in user_chats:
             chat_info = await cls.load_info(chat_service_id=str(chat['service_id']))
             if 'error' in chat_info:
                 continue
 
-            chat_repository.update({'id': chat['id'], 'name': chat_info['title']})
+            await chat_repository.update({'id': chat['id'], 'name': chat_info['title']})

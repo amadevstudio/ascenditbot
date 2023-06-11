@@ -77,6 +77,7 @@ async def message_sender(
         # print(e.method)
         if 'message is not modified' in str(e):  # except utils.exceptions.MessageNotModified:
             return
+        await User.bot_is_blocked(chat_id)
 
         logger.error(e)
 
@@ -88,7 +89,7 @@ async def message_sender(
 
     except telegram_exceptions.TelegramForbiddenError:
         try:
-            User.bot_is_blocked(chat_id)
+            await User.bot_is_blocked(chat_id)
         except Exception as e:
             logger.error(e)
 
