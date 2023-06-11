@@ -63,8 +63,8 @@ class User(Service):
         return await user_repository.find_by({'service_id': str(user_chat_id)})
 
     @staticmethod
-    def update_email_by_service_id(user_chat_id: int, email: str) -> UserInterface:
-        return user_repository.update_by_service_id(str(user_chat_id), {'email': email})
+    async def update_email_by_service_id(user_chat_id: int, email: str) -> UserInterface:
+        return await user_repository.update_by_service_id(str(user_chat_id), {'email': email})
 
     @staticmethod
     def generate_referral_link(user_chat_id: int) -> str:
