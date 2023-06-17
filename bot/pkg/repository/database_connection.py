@@ -15,13 +15,16 @@ Cursor = asyncpg.connection.cursor.Cursor
 
 class Database(metaclass=Singleton):
     def __init__(self):
-        self.__max_connections = 1
+        self.__max_connections = 2
+        self.__min_alife_connections = 2
+        if self.__min_alife_connections > self.__max_connections:
+            raise ValueError("Min connections can't be greater than max")
         self.__connection_pool: asyncpg.Pool | None = None
 
     async def connect(self, config: dict[str, str] = None):
         if config is not None:
             self.__connection_pool = await asyncpg.create_pool(
-                min_size=1,
+                min_size=self.__min_alife_connections,
                 max_size=self.__max_connections,
                 host=config['host'],
                 database=config['database'],
@@ -46,10 +49,7 @@ class Database(metaclass=Singleton):
         """
         # query = query.replace("\r", "").replace("\n", "")
         query = query.strip().split("%s")
-        if len(query) == 1:
-            return query[0]
-
-        return ''.join([(r + f"${i + 1}") if r != "" else "" for i, r in enumerate(query)])
+        return ''.join([(r + f"${i + 1}") for i, r in enumerate(query[:-1])]) + query[-1]
 
     # Data helpers
 
@@ -94,6 +94,8 @@ class Database(metaclass=Singleton):
                     return await connection.fetchrow(query, *params)
                 elif cursor_method == 'fetchall':
                     return await connection.fetch(query, *params)
+                elif cursor_method == 'fetchval':
+                    return await connection.fetchval(query, *params)
         except Exception as e:
             logger.error(e)
             return None
@@ -103,8 +105,11 @@ class Database(metaclass=Singleton):
         return result if result is not None else []
 
     async def fetchone(self, query: str, params: tuple | dict | None = None):
-        result = await self.__query_executor('fetchone', query, params)
-        return result
+        return await self.__query_executor('fetchone', query, params)
+
+    async def fetchval(self, query: str, params: tuple | dict | None = None):
+        result = await self.__query_executor('fetchval', query, params)
+        return result if result is not None else []
 
     async def fetchmany(self, query: str, per: int, params: tuple | dict | None = None) \
             -> Generator[Dict, None, None]:
@@ -123,7 +128,9 @@ class Database(metaclass=Singleton):
                         break
 
     async def update_many(self, query: str, per: int, params: tuple | dict = None,
-                          connection: asyncpg.connection.Connection | None = None) -> Generator[Any, None, None]:
+                          connection: asyncpg.connection.Connection | None = None) \
+            -> list[Any]:
+            # -> Generator[list[Any], None, None]:
 
         query = self.__prepare_query(query)
 
@@ -142,27 +149,33 @@ class Database(metaclass=Singleton):
         try:
             if params is None:
                 params = []
-            cursor = await connection.cursor(query, *params)
+            # cursor = await connection.cursor(query, *params)
             while True:
-                result = await cursor.fetch(per)
-                yield result
+                result = await connection.fetch(query, *params)
+                return result
 
-                if not result:
-                    break
+                # result = await cursor.fetch(per)
+                # yield result
+
+                # if not result:
+                #     break
 
         except Exception as e:
             logger.error(e)
             # Rollback only if the transaction created locally
+            print("EEEEE", flush=True)
             if commit:
                 await transaction.rollback()
 
         else:
             # Commit only if the transaction created locally
+            print("TRRRRRRR", flush=True)
             if commit:
                 await transaction.commit()
 
         finally:
             # Release connection only if created locally
+            print("FFFFFFF", flush=True)
             if commit:
                 await self.__connection_pool.release(connection)
 
@@ -180,7 +193,6 @@ class Database(metaclass=Singleton):
 
         if returning is not None:
             query += f" RETURNING {returning}"
-
         try:
             row_returning = await connection.fetchrow(query, *params)
 

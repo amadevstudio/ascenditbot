@@ -35,18 +35,26 @@ async def subscription_handler_action():
         logger.info("Subscription Handler:", "Processing ", process_subscription_data)
 
         try:
+            print(process_subscription_data['user']['id'])
             user = process_subscription_data['user']
 
+            print(process_subscription_data['action'] == 'prolonged')
+            print(process_subscription_data['action'] == 'disabled')
             if process_subscription_data['action'] == 'prolonged':
                 message_text = await auto_update.prolonged_message(
                     user['id'], user['language_code'], process_subscription_data['prolongable'])
 
             elif process_subscription_data['action'] == 'disabled':
+                print("!!!!!Disabling")
                 message_text = await auto_update.disabled_message(
                     user['id'], user['language_code'])
+                print(">??>>>>Disabled")
 
             else:
                 message_text = None
+
+            print("Action is done")
+
 
             if message_text is not None:
                 message_structures = [{
