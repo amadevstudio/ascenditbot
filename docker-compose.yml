@@ -18,8 +18,8 @@ services:
       - env/.env.dev
       - env/.env.local
     depends_on:
-      - storage
-    depends_on:
+      storage:
+        condition: service_started
       db:
         condition: service_healthy
 
