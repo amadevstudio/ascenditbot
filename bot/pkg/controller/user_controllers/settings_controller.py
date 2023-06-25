@@ -27,9 +27,9 @@ async def email(params: ControllerParams):
     call, message = params['call'], params['message']
 
     if not is_call_or_command(call, message) and len(message.text) != 0:
-        User.update_email_by_service_id(message.chat.id, message.text)
+        await User.update_email_by_service_id(message.chat.id, message.text)
 
-    user = User.find_by_service_id(message.chat.id)
+    user = await User.find_by_service_id(message.chat.id)
 
     message_structures = [{
         'type': 'text',

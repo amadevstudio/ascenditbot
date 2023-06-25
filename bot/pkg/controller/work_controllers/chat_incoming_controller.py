@@ -19,12 +19,12 @@ async def incoming_chat_message(message: telegram_types.Message):
     chat_service_id: int = message.chat.id
 
     # Validate chat
-    chat_data = Chat.find_by({'service_id': str(message.chat.id)})
+    chat_data = await Chat.find_by({'service_id': str(message.chat.id)})
     if chat_data is None or chat_data['disabled']:
         return
 
     # Validate allowed to write
-    allowed: bool = AllowedUser.can_write_to_chat(nickname, str(chat_service_id))
+    allowed: bool = await AllowedUser.can_write_to_chat(nickname, str(chat_service_id))
     if allowed:
         return
 

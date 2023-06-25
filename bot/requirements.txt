@@ -3,6 +3,7 @@ aiogram==3.0.0b7
 redis
 
 # psycopg2-binary # Postgres connection
-psycopg2
+# psycopg2
+asyncpg
 
 pip-upgrader

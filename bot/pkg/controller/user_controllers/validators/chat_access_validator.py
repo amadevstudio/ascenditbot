@@ -9,7 +9,7 @@ async def chat_access_validator(call: telegram_types.CallbackQuery, message: tel
     channel_state_data = state_data.get_state_data(call, message, 'chat')
     chat_service_id = channel_state_data.get(
         'service_id',
-        Chat.find(channel_state_data['id']).get('service_id', None))
+        (await Chat.find(channel_state_data['id'])).get('service_id', None))
 
     if chat_service_id is None:
         validate_result = {'error': 'not_found'}

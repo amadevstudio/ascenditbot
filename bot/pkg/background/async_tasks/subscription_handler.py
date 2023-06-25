@@ -31,18 +31,18 @@ async def subscription_handler():
 
 async def subscription_handler_action():
     logger.info("Subscription Handler: action part")
-    for process_subscription_data in Tariff.process_all_subscription_validity():
+    async for process_subscription_data in Tariff.process_all_subscription_validity():
         logger.info("Subscription Handler:", "Processing ", process_subscription_data)
 
         try:
             user = process_subscription_data['user']
 
             if process_subscription_data['action'] == 'prolonged':
-                message_text = auto_update.prolonged_message(
+                message_text = await auto_update.prolonged_message(
                     user['id'], user['language_code'], process_subscription_data['prolongable'])
 
             elif process_subscription_data['action'] == 'disabled':
-                message_text = auto_update.disabled_message(
+                message_text = await auto_update.disabled_message(
                     user['id'], user['language_code'])
 
             else:
@@ -64,13 +64,13 @@ async def subscription_handler_action():
 async def subscription_handler_notifier():
     notify_about_days = 1
     logger.info(f"Subscription Handler, notify part with days: {notify_about_days}")
-    for user in Tariff.users_with_remaining_days(notify_about_days):
+    async for user in Tariff.users_with_remaining_days(notify_about_days):
         logger.info("Subscription Handler:", f"Notifying {user['id']}")
 
         try:
             await message_sender(int(user['service_id']), resending=True, message_structures=[{
                 'type': 'text',
-                'text': auto_update.remaining_days_left_message(
+                'text': await auto_update.remaining_days_left_message(
                     user['id'], user['language_code'], notify_about_days),
                 'parse_mode': 'HTML'
             }])

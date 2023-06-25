@@ -1,61 +1,57 @@
+import asyncio
+import re
 import time
 from datetime import datetime, timezone
-from typing import Any, Literal, Generator
+from typing import Any, Literal, Generator, Dict
 
-import psycopg2
-from psycopg2 import pool
-from psycopg2.extras import RealDictCursor
+import asyncpg
 
 from lib.python.singleton import Singleton
 from pkg.system.logger import logger
 
+Connection = asyncpg.connection.Connection
+Cursor = asyncpg.connection.cursor.Cursor
+
 
 class Database(metaclass=Singleton):
-    def __init__(self):
-        self.connection_pool: psycopg2.pool.SimpleConnectionPool | None = None
+    def __init__(self, max_connections=10, min_alive_connections=5):
+        self.__max_connections = max_connections
+        self.__min_alive_connections = min_alive_connections
+        if self.__min_alive_connections > self.__max_connections:
+            raise ValueError("Min connections can't be greater than max")
+        self.__connection_pool: asyncpg.Pool | None = None
 
-    def connect(self, config: dict[str, str] = None):
+    async def connect(self, config: dict[str, str] = None):
         if config is not None:
-            self.connection_pool = psycopg2.pool.SimpleConnectionPool(
-                minconn=1,
-                maxconn=20,
+            self.__connection_pool = await asyncpg.create_pool(
+                min_size=self.__min_alive_connections,
+                max_size=self.__max_connections,
                 host=config['host'],
                 database=config['database'],
                 user=config['user'],
                 password=config['password'])
         else:
-            self.connection_pool = psycopg2.pool.SimpleConnectionPool(minconn=2, maxconn=10)
+            raise Exception("Database config is None")
 
-    def build_connection(self) -> psycopg2.extensions.connection:
-        while True:
-            try:
-                return self.connection_pool.getconn()
-            except psycopg2.pool.PoolError:
-                time.sleep(1)  # TODO: migrate to asyncio wrapper?
+    def get_connection(self) -> asyncpg.pool.PoolAcquireContext:
+        # while True:
+            # try:
+        return self.__connection_pool.acquire()
+            # except asyncpg.exceptions. as e:
+            #     logger.warning("Not enough connections:", e)
+            #     asyncio.sleep(1)
 
     @staticmethod
-    def __build_cursor(connection: psycopg2.extensions.connection) -> psycopg2.extensions.cursor:
-        return connection.cursor(cursor_factory=RealDictCursor)
+    def __prepare_query(query: str):
+        """
+        "  select %s from %s  " -> "select $1 from $2"
+        @param query: Sql query
+        """
+        # query = query.replace("\r", "").replace("\n", "")
+        query = query.strip().split("%s")
+        return ''.join([(r + f"${i + 1}") for i, r in enumerate(query[:-1])]) + query[-1]
 
-    def close(self, connection: psycopg2.extensions.connection):
-        try:
-            self.connection_pool.putconn(connection)
-        except Exception as e:
-            logger.error(e)
-
-    def commit_and_close(self, connection: psycopg2.extensions.connection):
-        try:
-            connection.commit()
-            self.connection_pool.putconn(connection)
-        except Exception as e:
-            logger.error(e)
-
-    def rollback_and_close(self, connection: psycopg2.extensions.connection):
-        try:
-            connection.rollback()
-            self.connection_pool.putconn(connection)
-        except Exception as e:
-            logger.error(e)
+    # Data helpers
 
     @staticmethod
     def __preset_key_fields(key_fields: list[str] | None):
@@ -74,7 +70,7 @@ class Database(metaclass=Singleton):
     @staticmethod
     def inject_updated_at(model):
         utc_dt = datetime.now(timezone.utc)  # UTC time
-        model['updated_at'] = utc_dt.astimezone()
+        model['updated_at'] = utc_dt.replace(tzinfo=None)
         return model
 
     @staticmethod
@@ -83,105 +79,130 @@ class Database(metaclass=Singleton):
         model['created_at'] = model['updated_at']
         return model
 
-    def __query_executor(
-            self, cursor_method: Literal['fetchone', 'fetchall'], query: str, params: tuple | dict
+    # Query executors
+
+    async def __query_executor(
+            self, cursor_method: Literal['fetchone', 'fetchall'], query: str, params: tuple | dict | None
     ) -> Any:  # List[Dict], Dict, Cursor, None,
-        connection = self.build_connection()
         try:
-            with self.__build_cursor(connection) as cursor:
-                cursor.execute(query, params)
+            query = self.__prepare_query(query)
+            connection: asyncpg.connection.Connection
+            if params is None:
+                params = []
+            async with self.get_connection() as connection:
                 if cursor_method == 'fetchone':
-                    return cursor.fetchone()
+                    return await connection.fetchrow(query, *params)
                 elif cursor_method == 'fetchall':
-                    return cursor.fetchall()
+                    return await connection.fetch(query, *params)
+                elif cursor_method == 'fetchval':
+                    return await connection.fetchval(query, *params)
         except Exception as e:
             logger.error(e)
-            if cursor is not None:
-                connection.rollback()
             return None
-        finally:
-            self.close(connection)
 
-    def fetchall(self, query: str, params: tuple | dict = None):
-        result = self.__query_executor('fetchall', query, params)
+    async def fetchall(self, query: str, params: tuple | dict | None = None):
+        result = await self.__query_executor('fetchall', query, params)
         return result if result is not None else []
 
-    def fetchone(self, query: str, params: tuple | dict = None):
-        result = self.__query_executor('fetchone', query, params)
-        return result
+    async def fetchone(self, query: str, params: tuple | dict | None = None):
+        return await self.__query_executor('fetchone', query, params)
 
-    def fetchmany(self, query: str, per: int, params: tuple | dict = None):
-        connection = self.build_connection()
-        with self.__build_cursor(connection) as cursor:
-            cursor.execute(query, params)
-            while True:
-                result = cursor.fetchmany(per)
-                yield result
-                if not result:
-                    self.close(connection)
-                    break
+    async def fetchval(self, query: str, params: tuple | dict | None = None):
+        result = await self.__query_executor('fetchval', query, params)
+        return result if result is not None else []
 
-    def update_many(self, query: str, per: int, params: tuple | dict = None,
-                    connection: psycopg2.extensions.connection | None = None) -> Generator[Any, None, None]:
-        if connection is None:
-            commit = True
-            connection = self.build_connection()
-        else:
-            commit = False
-
-        try:
-            with self.__build_cursor(connection) as cursor:
-                cursor.execute(query, params)
+    async def fetchmany(self, query: str, per: int, params: tuple | dict | None = None) \
+            -> Generator[Dict, None, None]:
+        connection: asyncpg.connection.Connection
+        cursor: asyncpg.connection.cursor.Cursor
+        query = self.__prepare_query(query)
+        async with self.get_connection() as connection:
+            async with connection.transaction():
+                if params is None:
+                    params = []
+                cursor = await connection.cursor(query, *params)
                 while True:
-                    result = cursor.fetchmany(per)
+                    result = await cursor.fetch(per)
                     yield result
                     if not result:
                         break
 
-        except psycopg2.DatabaseError as e:
-            logger.error(e)
-            if commit:
-                self.rollback_and_close(connection)
-            return None
-        finally:
-            if commit:
-                self.commit_and_close(connection)
+    async def update_many(self, query: str, per: int, params: tuple | dict = None,
+                          connection: asyncpg.connection.Connection | None = None) \
+            -> list[Any]:
 
-    def execute_single_model(
-            self, query: str, params: tuple = None, returning: str = None,
-            connection: psycopg2.extensions.connection | None = None) -> dict | None:
+        query = self.__prepare_query(query)
 
+        # transaction: asyncpg.connection.transaction.Transaction | None = None
+
+        # If the connection is not created outside, create it and transaction
         if connection is None:
             commit = True
-            connection = self.build_connection()
+            connection = await self.get_connection()
+            # transaction = connection.transaction()
+            # await transaction.start()
+        else:
+            commit = False
+        cursor: asyncpg.connection.cursor.Cursor
+
+        try:
+            if params is None:
+                params = []
+            # cursor = await connection.cursor(query, *params)
+            # while True:
+            #     result = await cursor.fetch(per)
+            #     yield result
+            #
+            #     if not result:
+            #         break
+            return await connection.fetch(query, *params)
+
+        except Exception as e:
+            logger.error(e)
+            # # Rollback only if the transaction created locally
+            # if commit:
+            #     await transaction.rollback()
+
+        # else:
+        #     # Commit only if the transaction created locally
+        #     if commit:
+        #         await transaction.commit()
+
+        finally:
+            # Release connection only if created locally
+            if commit:
+                await self.__connection_pool.release(connection)
+
+    async def execute_single_model(
+            self, query: str, params: tuple = None, returning: str = None,
+            connection: asyncpg.connection.Connection | None = None) -> dict | None:
+        query = self.__prepare_query(query)
+
+        # If the connection is not created outside, create it and transaction
+        if connection is None:
+            commit = True
+            connection = await self.get_connection()
         else:
             commit = False
 
         if returning is not None:
             query += f" RETURNING {returning}"
-
         try:
-            with self.__build_cursor(connection) as cursor:
-                cursor.execute(query, params)
+            row_returning = await connection.fetchrow(query, *params)
 
-                if returning is not None:
-                    row_returning = cursor.fetchone()
-                else:
-                    row_returning = None
+            if returning is None:
+                row_returning = None
 
-                return row_returning
+            return row_returning
 
-        except psycopg2.DatabaseError as e:
+        except Exception as e:
             logger.error(e)
-            if commit:
-                self.rollback_and_close(connection)
-            return None
 
         finally:
             if commit:
-                self.commit_and_close(connection)
+                await self.__connection_pool.release(connection)
 
-    def find_model(self, model_name: str, model_data: dict[str, Any]):
+    async def find_model(self, model_name: str, model_data: dict[str, Any]):
         key_fields = list(model_data.keys())
 
         filled_key_fields = Database.__preset_key_fields(key_fields)
@@ -193,11 +214,11 @@ class Database(metaclass=Singleton):
 
         key_fields_values = Database.__key_fields_values(filled_key_fields, model_data)
 
-        return self.fetchone(query, tuple(key_fields_values))
+        return await self.fetchone(query, tuple(key_fields_values))
 
-    def insert_model(  # or update on conflict
+    async def insert_model(  # or update on conflict
             self, model_name: str, model_data: dict[str, Any],
-            connection: psycopg2.extensions.connection | None = None,
+            connection: asyncpg.connection.Connection | None = None,
             conflict_unique_fields: list[str] | None = None):
 
         model_data = self.__class__.inject_timestamps(model_data)
@@ -206,7 +227,7 @@ class Database(metaclass=Singleton):
             INSERT INTO {model_name} ({columns}) VALUES ({sss})
         """.format(
             model_name=model_name, columns=(', '.join(model_data.keys())),
-            sss=(', '.join(["%s" for _ in range(0, len(model_data))])))
+            sss=(', '.join([f"%s" for _ in range(0, len(model_data))])))
 
         query_values = tuple(model_data.values())
 
@@ -218,11 +239,11 @@ class Database(metaclass=Singleton):
                 columns_equal_values=(', '.join([f"{c} = %s" for c in model_data.keys()])))
             query_values *= 2
 
-        return self.execute_single_model(query, query_values, returning='*', connection=connection)
+        return await self.execute_single_model(query, query_values, returning='*', connection=connection)
 
-    def update_model(
+    async def update_model(
             self, model_name: str, model_data: dict[str, Any], key_fields: list[str] | None = None,
-            connection: psycopg2.extensions.connection | None = None):
+            connection: asyncpg.connection.Connection | None = None):
         model_data = self.__class__.inject_updated_at(model_data)
 
         # Set key fields as ['id'] if empty
@@ -244,12 +265,12 @@ class Database(metaclass=Singleton):
             key_fields=(' AND '.join([f"{c} = %s" for c in filled_key_fields]))
         )
 
-        return self.execute_single_model(
+        return await self.execute_single_model(
             query, tuple(model_data_without_key_fields.values()) + tuple(key_fields_values), returning='*',
             connection=connection)
 
-    def delete_model(self, model_name: str, model_keys_data: dict[str, Any],
-                     connection: psycopg2.extensions.connection | None = None):
+    async def delete_model(self, model_name: str, model_keys_data: dict[str, Any],
+                           connection: asyncpg.connection.Connection | None = None):
         filled_key_fields = Database.__preset_key_fields(list(model_keys_data.keys()))
 
         query = """
@@ -261,20 +282,5 @@ class Database(metaclass=Singleton):
 
         key_fields_values = Database.__key_fields_values(filled_key_fields, model_keys_data)
 
-        return self.execute_single_model(
+        return await self.execute_single_model(
             query, tuple(key_fields_values), returning='*', connection=connection)
-
-
-class DatabaseContextManager:
-    def __init__(self, db: Database):
-        self.db = db
-
-    def __enter__(self):
-        self.connection = self.db.build_connection()
-        return self.connection
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_val:  # Error occurred
-            self.db.rollback_and_close(connection=self.connection)
-        else:
-            self.db.commit_and_close(connection=self.connection)

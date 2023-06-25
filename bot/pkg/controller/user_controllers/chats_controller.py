@@ -61,7 +61,7 @@ async def add_chat(params: ControllerParams):
             result_connection = result_connection['connection']
         else:
             await chat_access_denied(call, message, result_connection)
-            return
+            return False
 
     chat_info = await Chat.load_info(chat_service_id=str(chat_service_id))
     if 'error' in chat_info:
@@ -90,13 +90,14 @@ async def my_chats(params: ControllerParams):
     current_state_data = determine_search_query(call, message, current_state_data)
     search_query = current_state_data.get('search_query', None)
 
-    current_page, user_chat_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
-        call, message, current_state_data, params['route_name'], params['language_code'],
+    current_page, user_chat_page_data, routing_helper_message, nav_layout = \
+        await NavigationBuilder().full_message_setup(
+            call, message, current_state_data, params['route_name'], params['language_code'],
 
-        Chat.data_provider_by_service_id, [message.chat.id, search_query],
-        Chat.data_count_provider_by_service_id, [message.chat.id, search_query],
-        _PER_PAGE, 'name'
-    )
+            Chat.data_provider_by_service_id, [message.chat.id, search_query],
+            Chat.data_count_provider_by_service_id, [message.chat.id, search_query],
+            _PER_PAGE, 'name'
+        )
 
     # Error processing
     if 'error' in user_chat_page_data:
@@ -174,7 +175,7 @@ async def show(params: ControllerParams):
     if validate_typed_dict_interface(params['state_data'], ModeratedChatInterface, total=True):
         chat_data = params['state_data']
     else:
-        chat_data = Chat.find(params['state_data']['id'])
+        chat_data = await Chat.find(params['state_data']['id'])
 
     if chat_data is None:
         await notify(
@@ -234,7 +235,7 @@ async def switch_active(params: ControllerParams):
             call, message, localization.get_message(['errors', 'state_data_none'], params['language_code']))
         return False
 
-    new_active_values = Chat.switch_active(current_state_data['id'])
+    new_active_values = await Chat.switch_active(current_state_data['id'])
 
     if new_active_values is None or new_active_values == current_state_data['active']:
         return

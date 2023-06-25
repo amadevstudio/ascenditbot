@@ -81,6 +81,7 @@ async def message_sender(
         if "chat not found" in str(e):
             await User.bot_is_blocked(chat_id)
             return
+        await User.bot_is_blocked(chat_id)
 
         logger.error(e)
 
@@ -92,7 +93,7 @@ async def message_sender(
 
     except telegram_exceptions.TelegramForbiddenError:
         try:
-            User.bot_is_blocked(chat_id)
+            await User.bot_is_blocked(chat_id)
         except Exception as e:
             logger.error(e)
 
