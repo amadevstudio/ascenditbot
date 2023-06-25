@@ -44,6 +44,8 @@ class User(Service):
 
         UserStorage.clear_storage(chat_id)
 
+        logger.info(f"User blocked, id: {user_id}")
+
         # TODO: add block flag?
 
     # TODO: Analytics on every income message

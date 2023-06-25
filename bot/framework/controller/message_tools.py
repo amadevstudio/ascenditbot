@@ -75,7 +75,11 @@ async def message_sender(
 
     except telegram_exceptions.TelegramBadRequest as e:
         # print(e.method)
-        if 'message is not modified' in str(e):  # except utils.exceptions.MessageNotModified:
+        if "message is not modified" in str(e):  # except utils.exceptions.MessageNotModified:
+            return
+
+        if "chat not found" in str(e):
+            await User.bot_is_blocked(chat_id)
             return
 
         logger.error(e)
