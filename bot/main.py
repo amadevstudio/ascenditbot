@@ -29,7 +29,6 @@ database_configuration = {
     "user": environment["POSTGRES_USER"],
     "password": environment["POSTGRES_PASSWORD"]
 }
-database_connection = Database().connect(database_configuration)
 
 NavigationBuilder(localization.get_message, ["navigation_builder"])
 
@@ -38,6 +37,10 @@ init_routes(dp)
 
 
 async def run():
+    max_connections, min_alive_connections = (10, 5) if environment["ENVIRONMENT"] == "production" else (1, 1)
+    await Database(max_connections=max_connections, min_alive_connections=min_alive_connections)\
+        .connect(database_configuration)
+
     server = PaymentServer(3000, list(payment_processors.values()))
     await before_bot_startup()
 

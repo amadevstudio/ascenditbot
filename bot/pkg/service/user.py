@@ -21,28 +21,30 @@ class BeginParamsInterface(TypedDict, total=False):
 
 class User(Service):
     @staticmethod
-    def register(chat_id: int, language_code: str, initial_data: BeginParamsInterface) -> RegistrationResultInterface:
+    async def register(chat_id: int, language_code: str, initial_data: BeginParamsInterface) -> RegistrationResultInterface:
         user: UserInterface = {"service_id": str(chat_id), "language_code": language_code}
 
-        registration_result = user_repository.register_or_update_by_service_id(
+        registration_result = await user_repository.register_or_update_by_service_id(
             user, referral_service_id=initial_data['referral'])
 
         result: RegistrationResultInterface = {'user': registration_result['user']}
 
         if registration_result['is_new'] and registration_result['user']['ref_id'] is not None:
-            result = {**result, 'refer': User.get_by_id(registration_result['user']['ref_id'])}
+            result = {**result, 'refer': await User.get_by_id(registration_result['user']['ref_id'])}
 
-        tariff_initiation_result = Tariff.initiate(registration_result['user']['id'])
+        tariff_initiation_result = await Tariff.initiate(registration_result['user']['id'])
         result = {**result, 'subscription': tariff_initiation_result}
 
         return result
 
     @classmethod
-    def bot_is_blocked(cls, chat_id: int):
-        user_id = User.get_id_by_service_id(chat_id)
-        Tariff.change(user_id, 0, force=True)
+    async def bot_is_blocked(cls, chat_id: int):
+        user_id = await User.get_id_by_service_id(chat_id)
+        await Tariff.change(user_id, 0, force=True)
 
         UserStorage.clear_storage(chat_id)
+
+        logger.info(f"User blocked, id: {user_id}")
 
         # TODO: add block flag?
 
@@ -51,20 +53,20 @@ class User(Service):
     #     pass
 
     @staticmethod
-    def get_by_id(user_id: int) -> UserInterface | None:
-        return user_repository.find_by({'id': user_id})
+    async def get_by_id(user_id: int) -> UserInterface | None:
+        return await user_repository.find_by({'id': user_id})
 
     @staticmethod
-    def get_id_by_service_id(user_chat_id: int) -> int | None:
-        return user_repository.get_id_by_service_id(str(user_chat_id))
+    async def get_id_by_service_id(user_chat_id: int) -> int | None:
+        return await user_repository.get_id_by_service_id(str(user_chat_id))
 
     @staticmethod
-    def find_by_service_id(user_chat_id: int) -> UserInterface | None:
-        return user_repository.find_by({'service_id': str(user_chat_id)})
+    async def find_by_service_id(user_chat_id: int) -> UserInterface | None:
+        return await user_repository.find_by({'service_id': str(user_chat_id)})
 
     @staticmethod
-    def update_email_by_service_id(user_chat_id: int, email: str) -> UserInterface:
-        return user_repository.update_by_service_id(str(user_chat_id), {'email': email})
+    async def update_email_by_service_id(user_chat_id: int, email: str) -> UserInterface:
+        return await user_repository.update_by_service_id(str(user_chat_id), {'email': email})
 
     @staticmethod
     def generate_referral_link(user_chat_id: int) -> str:

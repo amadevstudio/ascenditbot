@@ -15,7 +15,7 @@ async def start(params: ControllerParams):
     if call is None:
         await message.reply('👋')
         initial_data = User.analyze_initial_data(message.text)
-        registration_result = User.register(message.chat.id, params['language_code'], initial_data)
+        registration_result = await User.register(message.chat.id, params['language_code'], initial_data)
 
     markup = [[{
         'text': localization.get_message(['welcome', 'lets_begin'], params['language_code']),
@@ -49,18 +49,18 @@ async def menu(params: ControllerParams):
 
     answer_messages = []
 
-    user_id = User.get_id_by_service_id(message.chat.id)
+    user_id = await User.get_id_by_service_id(message.chat.id)
 
-    user_tariff_info = Tariff.user_tariff_info(user_id)
+    user_tariff_info = await Tariff.user_tariff_info(user_id)
 
-    trial_info = Tariff.activate_trial(user_tariff_info)
+    trial_info = await Tariff.activate_trial(user_tariff_info)
     if trial_info is not None:
         answer_messages.append({
             'type': 'text',
             'text': localization.get_message(['subscription', 'free_trial'], params['language_code']),
             'parse_mode': 'HTML'
         })
-        user_tariff_info = Tariff.user_tariff_info(user_id)
+        user_tariff_info = await Tariff.user_tariff_info(user_id)
 
     answer_messages.append({
         'type': 'text',

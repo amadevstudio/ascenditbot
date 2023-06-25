@@ -1,8 +1,5 @@
 import sys
 import os
-import datetime
-# import queue
-# import threading
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from typing import Literal
@@ -26,14 +23,14 @@ class Logger:
         if os.environ['ENVIRONMENT'] == "development":
             logging.basicConfig(
                 encoding='utf-8',
-                format='%(asctime)s %(levelname)-8s %(message)s',
+                format='%(asctime)s %(levelname)-8s {%(pathname)s:%(lineno)d}: %(message)s',
                 datefmt='%Y-%m-%d %H:%M:%S %z')  # , level=logging.DEBUG)
         else:
             file_path = os.path.join(self.__logs_folder, self.__file)
             file_handler = TimedRotatingFileHandler(file_path, when='D', interval=1)
             logging.basicConfig(
                 encoding='utf-8',
-                format='%(asctime)s %(levelname)-8s %(message)s',
+                format='%(asctime)s %(levelname)-8s {%(pathname)s:%(lineno)d}: %(message)s',
                 level='INFO',
                 handlers=[file_handler],
                 datefmt='%Y-%m-%d %H:%M:%S %z')

@@ -41,7 +41,7 @@ async def add_to_chat_whitelist(params: ControllerParams):
 
     chat_state_data = state_data.get_local_state_data(message, 'chat')
 
-    result_connection = Chat.add_to_whitelist(chat_state_data['id'], user_nickname)
+    result_connection = await Chat.add_to_whitelist(chat_state_data['id'], user_nickname)
 
     if 'error' in result_connection:
         error_trace = ['errors', result_connection['error']]  # == 'unexpected'
@@ -76,13 +76,14 @@ async def chat_whitelist(params: ControllerParams):
 
     chat_info = await Chat.load_info(str(chat['service_id']))
 
-    current_page, chat_whitelist_page_data, routing_helper_message, nav_layout = NavigationBuilder().full_message_setup(
-        call, message, current_state_data, params['route_name'], params['language_code'],
+    current_page, chat_whitelist_page_data, routing_helper_message, nav_layout = \
+        await NavigationBuilder().full_message_setup(
+            call, message, current_state_data, params['route_name'], params['language_code'],
 
-        Chat.whitelist_data_provider, [chat['id'], search_query],
-        Chat.whitelist_data_count_provider, [chat['id'], search_query],
-        _PER_PAGE, 'nickname'
-    )
+            Chat.whitelist_data_provider, [chat['id'], search_query],
+            Chat.whitelist_data_count_provider, [chat['id'], search_query],
+            _PER_PAGE, 'nickname'
+        )
 
     # Error processing
     if 'error' in chat_whitelist_page_data:
@@ -168,7 +169,7 @@ async def show(params: ControllerParams):
     if validate_typed_dict_interface(params['state_data'], AllowedUserInterface, total=True):
         allowed_user_data = params['state_data']
     else:
-        allowed_user_data = AllowedUser.find(params['state_data']['id'])
+        allowed_user_data = await AllowedUser.find(params['state_data']['id'])
 
     if allowed_user_data is None:
         await notify(
@@ -222,7 +223,7 @@ async def switch_active(params: ControllerParams):
         await raise_error(None, message, 'state_data_none')
         return
 
-    new_active_values = AllowedUser.switch_active(current_state_data['id'])
+    new_active_values = await AllowedUser.switch_active(current_state_data['id'])
 
     if new_active_values is None or new_active_values == current_state_data['active']:
         return
@@ -244,7 +245,7 @@ async def delete(params: ControllerParams):
 
     # Already deleting
     if 'deleting' in current_state_data:
-        deleted_id = AllowedUser.delete(current_state_data['id'])
+        deleted_id = await AllowedUser.delete(current_state_data['id'])
         if deleted_id is not None:
             await params['go_back_action'](call)
             return

@@ -14,7 +14,7 @@ from project import constants
 async def page(params: ControllerParams):
     call, message = params['call'], params['message']
 
-    user_id = User.get_id_by_service_id(message.chat.id)
+    user_id = await User.get_id_by_service_id(message.chat.id)
 
     tariff_message = localization.get_message(['subscription', 'show', 'text'], params['language_code'])
     tariff_message += "\n\n" + localization.get_message(
@@ -25,7 +25,7 @@ async def page(params: ControllerParams):
         ['subscription', 'referral'], params['language_code'], referral_link=referral_link)
 
     tariff_message += "\n\n" + localization.get_message(['tariffs', 'current'], params['language_code'])
-    user_tariff_info = Tariff.user_tariff_info(user_id)
+    user_tariff_info = await Tariff.user_tariff_info(user_id)
     tariff_message += "\n\n" + build_subscription_info(user_tariff_info, params['language_code'])
 
     reply_markup = []
@@ -52,10 +52,10 @@ async def page(params: ControllerParams):
 async def tariffs(params: ControllerParams):
     call, message = params['call'], params['message']
 
-    user_id = User.get_id_by_service_id(message.chat.id)
-    user_tariff_info = Tariff.user_tariff_info(user_id)
+    user_id = await User.get_id_by_service_id(message.chat.id)
+    user_tariff_info = await Tariff.user_tariff_info(user_id)
 
-    available_tariffs = Tariff.tariffs_info(user_id)
+    available_tariffs = await Tariff.tariffs_info(user_id)
 
     tariffs_message = localization.get_message(['tariffs', 'index'], params['language_code'])
     reply_markup = []
@@ -102,13 +102,13 @@ async def change_tariff(params: ControllerParams):
 
     chosen_tariff_id = current_state_data.get('id', None)
 
-    user_id = User.get_id_by_service_id(message.chat.id)
+    user_id = await User.get_id_by_service_id(message.chat.id)
 
     if user_id is None:
         await raise_error(call, message, 'user_none')
         return
 
-    user_tariff_connection = Tariff.change(user_id, chosen_tariff_id)
+    user_tariff_connection = await Tariff.change(user_id, chosen_tariff_id)
     if 'error' in user_tariff_connection:
         if user_tariff_connection['error'] in ['currency_mess']:
             await raise_error(call, message, 'unexpected')
@@ -127,11 +127,11 @@ async def change_tariff(params: ControllerParams):
 async def fund_balance_page(params: ControllerParams):
     call, message = params['call'], params['message']
 
-    user = User.find_by_service_id(message.chat.id)
+    user = await User.find_by_service_id(message.chat.id)
     user_id = user['id']
 
-    user_currency_code = Tariff.currency_code_for_user(user_id)
-    available_tariffs = Tariff.tariffs_info(user_id)
+    user_currency_code = await Tariff.currency_code_for_user(user_id)
+    available_tariffs = await Tariff.tariffs_info(user_id)
 
     message_text = localization.get_message(
         ['subscription', 'fund', 'page'], params['language_code'], email=user['email'])
@@ -187,8 +187,8 @@ async def fund_link_page(params: ControllerParams):
             ['subscription', 'fund', 'errors', 'wrong_amount'], params['language_code']))
         return False
 
-    user = User.find_by_service_id(message.chat.id)
-    user_currency_code = Tariff.currency_code_for_user(user['id'])
+    user = await User.find_by_service_id(message.chat.id)
+    user_currency_code = await Tariff.currency_code_for_user(user['id'])
 
     fund_link = Payment.generate_payment_link(amount, user, user_currency_code, fund_service)
     if isinstance(fund_link, dict) and 'error' in fund_link:
