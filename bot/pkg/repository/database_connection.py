@@ -14,17 +14,17 @@ Cursor = asyncpg.connection.cursor.Cursor
 
 
 class Database(metaclass=Singleton):
-    def __init__(self):
-        self.__max_connections = 2
-        self.__min_alife_connections = 2
-        if self.__min_alife_connections > self.__max_connections:
+    def __init__(self, max_connections=10, min_alive_connections=5):
+        self.__max_connections = max_connections
+        self.__min_alive_connections = min_alive_connections
+        if self.__min_alive_connections > self.__max_connections:
             raise ValueError("Min connections can't be greater than max")
         self.__connection_pool: asyncpg.Pool | None = None
 
     async def connect(self, config: dict[str, str] = None):
         if config is not None:
             self.__connection_pool = await asyncpg.create_pool(
-                min_size=self.__min_alife_connections,
+                min_size=self.__min_alive_connections,
                 max_size=self.__max_connections,
                 host=config['host'],
                 database=config['database'],
@@ -35,11 +35,11 @@ class Database(metaclass=Singleton):
 
     def get_connection(self) -> asyncpg.pool.PoolAcquireContext:
         # while True:
-        #     try:
+            # try:
         return self.__connection_pool.acquire()
-        #     except asyncpg.exceptions.PoolError as e:
-        #         logger.warning("Not enough connections:", e)
-        #         asyncio.sleep(1)
+            # except asyncpg.exceptions. as e:
+            #     logger.warning("Not enough connections:", e)
+            #     asyncio.sleep(1)
 
     @staticmethod
     def __prepare_query(query: str):
@@ -130,18 +130,17 @@ class Database(metaclass=Singleton):
     async def update_many(self, query: str, per: int, params: tuple | dict = None,
                           connection: asyncpg.connection.Connection | None = None) \
             -> list[Any]:
-            # -> Generator[list[Any], None, None]:
 
         query = self.__prepare_query(query)
 
-        transaction: asyncpg.connection.transaction.Transaction | None = None
+        # transaction: asyncpg.connection.transaction.Transaction | None = None
 
         # If the connection is not created outside, create it and transaction
         if connection is None:
             commit = True
             connection = await self.get_connection()
-            transaction = connection.transaction()
-            await transaction.start()
+            # transaction = connection.transaction()
+            # await transaction.start()
         else:
             commit = False
         cursor: asyncpg.connection.cursor.Cursor
@@ -150,32 +149,27 @@ class Database(metaclass=Singleton):
             if params is None:
                 params = []
             # cursor = await connection.cursor(query, *params)
-            while True:
-                result = await connection.fetch(query, *params)
-                return result
-
-                # result = await cursor.fetch(per)
-                # yield result
-
-                # if not result:
-                #     break
+            # while True:
+            #     result = await cursor.fetch(per)
+            #     yield result
+            #
+            #     if not result:
+            #         break
+            return await connection.fetch(query, *params)
 
         except Exception as e:
             logger.error(e)
-            # Rollback only if the transaction created locally
-            print("EEEEE", flush=True)
-            if commit:
-                await transaction.rollback()
+            # # Rollback only if the transaction created locally
+            # if commit:
+            #     await transaction.rollback()
 
-        else:
-            # Commit only if the transaction created locally
-            print("TRRRRRRR", flush=True)
-            if commit:
-                await transaction.commit()
+        # else:
+        #     # Commit only if the transaction created locally
+        #     if commit:
+        #         await transaction.commit()
 
         finally:
             # Release connection only if created locally
-            print("FFFFFFF", flush=True)
             if commit:
                 await self.__connection_pool.release(connection)
 

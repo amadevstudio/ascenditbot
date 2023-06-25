@@ -4,6 +4,7 @@ from typing import TypedDict, Generator, Literal, List
 from framework.repository.database_executor import databaseExecutor
 from pkg.repository import database_helpers
 from pkg.repository.database_connection import Database, Connection
+from pkg.system.logger import logger
 from project import constants
 from project.constants import default_currency
 from project.types import TariffInterface, UserTariffConnectionInterface, TariffInfoInterface, UserInterface, \
@@ -191,8 +192,8 @@ async def chats_number_satisfactory(chat_id: str, strong: bool = True) -> bool:
     """, (chat_id,)))['satisfies']
 
 
-async def process_subscriptions() -> Generator[ProcessSubscriptionInterface, None, None]:
-    users_set: List[ProlongableUserWithTariffIdInterface]
+async def process_subscriptions(update_batch: int = 1000) -> Generator[ProcessSubscriptionInterface, None, None]:
+    users_set: List[ProlongableUserWithTariffIdInterface | None]
     tariffs = await tariffs_model_hash()
 
     prolongable_conditions = ["<", ">="]
@@ -204,56 +205,44 @@ async def process_subscriptions() -> Generator[ProcessSubscriptionInterface, Non
     ]
 
     for i in range(2):
-        user_ids = [str(user['id']) for user in await databaseExecutor.run(db.fetchall, """
-            UPDATE user_tariff_connections AS utc
-            {update_action}
-            FROM users AS u
-            INNER JOIN (
-                SELECT utc.user_id, utc.balance >= tp.price * 2 AS prolongable, tp.price AS tariff_price
-                FROM user_tariff_connections AS utc
-                    INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
-                    INNER JOIN tariff_prices AS tp ON (tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
-                WHERE utc.tariff_id != 0
-                    AND utc.balance {prolongable_condition} tp.price
-                    AND utc.end_date < CURRENT_TIMESTAMP
-            ) AS subscription_filter ON (u.id = subscription_filter.user_id)
-            WHERE
-                utc.user_id = subscription_filter.user_id
-            RETURNING u.id
-        """.format(  # , u.service_id, u.language_code, subscription_filter.prolongable, utc.tariff_id
-            update_action=update_actions[i],
-            prolongable_condition=prolongable_conditions[i]
-        ))]
+        users_set = [None]
+        while len(users_set) > 0:
+            users_set = await databaseExecutor.run(db.update_many, """
+                UPDATE user_tariff_connections AS utc
+                {update_action}
+                FROM users AS u
+                INNER JOIN (
+                    SELECT utc.user_id, utc.balance >= tp.price * 2 AS prolongable, tp.price AS tariff_price
+                    FROM user_tariff_connections AS utc
+                        INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
+                        INNER JOIN tariff_prices AS tp ON (
+                            tp.tariff_id = t.id AND tp.currency_code = utc.currency_code)
+                    WHERE utc.tariff_id != 0
+                        AND utc.balance {prolongable_condition} tp.price
+                        AND utc.end_date < CURRENT_TIMESTAMP
+                    LIMIT {update_batch}
+                ) AS subscription_filter ON (u.id = subscription_filter.user_id)
+                WHERE
+                    utc.user_id = u.id
+                RETURNING u.id, u.service_id, u.language_code, subscription_filter.prolongable, utc.tariff_id
+            """.format(
+                update_action=update_actions[i],
+                prolongable_condition=prolongable_conditions[i],
+                update_batch=update_batch
+            ), 100)
+            for user in users_set:
+                await update_user_moderated_chats(
+                    user['id'], tariffs[user['tariff_id']]['channels_count'])
 
-        if len(user_ids) == 0:
-            continue
-
-        async for user in databaseExecutor.run_generator(db.fetchmany, """
-            SELECT u.id, u.service_id, u.language_code, utc.balance >= tp.price AS prolongable, utc.tariff_id
-            FROM users AS u
-            INNER JOIN user_tariff_connections AS utc ON (utc.user_id = u.id)
-            INNER JOIN tariff_prices AS tp ON (tp.tariff_id = utc.tariff_id AND tp.currency_code = utc.currency_code)
-            WHERE user_id IN ({user_ids})
-        """.format(user_ids=", ".join(user_ids)), 100):
-            # for user in users_set:
-            # Attention! Update_user_moderated_chats perform in separate connection,
-            # so it's need at least 2 db connections
-            print("Updating moderated chats...", user, flush=True)
-            await update_user_moderated_chats(user['id'], tariffs[user['tariff_id']]['channels_count'])
-
-            print("A", flush=True)
-            yield {
-                'user': {
-                    'id': user['id'],
-                    'service_id': user['service_id'],
-                    'language_code': user['language_code']
-                },
-                'action': 'disabled' if i == 0 else 'prolonged',
-                'prolongable': user['prolongable']
-            }
-        print("XXX", flush=True)
-        r = await db.fetchall("SELECT * FROM user_tariff_connections")
-        print(r, flush=True)
+                yield {
+                    'user': {
+                        'id': user['id'],
+                        'service_id': user['service_id'],
+                        'language_code': user['language_code']
+                    },
+                    'action': 'disabled' if i == 0 else 'prolonged',
+                    'prolongable': user['prolongable']
+                }
 
 
 async def update_user_moderated_chats(user_id: int, offset: int | None):
@@ -271,10 +260,8 @@ async def update_user_moderated_chats(user_id: int, offset: int | None):
         return
 
     # Some or all disabled
-    connection: Connection
     async with db.get_connection() as connection:
         async with connection.transaction():
-
             await databaseExecutor.run(db.execute_single_model, """
                 UPDATE moderated_chats AS mc
                 SET disabled = TRUE
