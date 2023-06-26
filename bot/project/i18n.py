@@ -361,15 +361,21 @@ routed_messages = {
             'text': {
                 'en':
                     emoji_codes.get('chat', '') +
-                    " To add a user, send their nickname, for example <code>mike</code>",
+                    " To add users, send their nicknames separated by a space, for example\n"
+                    "<code>mike christie</code>",
                 'ru':
                     emoji_codes.get('chat', '') +
-                    " Чтобы добавить пользователя, пришлите его никнейм, например <code>mike</code>"
+                    " Чтобы добавить пользователей, пришлите их никнеймы через пробел, например\n"
+                    "<code>mike christie</code>"
             },
             'success': {
                 'en': "Nickname {nickname} saved! Add another one or go back",
-                'ru': "Никнейм {nickname} сохранён! Добавьте ещё один или вернитесь назад"
+                'ru': "Никнейм {nickname} сохранён! Добавьте ещё или вернитесь назад"
             },
+            'success_plural': {
+                'en': "Nicknames are saved! Add another one or go back",
+                'ru': "Никнеймы сохранены! Добавьте ещё или вернитесь назад"
+            }
         },
         'errors': {
             'not_found': {
