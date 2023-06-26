@@ -33,31 +33,35 @@ async def add_to_chat_whitelist(params: ControllerParams):
     # ---
     # User adding
 
-    user_nickname = message.text
-
-    # Rid of the leading @: @zxc -> zxc
-    if user_nickname[0] == '@':
-        user_nickname = user_nickname[1:]
+    # Separate and Rid of the leading @: @zxc -> zxc
+    user_nicknames = [un[1:] if un[0] == '@' else un for un in message.text.split()]
 
     chat_state_data = state_data.get_local_state_data(message, 'chat')
 
-    result_connection = await Chat.add_to_whitelist(chat_state_data['id'], user_nickname)
+    for user_nickname in user_nicknames:
+        result_connection = await Chat.add_to_whitelist(chat_state_data['id'], user_nickname)
 
-    if 'error' in result_connection:
-        error_trace = ['errors', result_connection['error']]  # == 'unexpected'
-        # if result_connection['error'] == 'unexpected':
-        #     error_trace = ['errors', result_connection['error']]
-        # else:
-        #     error_trace = ['chat', 'add_to_whitelist', 'errors', result_connection['error']]
-        await notify(
-            call, message, localization.get_message(error_trace, params['language_code']),
-            alert=True, button_text='cancel')
-        return False
+        if 'error' in result_connection:
+            error_trace = ['errors', result_connection['error']]  # == 'unexpected'
+            # if result_connection['error'] == 'unexpected':
+            #     error_trace = ['errors', result_connection['error']]
+            # else:
+            #     error_trace = ['chat', 'add_to_whitelist', 'errors', result_connection['error']]
+            await notify(
+                call, message, localization.get_message(error_trace, params['language_code']),
+                alert=True, button_text='cancel')
+            return False
+
+    if len(user_nicknames) == 1:
+        answer_message = localization.get_message(
+            ['chat', 'add_to_whitelist', 'success'], params['language_code'], nickname=user_nicknames[0])
+    else:
+        answer_message = localization.get_message(
+            ['chat', 'add_to_whitelist', 'success_plural'], params['language_code'])
 
     message_structures = [{
         'type': 'text',
-        'text': localization.get_message(
-            ['chat', 'add_to_whitelist', 'success'], params['language_code']).format(nickname=user_nickname),
+        'text': answer_message,
         'reply_markup': go_back_inline_markup(params['language_code'])
     }]
 
