@@ -190,7 +190,8 @@ async def show(params: ControllerParams):
         return False
 
     message_text = localization.get_message(
-        ['chat', 'show', 'text'], params['language_code'], chat_name=chat_info['title'])
+        ['chat', 'show', 'text'], params['language_code'],
+        chat_name=chat_info['title'], chat_nickname=chat_info['nickname'])
 
     if chat_data['disabled']:
         message_text += "\n\n" + localization.get_message(['chat', 'show', 'disabled'], params['language_code'])

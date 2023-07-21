@@ -327,8 +327,8 @@ routed_messages = {
     'chat': {
         'show': {
             'text': {
-                'en': emoji_codes.get('chat', '') + " {chat_name}",
-                'ru': emoji_codes.get('chat', '') + " {chat_name}"
+                'en': emoji_codes.get('chat', '') + " {chat_name} @{chat_nickname}",
+                'ru': emoji_codes.get('chat', '') + " {chat_name} @{chat_nickname}"
             },
             'disabled': {
                 'en':
