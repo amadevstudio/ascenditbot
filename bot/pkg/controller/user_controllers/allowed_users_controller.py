@@ -127,6 +127,8 @@ async def chat_whitelist(params: ControllerParams):
     message_text = localization.get_message(['whitelist', 'list', 'text'], params['language_code'])
     message_text += " " + localization.get_message(
         ['chat', 'show', 'text'], params['language_code'], chat_name=chat_info['title'])
+    if chat_info['nickname'] is not None:
+        message_text += f" @{chat_info['nickname']}"
     message_text += '\n' + routing_helper_message
 
     # Chat buttons

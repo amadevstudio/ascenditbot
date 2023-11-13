@@ -1,4 +1,4 @@
-FROM amacneil/dbmate as base
+FROM amacneil/dbmate:2.7.0 as base
 WORKDIR /usr/src/migrator/
 COPY . /usr/src/migrator/
 

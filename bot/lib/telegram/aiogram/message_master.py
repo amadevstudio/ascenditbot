@@ -32,6 +32,8 @@ class MasterMessages(enum.Enum):
         return [x.value for x in list(MasterMessages)]
 
 
+message_types = Literal[MasterMessages.text, MasterMessages.image]
+
 LOADING_TYPE = MasterMessages.text.value
 
 
@@ -54,9 +56,6 @@ class ButtonRequestChatData(TypedDict):
     user_administrator_rights: Optional[ChatAdministratorData]
     bot_administrator_rights: Optional[ChatAdministratorData]
     bot_is_member: Optional[bool]
-
-
-message_types = Literal['text', 'image']
 
 
 class MessageStructuresInterface(TypedDict, total=False):
@@ -214,6 +213,7 @@ async def message_master(
     # Array to return
     new_message_structures = []
 
+    # Deleting unwanted messages
     for message_to_delete in messages_to_delete:
         try:
             await bot.delete_message(chat_id, message_to_delete['id'])
@@ -227,6 +227,7 @@ async def message_master(
     def image_digger(image_message_structure: MessageStructuresInterface) -> str | telegram_types.FSInputFile:
         return image_message_structure.get('file_id', image_message_structure['image'])
 
+    # Editing old messages
     for message_to_edit_id in messages_to_edit:
         message_structure: MessageStructuresInterface = messages_to_edit[message_to_edit_id]
 
@@ -260,6 +261,7 @@ async def message_master(
             new_message_structures.append(
                 build_new_prev_message_structure(result.message_id, message_structure['type']))
 
+    # Sending new messages
     for message_to_send in messages_to_send:
         message_structure = message_to_send
 
@@ -288,7 +290,7 @@ async def message_master(
             # Save message type
             message_type = \
                 message_structure['type'] if message_structure.get('markup_type', 'inline') != 'reply' \
-                else f"{message_structure['type']}_reply"
+                    else f"{message_structure['type']}_reply"
             new_message_structures.append(
                 build_new_prev_message_structure(result.message_id, message_type))
 

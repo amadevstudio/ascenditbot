@@ -200,7 +200,7 @@ routed_messages = {
                 },
                 'cant_edit_messages': {
                     'en':
-                        "Bot admin, but can't delete posts."
+                        "Bot is admin, but can't delete posts. "
                         "Give him the ability to delete messages and try again!",
                     'ru':
                         "Бот администратор, но не может удалять сообщения. "
@@ -274,7 +274,7 @@ routed_messages = {
             'ru': f"{emoji_codes.get('heavy_check_mark', '')} Выбрать группу {emoji_codes.get('magic_wand', '')}"
         },
         'success': {
-            'en': "chat {chat_name} has been added successfully!\n\nPlease add another one or go to settings.",
+            'en': "Chat {chat_name} has been added successfully!\n\nPlease add another one or go to settings.",
             'ru': "Группа {chat_name} была успешно добавлена!\n\nДобавьте ещё одну или перейдите к настройкам."
         },
         'subscription_limit_violation': {

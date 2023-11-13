@@ -23,11 +23,11 @@ def file_times(path, initial=False):
 
 def print_stdout(process):
     stdout = process.stdout
-    if stdout != None:
+    if stdout is not None:
         print(stdout)
 
 
-# We concatenate all of the arguments together, and treat that as the command to run
+# We concatenate all the arguments together, and treat that as the command to run
 command = " ".join(sys.argv[1:])
 
 # The path to watch
