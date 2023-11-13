@@ -183,14 +183,14 @@ class Chat(Service):
 
     @classmethod
     async def load_info(cls, chat_service_id: str) \
-            -> TypedDict('_', {'service_id': str, 'title': str, 'nickname': str}) | ErrorDictInterface:
+            -> TypedDict('_', {'service_id': str, 'title': str, 'nickname': str | None}) | ErrorDictInterface:
         try:
             chat_info: telegram_types.Chat = await cls.BOT.get_chat(chat_service_id)
         except telegram_exceptions.TelegramBadRequest:
             return {'error': "chat_not_found"}
 
         chat_title = chat_info.title if chat_info.title is not None else ''
-        chat_nickname = chat_info.username if chat_info.username is not None else ''
+        chat_nickname = chat_info.username
 
         return {
             'service_id': str(chat_info.id),
