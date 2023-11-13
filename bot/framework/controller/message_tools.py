@@ -102,8 +102,7 @@ async def message_sender(
 
     if new_message_structures is not None:
         UserStorage.set_message_structures(chat_id, new_message_structures)
-
-    UserStorage.set_resend(chat_id, False)
+        UserStorage.set_resend(chat_id, False)
 
 
 async def notify(
