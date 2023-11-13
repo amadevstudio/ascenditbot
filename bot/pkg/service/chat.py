@@ -70,14 +70,20 @@ class Chat(Service):
         for chat_administrator in chat_administrators:
             if chat_administrator.user.id == user_service_id:
                 administrator = chat_administrator
+                break
 
         if administrator is None:
             return {'error': 'user_not_admin'}
 
-        if administrator.can_delete_messages is False:
+        if isinstance(administrator, telegram_types.ChatMemberOwner):
+            return {'administrator': administrator}
+
+        if isinstance(administrator, telegram_types.ChatMemberAdministrator):
+            if administrator.can_delete_messages:
+                return {'administrator': administrator}
             return {'error': 'user_cant_edit_messages'}
 
-        return {'administrator': administrator}
+        return {'error': 'user_not_admin'}
 
     @classmethod
     async def validate_access(cls, chat_service_id: int, user_service_id: int) \
