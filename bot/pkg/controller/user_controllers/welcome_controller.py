@@ -82,3 +82,12 @@ async def help_page(params: ControllerParams):
         'text': localization.get_message(['help', 'text'], params['language_code']),
         'reply_markup': go_back_inline_markup(params['language_code'])
     }])
+
+async def privacy(params: ControllerParams):
+    call, message = params['call'], params['message']
+
+    await message_sender(message.chat.id, message_structures=[{
+        'type': 'text',
+        'text': localization.get_message(['help', 'privacy'], params['language_code']),
+        'reply_markup': go_back_inline_markup(params['language_code'])
+    }])

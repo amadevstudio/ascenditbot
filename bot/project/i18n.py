@@ -40,7 +40,6 @@ links = {
     }
 }
 
-
 routed_messages = {
     'buttons': {
         'back': {
@@ -164,6 +163,16 @@ routed_messages = {
                 " Добавленные группы доступны в /my_chats, где вы можете управлять ей и пользователями\n\n"
                 "Для того, чтобы использовать все возможности, у вас должна быть подписка."
                 " Вся информация по подписке находится на /subscription"
+        },
+        'privacy': {
+            "ru": "Мы храним некоторые ваши данные для предоставления сервиса: telegram id, ваше имя, никнейм, "
+                  "язык, а также все указанные в боте данные, например, список ваших чатов и белый список, "
+                  "идентификаторы чатов и так далее.\n\n"
+                  "Мы ни с кем не делимся этими данными кроме случаев, когда это используется в интерфейсе бота.",
+            "en": "We store some of your data to provide the service: telegram id, your name, nickname, language, "
+                  "as well as all the data specified in the bot, for example, a list of your chats, "
+                  "chats identifiers, and so on.\n\n"
+                  "We do not share this data with anyone except when it is used in the bot interface."
         }
     },
 
@@ -529,12 +538,12 @@ routed_messages = {
             'balance_warning': {
                 'en':
                     emoji_codes.get('warning_sign', '') + "Warning!"
-                    " Any currency on the balance in the bot system is virtual points,"
-                    " which are not considered real currency and belong to the owner of the bot",
+                                                          " Any currency on the balance in the bot system is virtual points,"
+                                                          " which are not considered real currency and belong to the owner of the bot",
                 'ru':
                     emoji_codes.get('warning_sign', '') + " Внимание!"
-                    " Любая валюта на балансе в системе бота – это виртуальные очки, "
-                    "которые не считаются настоящей валютой и принадлежат владельцу бота"
+                                                          " Любая валюта на балансе в системе бота – это виртуальные очки, "
+                                                          "которые не считаются настоящей валютой и принадлежат владельцу бота"
             }
         },
         'referral': {
@@ -587,10 +596,10 @@ routed_messages = {
             'non-prolongable': {
                 'en':
                     emoji_codes.get('warning_sign', '') + "Not enough funds for next renewal!"
-                    " Top up your balance to continue using the bot. More info /subscription",
+                                                          " Top up your balance to continue using the bot. More info /subscription",
                 'ru':
                     emoji_codes.get('warning_sign', '') + " Недостаточно средств для следующего продления!"
-                    " Пополните баланс, чтобы продолжать пользоваться ботом. Подробнее /subscription"
+                                                          " Пополните баланс, чтобы продолжать пользоваться ботом. Подробнее /subscription"
             },
             'disabled': {
                 'en':
@@ -672,7 +681,7 @@ routed_messages = {
                 f"{emoji_codes.get('warning_sign', '')} However, the amount for the current day will be charged again!",
             'ru':
                 f"{emoji_codes.get('bar_chart', '')} Тарифы\n\n"
-                "Внимание! При смене тарифа начисляется разница за оставшиеся дни:\n"                
+                "Внимание! При смене тарифа начисляется разница за оставшиеся дни:\n"
                 "● с положительным значением при выборе более дешёвого тарифа;\n"
                 "● с отрицательным при выборе более дорогого.\n\n"
                 f"{emoji_codes.get('warning_sign', '')} Однако сумма за текущий день будет списана ещё раз!"

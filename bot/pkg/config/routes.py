@@ -51,6 +51,10 @@ class RouteMap:
                 'menu'
             ],
         },
+        'privacy': {
+            'method': welcome_controller.privacy,
+            'available_from': ['command'],
+        },
         'menu': {
             'method': welcome_controller.menu,
             'available_from': ['command', 'call'],
