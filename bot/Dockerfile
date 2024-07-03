@@ -7,7 +7,7 @@ COPY . /usr/src/bot/
 
 RUN pip install -r requirements.txt # Install packages from requirements.txt
 
-RUN pip-upgrade --skip-virtualenv-check # Interactively upgrade packages from requirements file, and also update the pinned version from requirements file(s).
+# RUN pip-upgrade --skip-virtualenv-check # Interactively upgrade packages from requirements file, and also update the pinned version from requirements file(s).
 
 # RUN apt update
 
