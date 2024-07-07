@@ -1,6 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Callable, NoReturn, TypedDict, Awaitable
+from typing import Callable, NoReturn, TypedDict, Awaitable, List
 from aiohttp import web
 
 from lib.python.logger import Logger
@@ -18,11 +18,11 @@ class CallableInterface(ErrorDictInterface, total=False):
 
 
 class PaymentProcessor(ABC):
-    AVAILABLE_CURRENCIES = []
+    AVAILABLE_CURRENCIES: List[str] = []
 
     def __init__(
             self, credentials: dict, incoming_payment_callback: Callable[[CallableInterface], Awaitable[NoReturn]],
-            logger: Logger = None):
+            logger: Logger | None = None):
         self.credentials = credentials
         self.incoming_payment_callback = incoming_payment_callback
 

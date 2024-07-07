@@ -7,7 +7,7 @@ class Storage(metaclass=Singleton):
     def __init__(self):
         self.connection = None
 
-    def connect(self, config: dict[str, str] = None):
+    def connect(self, config: dict[str, str | int]):
         if config is not None:
             # self.connection = redis.ConnectionPool(
             self.connection = redis.Redis(
