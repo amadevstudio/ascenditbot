@@ -37,31 +37,14 @@ async def chat_id_sender(user_chat_id: int, message_structures: list[MessageStru
         logger.warning(f"Incoming message structures is None for {user_chat_id}")
         return
 
-    for message_to_send in message_structures:
-        message_structure = message_to_send
-
-        if message_structure['type'] == MasterMessages.text.value:
-            result = await bot.send_message(
-                chat_id=user_chat_id,
-                text=message_structure.get('text', None),
-                parse_mode=message_structure.get('parse_mode', None),
-                reply_markup=message_structure.get('reply_markup', None),
-                disable_web_page_preview=message_structure.get('disable_web_page_preview', None))
-
-        elif message_structure['type'] == MasterMessages.image.value:
-            result = await bot.send_photo(
-                chat_id=user_chat_id,
-                photo=message_structure.get('image', None),
-                caption=message_structure.get('text', None),
-                parse_mode=message_structure.get('parse_mode', None),
-                reply_markup=message_structure.get('reply_markup', None))
+    await message_sender(user_chat_id, True, message_structures)
 
     UserStorage.set_resend(user_chat_id)
 
 
 async def message_sender(
         chat_id: int, resending=False,
-        message_structures: list[MessageStructuresInterface] = None):
+        message_structures: list[MessageStructuresInterface] | None = None):
 
     if message_structures is None:
         message_structures = []
