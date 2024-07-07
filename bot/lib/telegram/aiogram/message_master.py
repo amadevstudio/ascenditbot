@@ -32,9 +32,7 @@ class MasterMessages(enum.Enum):
         return [x.value for x in list(MasterMessages)]
 
 
-message_types = Literal[MasterMessages.text, MasterMessages.image]
-
-LOADING_TYPE = MasterMessages.text.value
+message_types = Literal['text', 'image']
 
 
 class InlineButtonData(TypedDict):
@@ -58,11 +56,14 @@ class ButtonRequestChatData(TypedDict):
     bot_is_member: Optional[bool]
 
 
+reply_markup_type = list[list[InlineButtonData | ButtonRequestChatData]]
+
+
 class MessageStructuresInterface(TypedDict, total=False):
     type: message_types
     markup_type: Literal['inline', 'reply']
     text: str
-    reply_markup: list[list[InlineButtonData | ButtonRequestChatData]]
+    reply_markup: reply_markup_type
     parse_mode: Literal['MarkdownV2', 'HTML'] | None
     disable_web_page_preview: bool
     image: str | telegram_types.FSInputFile
@@ -76,12 +77,10 @@ class PreviousMessageStructuresInterface(TypedDict):
 
 def build_new_prev_message_structure(message_id: int,
                                      message_type: message_types) -> PreviousMessageStructuresInterface:
-    result = {
+    return {
         'id': message_id,
         'type': message_type
     }
-
-    return result
 
 
 def build_markup(message_structure: MessageStructuresInterface):

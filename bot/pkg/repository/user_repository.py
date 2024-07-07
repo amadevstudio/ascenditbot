@@ -30,7 +30,7 @@ async def register_or_update_by_service_id(user_data: UserInterface, referral_se
     return {'user': user, 'is_new': False}
 
 
-async def find_by(fields_value: dict[str, Any]) -> UserInterface:
+async def find_by(fields_value: dict[str, Any]) -> UserInterface | None:
     return await databaseExecutor.run(db.find_model, 'users', fields_value)
 
 

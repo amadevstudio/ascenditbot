@@ -16,7 +16,7 @@ from pkg.service.payment import payment_processors
 # from db.adapter import database
 # from utils import get_username_from_command
 
-storage_configuration = {
+storage_configuration: dict[str, str | int] = {
     "host": "storage",
     "port": 6379,
     "password": environment["REDIS_PASSWORD"]

@@ -32,7 +32,11 @@ def image_link_or_object(path: str):
     return path
 
 
-async def chat_id_sender(user_chat_id: int, message_structures: list[MessageStructuresInterface] = None):
+async def chat_id_sender(user_chat_id: int, message_structures: list[MessageStructuresInterface] | None = None):
+    if message_structures is None:
+        logger.warning(f"Incoming message structures is None for {user_chat_id}")
+        return
+
     for message_to_send in message_structures:
         message_structure = message_to_send
 

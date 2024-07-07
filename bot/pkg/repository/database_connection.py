@@ -21,7 +21,7 @@ class Database(metaclass=Singleton):
             raise ValueError("Min connections can't be greater than max")
         self.__connection_pool: asyncpg.Pool | None = None
 
-    async def connect(self, config: dict[str, str] = None):
+    async def connect(self, config: dict[str, str] | None = None):
         if config is not None:
             self.__connection_pool = await asyncpg.create_pool(
                 min_size=self.__min_alive_connections,

@@ -1,7 +1,10 @@
+import typing
+
 from framework.controller.message_tools import chat_id_sender
 from lib.language import localization
 from lib.payment.payment import CallableInterface, PaymentProcessor
 from lib.payment.services import robokassa
+from lib.telegram.aiogram.message_master import InlineButtonData, reply_markup_type
 from pkg.config.config import environment
 from framework.system.bot_setup import bot
 from pkg.service.service import Service
@@ -17,14 +20,24 @@ class BalanceHandler(Service):
     BOT = bot
 
     # Usage example
-    # import main; import asyncio; from pkg.service.payment import BalanceHandler
+    # import main
+    # import asyncio
+    # from pkg.service.payment import BalanceHandler
+    # from pkg.config.config import environment
+    # database_configuration = {"host": "db","database": environment["POSTGRES_DB"],"user": environment["POSTGRES_USER"],"password": environment["POSTGRES_PASSWORD"]}
+    # from pkg.repository.database_connection import Database
+    # asyncio.run(Database(max_connections=1, min_alive_connections=1).connect(database_configuration))
     # asyncio.run(BalanceHandler.funding({'amount': 50000, 'currency': 'rub', 'user_id': 12, 'service': 'robokassa'}))
     @classmethod
     async def funding(cls, result: CallableInterface):
-        user: UserInterface = await User.get_by_id(result['user_id'])
+        user = await User.get_by_id(result['user_id'])
+        if user is None:
+            logger.warning(f"The user with id {result['user_id']} was not found.")
+            return
+
         language_code = user['language_code']
 
-        markup = [[{
+        markup: reply_markup_type = [[{
             'text': localization.get_message(['buttons', 'menu'], language_code),
             'callback_data': {'tp': 'menu'}}]]
 
@@ -70,13 +83,13 @@ class BalanceHandler(Service):
         success_message = localization.get_message(['subscription', 'fund', 'success_payment'], language_code)
         success_message += "\n\n" + localization.get_message(['tariffs', 'current'], language_code) \
                            + "\n" + build_subscription_info(new_user_tariff_info, language_code)
-        message_structures = [{
+
+        await chat_id_sender(int(user['service_id']), message_structures=[{
             'type': 'text',
             'text': success_message,
             'parse_mode': 'HTML',
             'reply_markup': markup
-        }]
-        await chat_id_sender(int(user['service_id']), message_structures=message_structures)
+        }])
 
         # Notify admins
         telegram_admin_group_id = environment.get('TELEGRAM_ADMIN_GROUP_ID', None)
@@ -107,7 +120,8 @@ class BalanceHandler(Service):
             await Tariff.change(referrer['id'], constants.tariff_free_trail_id, force=True)
             referrer_tariff_info = await Tariff.user_tariff_info(referrer['id'])
 
-        tariff_as_referral = await Tariff.tariff_info(referrer_tariff_info['tariff_id'], referral['id'])
+        tariff_as_referral = await Tariff.tariff_info(
+            typing.cast(int, referrer_tariff_info['tariff_id']), referral['id'])
 
         # Reward as part of incoming sum
         reward_days = int(amount * constants.tariff_duration_days / tariff_as_referral['price'])
@@ -130,17 +144,14 @@ class BalanceHandler(Service):
         success_message += "\n\n" + localization.get_message(['tariffs', 'current'], referrer['language_code']) \
                            + "\n" + build_subscription_info(new_user_tariff_info, referrer['language_code'])
 
-        markup = [[{
-            'text': localization.get_message(['buttons', 'menu'], referrer['language_code']),
-            'callback_data': {'tp': 'menu'}}]]
-
-        message_structures = [{
+        await chat_id_sender(int(referrer['service_id']), message_structures=[{
             'type': 'text',
             'text': success_message,
             'parse_mode': 'HTML',
-            'reply_markup': markup
-        }]
-        await chat_id_sender(int(referrer['service_id']), message_structures=message_structures)
+            'reply_markup': [[{
+            'text': localization.get_message(['buttons', 'menu'], referrer['language_code']),
+            'callback_data': {'tp': 'menu'}}]]
+        }])
 
 
 payment_processors: dict[str, PaymentProcessor] = {

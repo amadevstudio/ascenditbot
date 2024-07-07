@@ -36,10 +36,10 @@ class Tariff(Service):
 
     @staticmethod
     async def user_tariff_info(user_id: int) -> UserTariffInfoInterface:
-        tariff_info = await tariff_repository.user_tariff_info(user_id)
+        tariff_info: UserTariffInfoInterface = await tariff_repository.user_tariff_info(user_id)
         if tariff_info is None:
             user_base_currency_code = await tariff_repository.get_currency_code_for_user(user_id)
-            tariff_info: UserTariffInfoInterface = {
+            tariff_info = {
                 'channels_count': 0,
                 'currency_code': user_base_currency_code,
                 'price': 0,
