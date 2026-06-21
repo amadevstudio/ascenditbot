@@ -222,6 +222,26 @@ class Chat(Service):
         return await chat_repository.switch_active(chat_id)
 
     @staticmethod
+    async def delete(chat_id: int, user_service_id: int) -> int | ErrorDictInterface:
+        try:
+            chat_info = await chat_repository.find(chat_id)
+            if chat_info is None:
+                return {'error': 'not_found'}
+
+            validate_access_result = await Chat.validate_access(int(chat_info['service_id']), user_service_id)
+            if 'error' in validate_access_result:
+                return validate_access_result
+
+            if validate_access_result['administrator'].status != 'creator':
+                return {'error': 'owner_must_delete'}
+
+            delete_result = await chat_repository.delete(chat_id)
+            return {'error': 'not_found'} if delete_result is None else delete_result
+        except Exception as e:
+            logger.error(e)
+            return {'error': 'unexpected'}
+
+    @staticmethod
     async def add_to_whitelist(chat_id: int, user_nickname: str) \
             -> ModeratedChatInterface | None | TypedDict('AddToWhitelistError', {'error': Literal['unexpected']}):
         # chat_member = await Chat._get_chat_member(bot, chat_service_id, user_)

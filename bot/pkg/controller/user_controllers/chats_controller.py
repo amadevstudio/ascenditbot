@@ -217,6 +217,16 @@ async def show(params: ControllerParams):
         ), 'callback_data': {'tp': 'switch_active'}}
     reply_markup.append([state_button])
 
+    delete_button = {
+        'text': localization.get_message(
+            [
+                'chat', 'show', 'delete_button',
+                'deleting' if params['state_data'].get('deleting') else 'initial'
+            ],
+            params['language_code']),
+        'callback_data': {'tp': 'delete'}}
+    reply_markup.append([delete_button])
+
     reply_markup.append([go_back_inline_button(params['language_code'])])
 
     message_structures = [{
@@ -248,4 +258,33 @@ async def switch_active(params: ControllerParams):
     UserStorage.add_user_state_data(message.chat.id, 'chat', params['state_data'])
 
     # Tell show method to take data from state
+    await show(params)
+
+
+async def delete(params: ControllerParams):
+    call, message, current_state_data = params['call'], params['message'], params['state_data']
+
+    if current_state_data is None or 'id' not in current_state_data:
+        await raise_error(None, message, 'state_data_none')
+        return
+
+    # Already deleting
+    if 'deleting' in current_state_data:
+        delete_result = await Chat.delete(current_state_data['id'], message.chat.id)
+        if isinstance(delete_result, dict) and 'error' in delete_result:
+            await chat_access_denied(call, message, delete_result)
+            return False
+
+        if delete_result is not None:
+            await params['go_back_action'](call)
+            return
+
+    current_state_data['deleting'] = True
+
+    params['state_data'] = current_state_data
+    UserStorage.add_user_state_data(message.chat.id, 'chat', params['state_data'])
+
+    await notify(call, message, localization.get_message(
+        ['chat', 'delete', 'confirm'], params['language_code']), alert=True)
+
     await show(params)
