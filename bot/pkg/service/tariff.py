@@ -6,7 +6,8 @@ from pkg.repository.tariff_repository import UserTariffInfoInterface, TariffInfo
 from pkg.service.service import Service
 
 from project import constants
-from project.types import UserTariffConnectionInterface, ErrorDictInterface, PaymentHistoryInterface, UserInterface
+from project.types import UserTariffConnectionInterface, ErrorDictInterface, PaymentHistoryInterface, UserInterface, \
+    CurrencyInterface
 
 
 class Tariff(Service):
@@ -44,6 +45,7 @@ class Tariff(Service):
                 'currency_code': user_base_currency_code,
                 'price': 0,
                 'balance': 0,
+                'balances': await tariff_repository.user_balances(user_id),
                 'end_date': None,
                 'user_id': user_id,
                 'tariff_id': 0,
@@ -60,6 +62,10 @@ class Tariff(Service):
     async def tariffs_info(user_id: int) -> list[TariffInfoInterface]:
         return await tariff_repository.tariffs_info(user_id)
 
+    @staticmethod
+    async def tariffs_info_by_currency(currency_code: str) -> list[TariffInfoInterface]:
+        return await tariff_repository.tariffs_info_by_currency(currency_code)
+
     # @staticmethod
     # async def find(tariff_id: int) -> TariffInfoInterface | None:
     #     return await tariff_repository.find(tariff_id)
@@ -73,8 +79,7 @@ class Tariff(Service):
         subscription: UserTariffConnectionInterface = {
             'user_id': user_id,
             'tariff_id': 0,
-            'balance': 0,
-            'currency_code': await tariff_repository.currency_code_for_user(user_id),
+            'payment_currency_code': await tariff_repository.currency_code_for_user(user_id),
             'end_date': None,
             'trial_was_activated': False
         }
@@ -86,7 +91,8 @@ class Tariff(Service):
         if user_tariff_info['trial_was_activated'] is True:
             return None
 
-        if user_tariff_info['balance'] != 0 or user_tariff_info['end_date'] is not None \
+        has_balance = any(balance['balance'] != 0 for balance in user_tariff_info.get('balances', []))
+        if has_balance or user_tariff_info['end_date'] is not None \
                 or user_tariff_info['tariff_id'] != 0:
             subscription: UserTariffConnectionInterface = {
                 'user_id': user_tariff_info['user_id'],
@@ -99,8 +105,7 @@ class Tariff(Service):
         subscription: UserTariffConnectionInterface = {
             'user_id': user_tariff_info['user_id'],
             'tariff_id': trial_tariff['id'],
-            'balance': 0,
-            'currency_code': trial_tariff['currency_code'],
+            'payment_currency_code': user_tariff_info['currency_code'],
             'end_date':
                 datetime.datetime.now()
                 + datetime.timedelta(days=constants.tariff_free_trail_days),
@@ -158,16 +163,16 @@ class Tariff(Service):
         new_subscription: UserTariffConnectionInterface = {
             'user_id': user_id,
             'tariff_id': chosen_tariff['id'],
-            'balance': user_subscription['balance'] - change_sum,
-            'currency_code': user_subscription['currency_code'],
+            'payment_currency_code': user_subscription['currency_code'],
             'end_date': new_subscription_end_date,
         }
 
-        return await tariff_repository.update_subscription(new_subscription)
+        return await tariff_repository.update_subscription_with_balance_delta(
+            new_subscription, -change_sum, user_subscription['currency_code'])
 
     @staticmethod
-    async def add_amount(user_id: int, amount: int) -> int:
-        return await tariff_repository.increase_amount(user_id, amount)
+    async def add_amount(user_id: int, amount: int, currency_code: str) -> int:
+        return await tariff_repository.increase_amount(user_id, amount, currency_code)
 
     @staticmethod
     async def prolong(user_id: int, days: int) -> datetime:
@@ -194,6 +199,18 @@ class Tariff(Service):
     @staticmethod
     async def currency_code_for_user(user_id: int):
         return await tariff_repository.currency_code_for_user(user_id)
+
+    @staticmethod
+    async def enabled_currencies() -> list[CurrencyInterface]:
+        return await tariff_repository.enabled_currencies()
+
+    @staticmethod
+    async def set_payment_currency(user_id: int, currency_code: str) -> UserTariffConnectionInterface | None:
+        return await tariff_repository.set_payment_currency(user_id, currency_code)
+
+    @staticmethod
+    async def tariff_info_by_currency(tariff_id: int, currency_code: str) -> TariffInfoInterface:
+        return await tariff_repository.tariff_info_by_currency(tariff_id, currency_code)
 
     @staticmethod
     async def add_payment_history(payment_history: PaymentHistoryInterface) -> PaymentHistoryInterface:

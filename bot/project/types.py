@@ -73,11 +73,28 @@ class TariffInfoInterface(TariffInterface, TariffPriceInterface):
     pass
 
 
+class CurrencyInterface(TypedDict, total=False):
+    code: str
+    title: str
+    minor_units: int
+    payment_provider: str
+    enabled: bool
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class UserBalanceInterface(TypedDict, total=False):
+    user_id: int
+    currency_code: str
+    balance: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
 class UserTariffConnectionInterface(TypedDict, total=False):
     user_id: int
     tariff_id: int | None
-    balance: int
-    currency_code: str
+    payment_currency_code: str
     end_date: datetime.datetime | None
     trial_was_activated: bool
     created_at: datetime.datetime

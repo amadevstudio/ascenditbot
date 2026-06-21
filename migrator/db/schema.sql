@@ -53,6 +53,21 @@ ALTER SEQUENCE public.allowed_users_id_seq OWNED BY public.allowed_users.id;
 
 
 --
+-- Name: currencies; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.currencies (
+    code character varying(16) NOT NULL,
+    title character varying(255) NOT NULL,
+    minor_units smallint DEFAULT 2 NOT NULL,
+    payment_provider character varying(255),
+    enabled boolean DEFAULT true NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
 -- Name: lang_country_curr_codes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -143,7 +158,7 @@ CREATE TABLE public.payments_history (
     payment_service character varying(255) NOT NULL,
     status smallint DEFAULT 0 NOT NULL,
     amount integer DEFAULT 0 NOT NULL,
-    currency_code character varying(3) NOT NULL,
+    currency_code character varying(16) NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL
 );
@@ -183,7 +198,7 @@ CREATE TABLE public.schema_migrations (
 
 CREATE TABLE public.tariff_prices (
     tariff_id bigint NOT NULL,
-    currency_code character varying(3),
+    currency_code character varying(16),
     price integer NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL
@@ -236,6 +251,19 @@ CREATE TABLE public.user_moderated_chat_connections (
 
 
 --
+-- Name: user_balances; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_balances (
+    user_id bigint NOT NULL,
+    currency_code character varying(16) NOT NULL,
+    balance integer DEFAULT 0 NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
 -- Name: user_moderated_chat_connections_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -261,8 +289,7 @@ ALTER SEQUENCE public.user_moderated_chat_connections_id_seq OWNED BY public.use
 CREATE TABLE public.user_tariff_connections (
     user_id bigint NOT NULL,
     tariff_id bigint NOT NULL,
-    balance integer DEFAULT 0 NOT NULL,
-    currency_code character varying(3) NOT NULL,
+    payment_currency_code character varying(16) NOT NULL,
     end_date timestamp without time zone,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
@@ -404,6 +431,14 @@ ALTER TABLE ONLY public.payments_history
 
 
 --
+-- Name: currencies currencies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.currencies
+    ADD CONSTRAINT currencies_pkey PRIMARY KEY (code);
+
+
+--
 -- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -441,6 +476,14 @@ ALTER TABLE ONLY public.user_moderated_chat_connections
 
 ALTER TABLE ONLY public.user_moderated_chat_connections
     ADD CONSTRAINT user_moderated_chat_connections_user_id_moderated_chat_id_key UNIQUE (user_id, moderated_chat_id);
+
+
+--
+-- Name: user_balances user_balances_user_id_currency_code_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_balances
+    ADD CONSTRAINT user_balances_user_id_currency_code_key UNIQUE (user_id, currency_code);
 
 
 --
@@ -514,6 +557,38 @@ ALTER TABLE ONLY public.tariff_prices
 
 
 --
+-- Name: payments_history fk_currency; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payments_history
+    ADD CONSTRAINT fk_currency FOREIGN KEY (currency_code) REFERENCES public.currencies(code);
+
+
+--
+-- Name: tariff_prices fk_currency; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tariff_prices
+    ADD CONSTRAINT fk_currency FOREIGN KEY (currency_code) REFERENCES public.currencies(code);
+
+
+--
+-- Name: user_balances fk_currency; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_balances
+    ADD CONSTRAINT fk_currency FOREIGN KEY (currency_code) REFERENCES public.currencies(code);
+
+
+--
+-- Name: user_tariff_connections fk_payment_currency; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_tariff_connections
+    ADD CONSTRAINT fk_payment_currency FOREIGN KEY (payment_currency_code) REFERENCES public.currencies(code);
+
+
+--
 -- Name: user_tariff_connections fk_tariff; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -526,6 +601,14 @@ ALTER TABLE ONLY public.user_tariff_connections
 --
 
 ALTER TABLE ONLY public.user_moderated_chat_connections
+    ADD CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: user_balances fk_user; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_balances
     ADD CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
@@ -560,4 +643,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20230205105440'),
     ('20230215214153'),
     ('20230217162034'),
-    ('20230317222504');
+    ('20230317222504'),
+    ('20260621120000');

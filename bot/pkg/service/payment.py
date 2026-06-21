@@ -53,10 +53,8 @@ class BalanceHandler(Service):
             logger.warning('Error wrong_signature', result, user, result['error'])
             return
 
-        user_tariff_info = await Tariff.user_tariff_info(user['id'])
-
-        # Wrong currency
-        if user_tariff_info is None or user_tariff_info['currency_code'] != result['currency']:
+        available_currency_codes = [currency['code'] for currency in await Tariff.enabled_currencies()]
+        if result['currency'] not in available_currency_codes:
             await chat_id_sender(int(user['service_id']), message_structures=[{
                 'type': 'text',
                 'text': localization.get_message(
@@ -64,11 +62,11 @@ class BalanceHandler(Service):
                 'parse_mode': 'HTML',
                 'reply_markup': markup
             }])
-            logger.warning('Error wrong_currency_income', result, user, user_tariff_info)
+            logger.warning('Error wrong_currency_income', result, user, available_currency_codes)
             return
 
         # Funding
-        new_balance = await Tariff.add_amount(user['id'], result['amount'])
+        new_balance = await Tariff.add_amount(user['id'], result['amount'], result['currency'])
         await Tariff.add_payment_history({
             'user_id': user['id'],
             'payment_service': result['service'],
@@ -76,7 +74,7 @@ class BalanceHandler(Service):
             'currency_code': result['currency']})
 
         new_user_tariff_info = await Tariff.user_tariff_info(user['id'])
-        if new_user_tariff_info['balance'] != new_balance:
+        if new_user_tariff_info['currency_code'] == result['currency'] and new_user_tariff_info['balance'] != new_balance:
             new_user_tariff_info = {**new_user_tariff_info, 'balance': new_balance}
 
         # Notify user
@@ -102,10 +100,10 @@ class BalanceHandler(Service):
             }])
 
         # Check referrer
-        await cls.reward_referrer(user, result['amount'])
+        await cls.reward_referrer(user, result['amount'], result['currency'])
 
     @classmethod
-    async def reward_referrer(cls, referral: UserInterface, amount: int):
+    async def reward_referrer(cls, referral: UserInterface, amount: int, currency_code: str):
         if referral['ref_id'] is None:
             return
 
@@ -120,8 +118,10 @@ class BalanceHandler(Service):
             await Tariff.change(referrer['id'], constants.tariff_free_trail_id, force=True)
             referrer_tariff_info = await Tariff.user_tariff_info(referrer['id'])
 
-        tariff_as_referral = await Tariff.tariff_info(
-            typing.cast(int, referrer_tariff_info['tariff_id']), referral['id'])
+        tariff_as_referral = await Tariff.tariff_info_by_currency(
+            typing.cast(int, referrer_tariff_info['tariff_id']), currency_code)
+        if tariff_as_referral is None or tariff_as_referral['price'] == 0:
+            return
 
         # Reward as part of incoming sum
         reward_days = int(amount * constants.tariff_duration_days / tariff_as_referral['price'])

@@ -533,6 +533,10 @@ routed_messages = {
                 'en': 'Balance',
                 'ru': 'Баланс'
             },
+            'payment_currency': {
+                'en': 'Tariff payment currency',
+                'ru': 'Валюта оплаты тарифа'
+            },
             'not_enough_for_renewal': {
                 'en': "Insufficient Funds to Renew",
                 'ru': "Недостаточно средств для продления"
@@ -635,15 +639,19 @@ routed_messages = {
         'fund': {
             'page': {
                 'en':
-                    "To replenish the balance, enter the amount or click on one of the buttons with the cost of the"
+                    "Select the balance currency. Then enter the amount or click on one of the buttons with the cost of the"
                     " bot's tariffs. After that, follow the link and replenish the balance."
                     " If everything goes well, the bot will send you a notification\n\n"
                     "The current mail <b>{email}</b> is important, it will receive a payment receipt",
                 'ru':
-                    "Для пополнения баланса введите сумму или нажмите на одну из кнопок со стоимостями тарифов бота."
+                    "Выберите валюту баланса. Затем введите сумму или нажмите на одну из кнопок со стоимостями тарифов бота."
                     " После этого перейдите по ссылке и пополните баланс."
                     " Если всё пройдёт успешно, бот пришлёт вам уведомление\n\n"
                     "Важа текущая почта <b>{email}</b>, на неё придёт чек об оплате"
+            },
+            'currency_page': {
+                'en': "Top up {currency} balance",
+                'ru': "Пополнение баланса {currency}"
             },
             'fund_link_message': {
                 'en': "To replenish your account, follow the link\n{link}",
@@ -752,6 +760,10 @@ routed_messages = {
             'email': {
                 'en': f"{emoji_codes.get('email', '')} E-Mail",
                 'ru': f"{emoji_codes.get('email', '')} Почта"
+            },
+            'currency': {
+                'en': f"{emoji_codes.get('credit_card', '')} Tariff payment currency",
+                'ru': f"{emoji_codes.get('credit_card', '')} Валюта оплаты тарифа"
             }
         },
         'email': {
@@ -768,6 +780,18 @@ routed_messages = {
             'empty': {
                 'en': "empty",
                 'ru': "не установлена"
+            }
+        },
+        'currency': {
+            'page': {
+                'en':
+                    f"{emoji_codes.get('credit_card', '')} Tariff payment currency\n"
+                    "Current currency: {currency}\n\n"
+                    "This affects tariff changes and future renewals. Existing balances are not converted.",
+                'ru':
+                    f"{emoji_codes.get('credit_card', '')} Валюта оплаты тарифа\n"
+                    "Текущая валюта: {currency}\n\n"
+                    "Это влияет на смену тарифа и будущие продления. Существующие балансы не конвертируются."
             }
         }
     },
