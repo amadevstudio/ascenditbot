@@ -116,5 +116,9 @@ class PaymentHistoryInterface(TypedDict, total=False):
     currency_code: str
     external_payment_id: str
     invoice_payload: str
+    provider_out_sum: str
+    provider_inc_sum: str
+    provider_inc_curr_label: str
+    provider_payment_method: str
     created_at: datetime.datetime
     updated_at: datetime.datetime

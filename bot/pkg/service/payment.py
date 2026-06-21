@@ -80,6 +80,14 @@ class BalanceHandler(Service):
             payment_history['external_payment_id'] = str(result['id'])
         if 'invoice_payload' in result:
             payment_history['invoice_payload'] = result['invoice_payload']
+        if 'provider_out_sum' in result:
+            payment_history['provider_out_sum'] = result['provider_out_sum']
+        if 'provider_inc_sum' in result:
+            payment_history['provider_inc_sum'] = result['provider_inc_sum']
+        if 'provider_inc_curr_label' in result:
+            payment_history['provider_inc_curr_label'] = result['provider_inc_curr_label']
+        if 'provider_payment_method' in result:
+            payment_history['provider_payment_method'] = result['provider_payment_method']
 
         funding = await Tariff.add_amount_with_payment_history(
             user['id'], result['amount'], result['currency'], payment_history)
