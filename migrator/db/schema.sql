@@ -159,6 +159,8 @@ CREATE TABLE public.payments_history (
     status smallint DEFAULT 0 NOT NULL,
     amount integer DEFAULT 0 NOT NULL,
     currency_code character varying(16) NOT NULL,
+    external_payment_id character varying(255),
+    invoice_payload character varying(255),
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL
 );
@@ -428,6 +430,14 @@ ALTER TABLE ONLY public.moderated_chats
 
 ALTER TABLE ONLY public.payments_history
     ADD CONSTRAINT payments_history_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payments_history payments_history_payment_service_external_payment_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payments_history
+    ADD CONSTRAINT payments_history_payment_service_external_payment_id_key UNIQUE (payment_service, external_payment_id);
 
 
 --

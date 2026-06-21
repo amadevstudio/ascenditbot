@@ -15,6 +15,9 @@ db = Database()
 class UserTariffInfoInterface(TypedDict, total=True):
     channels_count: int
     currency_code: str
+    currency_title: str
+    minor_units: int
+    payment_provider: str
     price: int
     balance: int
     balances: list[UserBalanceInterface]
@@ -54,6 +57,14 @@ async def enabled_currencies() -> list[CurrencyInterface]:
     """)
 
 
+async def currency(currency_code: str) -> CurrencyInterface | None:
+    return await databaseExecutor.run(db.fetchone, """
+        SELECT *
+        FROM currencies
+        WHERE code = %s AND enabled IS TRUE
+    """, (currency_code,))
+
+
 async def ensure_user_balances(user_id: int):
     await databaseExecutor.run(db.execute_single_model, """
         INSERT INTO user_balances (user_id, currency_code, balance, created_at, updated_at)
@@ -67,7 +78,7 @@ async def ensure_user_balances(user_id: int):
 async def user_balances(user_id: int) -> list[UserBalanceInterface]:
     await ensure_user_balances(user_id)
     return await databaseExecutor.run(db.fetchall, """
-        SELECT ub.*
+        SELECT ub.*, c.title AS currency_title, c.minor_units, c.payment_provider
         FROM user_balances AS ub
         INNER JOIN currencies AS c ON (c.code = ub.currency_code)
         WHERE ub.user_id = %s AND c.enabled IS TRUE
@@ -117,12 +128,14 @@ async def tariff_info(tariff_id: int, user_id: int) -> TariffInfoInterface | Non
 
 async def tariff_info_by_currency(tariff_id: int, currency_code: str) -> TariffInfoInterface | None:
     return await databaseExecutor.run(db.fetchone, f"""
-        SELECT t.id, t.channels_count, tp.currency_code, tp.price
+        SELECT t.id, t.channels_count, tp.currency_code, c.title AS currency_title,
+            c.minor_units, c.payment_provider, tp.price
         FROM tariffs AS t
         INNER JOIN tariff_prices AS tp ON (
             t.id = tp.tariff_id
             AND {_tariff_prices_for_currency_selection('%s')}
         )
+        INNER JOIN currencies AS c ON (c.code = tp.currency_code AND c.enabled IS TRUE)
         WHERE t.id = %s
     """, (currency_code, tariff_id,))
 
@@ -133,6 +146,9 @@ async def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
     tariff_info_row = await databaseExecutor.run(db.fetchone, f"""
         SELECT t.channels_count,
             utc.payment_currency_code AS currency_code,
+            c.title AS currency_title,
+            c.minor_units,
+            c.payment_provider,
             tp.price,
             COALESCE(ub.balance, 0) AS balance,
             utc.end_date, utc.user_id, utc.tariff_id, utc.trial_was_activated
@@ -145,6 +161,7 @@ async def user_tariff_info(user_id: int) -> UserTariffInfoInterface | None:
             tp.tariff_id = t.id
             AND {_tariff_prices_for_currency_selection('utc.payment_currency_code')}
         )
+        INNER JOIN currencies AS c ON (c.code = utc.payment_currency_code AND c.enabled IS TRUE)
         WHERE utc.user_id = %s
     """, (user_id,))
     if tariff_info_row is None:
@@ -164,12 +181,14 @@ async def tariffs_info(user_id: int) -> list[TariffInfoInterface | None]:
 
 async def tariffs_info_by_currency(currency_code: str) -> list[TariffInfoInterface | None]:
     return await databaseExecutor.run(db.fetchall, f"""
-        SELECT t.id, t.channels_count, tp.currency_code, tp.price
+        SELECT t.id, t.channels_count, tp.currency_code, c.title AS currency_title,
+            c.minor_units, c.payment_provider, tp.price
         FROM tariffs AS t
         INNER JOIN tariff_prices AS tp ON (
             t.id = tp.tariff_id
             AND {_tariff_prices_for_currency_selection('%s')}
         )
+        INNER JOIN currencies AS c ON (c.code = tp.currency_code AND c.enabled IS TRUE)
         ORDER BY t.id ASC
     """, (currency_code,))
 
@@ -433,3 +452,36 @@ async def move_end_date(user_id: int, days: int) -> datetime:
 
 async def add_payment_history(payment_history_data: PaymentHistoryInterface) -> PaymentHistoryInterface:
     return await databaseExecutor.run(db.insert_model, 'payments_history', payment_history_data)
+
+
+async def increase_amount_with_payment_history(
+        user_id: int, amount: int, currency_code: str, payment_history_data: PaymentHistoryInterface
+) -> dict | None:
+    await ensure_user_balances(user_id)
+
+    async with db.get_connection() as connection:
+        async with connection.transaction():
+            payment_history_data = db.inject_timestamps(payment_history_data)
+            columns = list(payment_history_data.keys())
+            placeholders = ', '.join(['%s' for _ in columns])
+
+            payment_history = await databaseExecutor.run(db.execute_single_model, f"""
+                INSERT INTO payments_history ({', '.join(columns)})
+                VALUES ({placeholders})
+                ON CONFLICT (payment_service, external_payment_id) DO NOTHING
+            """, tuple(payment_history_data.values()), returning='*', connection=connection)
+
+            if payment_history is None:
+                return None
+
+            new_balance = await databaseExecutor.run(db.execute_single_model, """
+                UPDATE user_balances
+                SET balance = balance + %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = %s AND currency_code = %s
+            """, (amount, user_id, currency_code,), returning='balance', connection=connection)
+
+            return {
+                'balance': new_balance['balance'],
+                'payment_history': payment_history
+            }

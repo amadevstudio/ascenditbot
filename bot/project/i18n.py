@@ -640,12 +640,12 @@ routed_messages = {
             'page': {
                 'en':
                     "Select the balance currency. Then enter the amount or click on one of the buttons with the cost of the"
-                    " bot's tariffs. After that, follow the link and replenish the balance."
+                    " bot's tariffs. After that, follow the payment instructions."
                     " If everything goes well, the bot will send you a notification\n\n"
                     "The current mail <b>{email}</b> is important, it will receive a payment receipt",
                 'ru':
                     "Выберите валюту баланса. Затем введите сумму или нажмите на одну из кнопок со стоимостями тарифов бота."
-                    " После этого перейдите по ссылке и пополните баланс."
+                    " После этого следуйте инструкциям оплаты."
                     " Если всё пройдёт успешно, бот пришлёт вам уведомление\n\n"
                     "Важа текущая почта <b>{email}</b>, на неё придёт чек об оплате"
             },
@@ -656,6 +656,24 @@ routed_messages = {
             'fund_link_message': {
                 'en': "To replenish your account, follow the link\n{link}",
                 'ru': "Для пополнения счёта перейдите по ссылке\n{link}"
+            },
+            'telegram_stars': {
+                'invoice_title': {
+                    'en': "Telegram Stars balance",
+                    'ru': "Баланс Telegram Stars"
+                },
+                'invoice_description': {
+                    'en': "Top up your bot balance with {amount} Telegram Stars",
+                    'ru': "Пополнение баланса бота на {amount} Telegram Stars"
+                },
+                'invoice_sent': {
+                    'en': "Telegram Stars invoice sent",
+                    'ru': "Счёт Telegram Stars отправлен"
+                },
+                'checkout_error': {
+                    'en': "The payment cannot be processed. Please try again or contact the bot administrator.",
+                    'ru': "Платёж не может быть обработан. Попробуйте ещё раз или свяжитесь с администратором бота."
+                }
             },
             'success_payment': {
                 'en': "Successful payment!",

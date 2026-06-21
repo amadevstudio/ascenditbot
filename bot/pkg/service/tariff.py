@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal, InvalidOperation, ROUND_DOWN
 from typing import Generator
 
 from pkg.repository import tariff_repository
@@ -21,6 +22,9 @@ class Tariff(Service):
                 'id': 0,
                 'channels_count': 0,
                 'currency_code': user_base_currency_code,
+                'currency_title': user_base_currency_code.upper(),
+                'minor_units': 2,
+                'payment_provider': 'robokassa.ru',
                 'price': 0
             }
 
@@ -28,12 +32,38 @@ class Tariff(Service):
 
     @staticmethod
     def user_amount(price: int, accuracy: int = 0, ndigits: int = 2) -> float:
-        rounded = round((int(price) + int(accuracy)) / 100, ndigits)
+        return Tariff.format_amount(price, minor_units=2, accuracy=accuracy, ndigits=ndigits)
+
+    @staticmethod
+    def format_amount(amount: int, minor_units: int = 2, accuracy: int = 0, ndigits: int | None = None) -> int | float:
+        if ndigits is None:
+            ndigits = minor_units
+
+        divider = Decimal(10) ** minor_units
+        quantum = Decimal(1) if minor_units == 0 else Decimal(1) / (Decimal(10) ** ndigits)
+        rounded = (Decimal(int(amount) + int(accuracy)) / divider).quantize(quantum, rounding=ROUND_DOWN)
+
         integer_value = int(rounded)
         if rounded == integer_value:
             return integer_value
 
-        return rounded
+        return float(rounded)
+
+    @staticmethod
+    def parse_amount(amount: str | int | float, minor_units: int = 2) -> int | None:
+        try:
+            decimal_amount = Decimal(str(amount).replace(',', '.'))
+        except (InvalidOperation, ValueError):
+            return None
+
+        if decimal_amount <= 0:
+            return None
+
+        quantum = Decimal(1) if minor_units == 0 else Decimal(1) / (Decimal(10) ** minor_units)
+        if decimal_amount != decimal_amount.quantize(quantum):
+            return None
+
+        return int(decimal_amount * (Decimal(10) ** minor_units))
 
     @staticmethod
     async def user_tariff_info(user_id: int) -> UserTariffInfoInterface:
@@ -43,6 +73,9 @@ class Tariff(Service):
             tariff_info = {
                 'channels_count': 0,
                 'currency_code': user_base_currency_code,
+                'currency_title': user_base_currency_code.upper(),
+                'minor_units': 2,
+                'payment_provider': 'robokassa.ru',
                 'price': 0,
                 'balance': 0,
                 'balances': await tariff_repository.user_balances(user_id),
@@ -205,6 +238,10 @@ class Tariff(Service):
         return await tariff_repository.enabled_currencies()
 
     @staticmethod
+    async def currency(currency_code: str) -> CurrencyInterface | None:
+        return await tariff_repository.currency(currency_code)
+
+    @staticmethod
     async def set_payment_currency(user_id: int, currency_code: str) -> UserTariffConnectionInterface | None:
         return await tariff_repository.set_payment_currency(user_id, currency_code)
 
@@ -215,3 +252,10 @@ class Tariff(Service):
     @staticmethod
     async def add_payment_history(payment_history: PaymentHistoryInterface) -> PaymentHistoryInterface:
         return await tariff_repository.add_payment_history(payment_history)
+
+    @staticmethod
+    async def add_amount_with_payment_history(
+            user_id: int, amount: int, currency_code: str, payment_history: PaymentHistoryInterface
+    ) -> dict | None:
+        return await tariff_repository.increase_amount_with_payment_history(
+            user_id, amount, currency_code, payment_history)

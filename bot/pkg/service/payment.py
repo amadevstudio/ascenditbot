@@ -65,13 +65,29 @@ class BalanceHandler(Service):
             logger.warning('Error wrong_currency_income', result, user, available_currency_codes)
             return
 
-        # Funding
-        new_balance = await Tariff.add_amount(user['id'], result['amount'], result['currency'])
-        await Tariff.add_payment_history({
+        currency = await Tariff.currency(result['currency'])
+        if currency is None:
+            logger.warning('Error wrong_currency_income', result, user, available_currency_codes)
+            return
+
+        payment_history = {
             'user_id': user['id'],
             'payment_service': result['service'],
             'amount': result['amount'],
-            'currency_code': result['currency']})
+            'currency_code': result['currency']
+        }
+        if 'id' in result and result['service'] == 'telegram_stars':
+            payment_history['external_payment_id'] = str(result['id'])
+        if 'invoice_payload' in result:
+            payment_history['invoice_payload'] = result['invoice_payload']
+
+        funding = await Tariff.add_amount_with_payment_history(
+            user['id'], result['amount'], result['currency'], payment_history)
+        if funding is None:
+            logger.warning('Payment already processed', result, user)
+            return
+
+        new_balance = funding['balance']
 
         new_user_tariff_info = await Tariff.user_tariff_info(user['id'])
         if new_user_tariff_info['currency_code'] == result['currency'] and new_user_tariff_info['balance'] != new_balance:
@@ -92,11 +108,14 @@ class BalanceHandler(Service):
         # Notify admins
         telegram_admin_group_id = environment.get('TELEGRAM_ADMIN_GROUP_ID', None)
         if telegram_admin_group_id is not None:
+            amount_text = Tariff.format_amount(result['amount'], currency['minor_units'])
+            new_balance_text = Tariff.format_amount(new_balance, currency['minor_units'])
             await chat_id_sender(int(telegram_admin_group_id), message_structures=[{
                 'type': 'text',
                 'text':
-                    f"New payment from user {user['id']}, email: {user['email']}, amount {result['amount']},"
-                    f" new balance {new_balance} (bd: {new_user_tariff_info['balance']})"
+                    f"New payment from user {user['id']}, email: {user['email']}, "
+                    f"amount {amount_text} {result['currency']},"
+                    f" new balance {new_balance_text} {result['currency']}"
             }])
 
         # Check referrer

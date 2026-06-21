@@ -28,9 +28,13 @@ def build_subscription_info(user_tariff_info: UserTariffInfoInterface | None, la
 
     balance_items = []
     for user_balance in user_tariff_info.get('balances', []):
-        balance_items.append(f"{Tariff.user_amount(user_balance['balance'])} {user_balance['currency_code']}")
+        balance_items.append(
+            f"{Tariff.format_amount(user_balance['balance'], user_balance.get('minor_units', 2))} "
+            f"{user_balance['currency_code']}")
     if len(balance_items) == 0:
-        balance_items.append(f"{Tariff.user_amount(user_tariff_info['balance'])} {user_tariff_info['currency_code']}")
+        balance_items.append(
+            f"{Tariff.format_amount(user_tariff_info['balance'], user_tariff_info.get('minor_units', 2))} "
+            f"{user_tariff_info['currency_code']}")
 
     info_message += f"\n{localization.get_message(['subscription', 'info_block', 'balance'], language_code)} " \
                     f"{', '.join(balance_items)}"
