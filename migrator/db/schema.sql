@@ -161,6 +161,10 @@ CREATE TABLE public.payments_history (
     currency_code character varying(16) NOT NULL,
     external_payment_id character varying(255),
     invoice_payload character varying(255),
+    provider_out_sum character varying(64),
+    provider_inc_sum character varying(64),
+    provider_inc_curr_label character varying(255),
+    provider_payment_method character varying(255),
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL
 );

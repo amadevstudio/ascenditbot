@@ -17,6 +17,10 @@ class CallableInterface(ErrorDictInterface, total=False):
     service: str
     id: str
     invoice_payload: str
+    provider_out_sum: str
+    provider_inc_sum: str
+    provider_inc_curr_label: str
+    provider_payment_method: str
 
 
 class PaymentProcessor(ABC):
