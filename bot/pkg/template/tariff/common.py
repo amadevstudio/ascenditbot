@@ -26,10 +26,20 @@ def build_subscription_info(user_tariff_info: UserTariffInfoInterface | None, la
     tariff_name = localization.get_message(['tariffs', 'list', user_tariff_info['tariff_id']], language_code)
     info_message = f"{tariff_name}"
 
-    balance = Tariff.user_amount(user_tariff_info['balance'])
+    balance_items = []
+    for user_balance in user_tariff_info.get('balances', []):
+        balance_items.append(
+            f"{Tariff.format_amount(user_balance['balance'], user_balance.get('minor_units', 2))} "
+            f"{user_balance['currency_code']}")
+    if len(balance_items) == 0:
+        balance_items.append(
+            f"{Tariff.format_amount(user_tariff_info['balance'], user_tariff_info.get('minor_units', 2))} "
+            f"{user_tariff_info['currency_code']}")
 
     info_message += f"\n{localization.get_message(['subscription', 'info_block', 'balance'], language_code)} " \
-                    f"{balance} {user_tariff_info['currency_code']}"
+                    f"{', '.join(balance_items)}"
+    info_message += f"\n{localization.get_message(['subscription', 'info_block', 'payment_currency'], language_code)} " \
+                    f"{user_tariff_info['currency_code']}"
 
     cant_renew_message = build_cant_renew_message(user_tariff_info, language_code)
     if cant_renew_message is not None:

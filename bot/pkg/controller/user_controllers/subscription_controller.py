@@ -5,7 +5,9 @@ from lib.language import localization
 from pkg.controller.user_controllers.common_controller import raise_error
 from pkg.service.payment import Payment
 from pkg.service.tariff import Tariff
+from pkg.service.telegram_stars import TelegramStarsPayment
 from pkg.service.user import User
+from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 from pkg.template.tariff.common import build_subscription_info, channels_count_text
 from project import constants
@@ -72,7 +74,8 @@ async def tariffs(params: ControllerParams):
                 ['subscription', 'info_block', 'days_countable'], params['language_code'],
                 constants.tariff_duration_days)
 
-            tariff_info += f"{Tariff.user_amount(tariff['price'])} {tariff['currency_code']} {per_days_message}, "
+            tariff_info += f"{Tariff.format_amount(tariff['price'], tariff.get('minor_units', 2))} " \
+                           f"{tariff['currency_code']} {per_days_message}, "
             tariff_info += channels_count_text(tariff['channels_count'], params['language_code']).lower()
             tariffs_message += "\n\n" + tariff_info
 
@@ -128,15 +131,45 @@ async def fund_balance_page(params: ControllerParams):
     call, message = params['call'], params['message']
 
     user = await User.find_by_service_id(message.chat.id)
-    user_id = user['id']
-
-    user_currency_code = await Tariff.currency_code_for_user(user_id)
-    available_tariffs = await Tariff.tariffs_info(user_id)
 
     message_text = localization.get_message(
         ['subscription', 'fund', 'page'], params['language_code'], email=user['email'])
     message_text += "\n\n" + localization.get_message(
         ['subscription', 'show', 'balance_warning'], params['language_code'])
+
+    reply_markup = []
+    for currency in await Tariff.enabled_currencies():
+        reply_markup.append([{
+            'text': currency['title'],
+            'callback_data': {'tp': 'fund_currency', 'currency': currency['code']}
+        }])
+
+    reply_markup.append([go_back_inline_button(params['language_code'])])
+
+    await message_sender(message.chat.id, message_structures=[{
+        'type': 'text',
+        'text': message_text,
+        'reply_markup': reply_markup,
+        'parse_mode': 'HTML'
+    }])
+
+
+async def fund_currency_page(params: ControllerParams):
+    call, message, current_state_data = params['call'], params['message'], params['state_data']
+
+    user = await User.find_by_service_id(message.chat.id)
+    currency_code = current_state_data.get('currency', None)
+    if currency_code is None:
+        currency_code = await Tariff.currency_code_for_user(user['id'])
+
+    UserStorage.add_user_state_data(message.chat.id, 'fund_currency', {'currency': currency_code})
+
+    available_tariffs = await Tariff.tariffs_info_by_currency(currency_code)
+
+    message_text = localization.get_message(
+        ['subscription', 'fund', 'currency_page'], params['language_code'], currency=currency_code)
+    message_text += "\n\n" + localization.get_message(
+        ['subscription', 'fund', 'page'], params['language_code'], email=user['email'])
 
     reply_markup = []
     reply_markup_row_buffer = []
@@ -146,9 +179,11 @@ async def fund_balance_page(params: ControllerParams):
             continue
 
         reply_markup_row_buffer.append({
-            'text': f"{Tariff.user_amount(tariff['price'])} {user_currency_code}",
+            'text': f"{Tariff.format_amount(tariff['price'], tariff.get('minor_units', 2))} {currency_code}",
             'callback_data': {
-                'tp': 'fund_amount', 'value': Tariff.user_amount(tariff['price'])  # , 'currency': user_currency_code
+                'tp': 'fund_amount',
+                'amount': tariff['price'],
+                'currency': currency_code
             }})
 
         if len(reply_markup_row_buffer) == 3:
@@ -169,28 +204,49 @@ async def fund_balance_page(params: ControllerParams):
 
 
 async def fund_link_page(params: ControllerParams):
-    call, message = params['call'], params['message']
+    call, message, current_state_data = params['call'], params['message'], params['state_data']
 
-    fund_service = Payment.get_fund_service()
+    user = await User.find_by_service_id(message.chat.id)
+    user_currency_code = state_data.decode_call_data(call).get('currency', None) if call is not None else None
+    if user_currency_code is None:
+        user_currency_code = current_state_data.get('currency', None)
+    if user_currency_code is None:
+        user_currency_code = UserStorage.get_user_state_data(message.chat.id, 'fund_currency').get('currency', None)
+    if user_currency_code is None:
+        user_currency_code = await Tariff.currency_code_for_user(user['id'])
 
+    currency = await Tariff.currency(user_currency_code)
+    if currency is None:
+        await notify(call, message, localization.get_message(
+            ['subscription', 'fund', 'errors', 'wrong_currency'], params['language_code']))
+        logger.warning(f"Wrong currency for user with id #{user['id']}, #{user_currency_code}")
+        return False
+
+    decoded_call_data = state_data.decode_call_data(call) if call is not None else {}
     if call is not None:
-        summa = state_data.decode_call_data(call).get('value', 0)
+        try:
+            amount = int(decoded_call_data.get('amount', 0))
+        except (TypeError, ValueError):
+            amount = None
     else:
         summa = message.text  # Payment.is_test
+        amount = Tariff.parse_amount(summa, currency['minor_units'])
 
-    try:
-        amount = float(summa)  # may raise ValueError
-        if amount <= 0:
-            raise ValueError("The amount must be greater than zero")
-    except ValueError:
+    if amount is None or amount <= 0:
         await notify(call, message, localization.get_message(
             ['subscription', 'fund', 'errors', 'wrong_amount'], params['language_code']))
         return False
 
-    user = await User.find_by_service_id(message.chat.id)
-    user_currency_code = await Tariff.currency_code_for_user(user['id'])
+    if currency['payment_provider'] == TelegramStarsPayment.PAYMENT_SERVICE:
+        await TelegramStarsPayment.send_fund_invoice(
+            message.chat.id, user['id'], amount, params['language_code'])
+        await notify(call, message, localization.get_message(
+            ['subscription', 'fund', 'telegram_stars', 'invoice_sent'], params['language_code']))
+        return
 
-    fund_link = Payment.generate_payment_link(amount, user, user_currency_code, fund_service)
+    fund_service = Payment.get_fund_service()
+    provider_amount = Tariff.format_amount(amount, currency['minor_units'])
+    fund_link = Payment.generate_payment_link(provider_amount, user, user_currency_code, fund_service)
     if isinstance(fund_link, dict) and 'error' in fund_link:
         await notify(call, message, localization.get_message(
             ['subscription', 'fund', 'errors', 'wrong_currency'], params['language_code']))

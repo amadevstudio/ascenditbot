@@ -35,9 +35,11 @@ class RoutesInterface(TypedDict):
     subscription: RouteInterface
     tariffs: RouteInterface
     fund: RouteInterface
+    fund_currency: RouteInterface
     fund_amount: RouteInterface
     settings: RouteInterface
     settings_email: RouteInterface
+    settings_currency: RouteInterface
     nowhere: RouteInterface
 
 
@@ -147,6 +149,14 @@ class RouteMap:
         'fund': {
             'method': subscription_controller.fund_balance_page,
             'available_from': ['call'],
+            'routes': ['fund_currency'],
+            'wait_for_input': True,
+            'validator': email_presence_validator
+        },
+        'fund_currency': {
+            'method': subscription_controller.fund_currency_page,
+            'available_from': ['call'],
+            'routes': ['fund_amount'],
             'wait_for_input': True,
             'validator': email_presence_validator
         },
@@ -154,19 +164,28 @@ class RouteMap:
             'method': subscription_controller.fund_link_page,
             'available_from': ['message', 'call'],
             'wait_for_input': True,
-            'states_for_input': ['fund', 'fund_amount'],
+            'states_for_input': ['fund_currency', 'fund_amount'],
             'validator': email_presence_validator
         },
 
         'settings': {
             'method': settings_controller.page,
             'available_from': ['command', 'call'],
-            'routes': ['settings_email']
+            'routes': ['settings_email', 'settings_currency']
         },
         'settings_email': {
             'method': settings_controller.email,
             'available_from': ['message', 'call'],
             'wait_for_input': True
+        },
+        'settings_currency': {
+            'method': settings_controller.currency,
+            'available_from': ['call'],
+            'actions': {
+                'change_currency': {
+                    'method': settings_controller.change_currency
+                }
+            }
         },
 
         'nowhere': {}

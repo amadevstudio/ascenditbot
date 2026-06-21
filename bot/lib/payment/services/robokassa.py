@@ -1,4 +1,5 @@
 import hashlib
+import secrets
 from typing import TypedDict
 
 from lib.payment.payment import PaymentProcessor, ErrorDictInterface
@@ -23,7 +24,7 @@ class PackageParams(TypedDict, total=False):
 
 
 class RobokassaPaymentProcessor(PaymentProcessor):
-    AVAILABLE_CURRENCIES = ['rub', 'usd', 'eur', 'kzt']
+    AVAILABLE_CURRENCIES = ['rub', 'usd']
 
     def validate_package(self, package: dict, service: str) -> bool:
         return service == 'robokassa'
@@ -54,7 +55,7 @@ class RobokassaPaymentProcessor(PaymentProcessor):
         if result:
             result_text = f"OK{inv_id}"
             await self.incoming_payment_callback({
-                'amount': result_summ, 'currency': currency, 'user_id': int(user_id), 'service': 'robokassa'})
+                'amount': result_summ, 'currency': currency, 'user_id': int(user_id), 'service': 'robokassa', 'id': inv_id})
         else:
             result_text = 'BAD'
             await self.incoming_payment_callback({'error': 'wrong_signature', 'user_id': int(user_id)})
@@ -65,7 +66,7 @@ class RobokassaPaymentProcessor(PaymentProcessor):
     def generate_payment_link(
             self, summ: int, user_id: int, currency: str, culture: str = None, test: bool = False
     ) -> str | ErrorDictInterface:
-        inv_id = 0  # max 2^31 - 1
+        inv_id = secrets.randbelow(2_147_483_647) + 1
 
         if currency not in self.AVAILABLE_CURRENCIES:
             return {'error': 'currency_not_available'}

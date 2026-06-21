@@ -64,6 +64,9 @@ class TariffInterface(TypedDict, total=False):
 class TariffPriceInterface(TypedDict, total=False):
     tariff_id: int | None
     currency_code: str
+    currency_title: str
+    minor_units: int
+    payment_provider: str
     price: int
     created_at: datetime.datetime
     updated_at: datetime.datetime
@@ -73,11 +76,31 @@ class TariffInfoInterface(TariffInterface, TariffPriceInterface):
     pass
 
 
+class CurrencyInterface(TypedDict, total=False):
+    code: str
+    title: str
+    minor_units: int
+    payment_provider: str
+    enabled: bool
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class UserBalanceInterface(TypedDict, total=False):
+    user_id: int
+    currency_code: str
+    currency_title: str
+    minor_units: int
+    payment_provider: str
+    balance: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
 class UserTariffConnectionInterface(TypedDict, total=False):
     user_id: int
     tariff_id: int | None
-    balance: int
-    currency_code: str
+    payment_currency_code: str
     end_date: datetime.datetime | None
     trial_was_activated: bool
     created_at: datetime.datetime
@@ -91,5 +114,7 @@ class PaymentHistoryInterface(TypedDict, total=False):
     status: int
     amount: int
     currency_code: str
+    external_payment_id: str
+    invoice_payload: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
