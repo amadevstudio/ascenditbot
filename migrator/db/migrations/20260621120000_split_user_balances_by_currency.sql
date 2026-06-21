@@ -70,10 +70,10 @@ where payment_currency_code not in (
 );
 
 insert into user_balances (user_id, currency_code, balance, created_at, updated_at)
-select user_id, currency_code, balance, now(), now()
+select user_id, payment_currency_code, balance, now(), now()
 from user_tariff_connections
 on conflict (user_id, currency_code) do update
-set balance = excluded.balance,
+set balance = user_balances.balance + excluded.balance,
     updated_at = now();
 
 insert into user_balances (user_id, currency_code, balance, created_at, updated_at)

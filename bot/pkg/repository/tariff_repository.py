@@ -114,10 +114,20 @@ async def set_payment_currency(user_id: int, currency_code: str) -> UserTariffCo
         return None
 
     await ensure_user_balances(user_id)
-    return await databaseExecutor.run(db.update_model, 'user_tariff_connections', {
+    result = await databaseExecutor.run(db.update_model, 'user_tariff_connections', {
         'user_id': user_id,
         'payment_currency_code': currency_code
     }, key_fields=['user_id'])
+    if result is not None:
+        return result
+
+    return await databaseExecutor.run(db.insert_model, 'user_tariff_connections', {
+        'user_id': user_id,
+        'tariff_id': 0,
+        'payment_currency_code': currency_code,
+        'end_date': None,
+        'trial_was_activated': False
+    })
 
 
 # Tariff info based on user currency

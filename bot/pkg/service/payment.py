@@ -76,7 +76,7 @@ class BalanceHandler(Service):
             'amount': result['amount'],
             'currency_code': result['currency']
         }
-        if 'id' in result and result['service'] == 'telegram_stars':
+        if 'id' in result:
             payment_history['external_payment_id'] = str(result['id'])
         if 'invoice_payload' in result:
             payment_history['invoice_payload'] = result['invoice_payload']
