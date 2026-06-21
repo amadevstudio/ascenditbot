@@ -371,8 +371,8 @@ routed_messages = {
             },
             'delete_button': {
                 'initial': {
-                    'en': emoji_codes.get('wastebasket') + " Delete chat",
-                    'ru': emoji_codes.get('wastebasket') + " Удалить группу"
+                    'en': emoji_codes.get('wastebasket', '') + " Delete chat",
+                    'ru': emoji_codes.get('wastebasket', '') + " Удалить группу"
                 },
                 'deleting': {
                     'en': emoji_codes.get('warning_sign', '') + " Confirm deletion?",

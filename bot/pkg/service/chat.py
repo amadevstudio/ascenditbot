@@ -222,7 +222,7 @@ class Chat(Service):
         return await chat_repository.switch_active(chat_id)
 
     @staticmethod
-    async def delete(chat_id: int, user_service_id: int) -> int | ErrorDictInterface | None:
+    async def delete(chat_id: int, user_service_id: int) -> int | ErrorDictInterface:
         try:
             chat_info = await chat_repository.find(chat_id)
             if chat_info is None:
@@ -235,10 +235,11 @@ class Chat(Service):
             if validate_access_result['administrator'].status != 'creator':
                 return {'error': 'owner_must_delete'}
 
-            return await chat_repository.delete(chat_id)
+            delete_result = await chat_repository.delete(chat_id)
+            return {'error': 'not_found'} if delete_result is None else delete_result
         except Exception as e:
             logger.error(e)
-            return None
+            return {'error': 'unexpected'}
 
     @staticmethod
     async def add_to_whitelist(chat_id: int, user_nickname: str) \
