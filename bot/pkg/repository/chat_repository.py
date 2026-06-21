@@ -173,6 +173,22 @@ async def switch_active(chat_id: int) -> bool:
     """, (chat_id,), returning='active'))['active']
 
 
+async def delete(chat_id: int) -> int | None:
+    connection: Connection
+    async with db.get_connection() as connection:
+        async with connection.transaction():
+            await connection.execute(
+                "DELETE FROM allowed_users WHERE moderated_chat_id = $1", chat_id)
+            await connection.execute(
+                "DELETE FROM moderated_chat_statistics WHERE moderated_chat_id = $1", chat_id)
+            await connection.execute(
+                "DELETE FROM user_moderated_chat_connections WHERE moderated_chat_id = $1", chat_id)
+            deleted_chat = await connection.fetchrow(
+                "DELETE FROM moderated_chats WHERE id = $1 RETURNING id", chat_id)
+
+    return None if deleted_chat is None else deleted_chat['id']
+
+
 async def add_to_whitelist(chat_id: int, user_nickname: str) -> ModeratedChatInterface | None:
     allowed_user = {'moderated_chat_id': chat_id, 'nickname': user_nickname}
     return await databaseExecutor.run(db.insert_model,

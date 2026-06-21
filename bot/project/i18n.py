@@ -235,6 +235,10 @@ routed_messages = {
                     'en': "In order to administer a chat, the owner must first add it to the bot",
                     'ru': "Чтобы администрировать группу, сначала владелец должен добавить её в бот"
                 },
+                'owner_must_delete': {
+                    'en': "Only the chat owner can delete it from the bot",
+                    'ru': "Удалить группу из бота может только владелец группы"
+                },
                 'creator_dont_subscribed': {
                     'en':
                         "In order for other admins to manage the chat, the owner must have a subscription to the bot"
@@ -364,6 +368,22 @@ routed_messages = {
                     'en': emoji_codes.get('cross_mark', '') + " Chat disabled",
                     'ru': emoji_codes.get('cross_mark', '') + " Чат отключён"
                 }
+            },
+            'delete_button': {
+                'initial': {
+                    'en': emoji_codes.get('wastebasket') + " Delete chat",
+                    'ru': emoji_codes.get('wastebasket') + " Удалить группу"
+                },
+                'deleting': {
+                    'en': emoji_codes.get('warning_sign', '') + " Confirm deletion?",
+                    'ru': emoji_codes.get('warning_sign', '') + " Подтвердить удаление?"
+                }
+            }
+        },
+        'delete': {
+            'confirm': {
+                'en': "Click the button again to delete",
+                'ru': "Для удаления нажмите на кнопку ещё раз"
             }
         },
         'add_to_whitelist': {

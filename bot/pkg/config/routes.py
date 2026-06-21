@@ -93,6 +93,9 @@ class RouteMap:
             'actions': {
                 'switch_active': {
                     'method': chats_controller.switch_active
+                },
+                'delete': {
+                    'method': chats_controller.delete
                 }
             },
             'validator': chat_access_validator
