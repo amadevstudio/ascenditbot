@@ -31,6 +31,7 @@ class RoutesInterface(TypedDict):
     chat: RouteInterface
     add_to_chat_whitelist: RouteInterface
     chat_whitelist: RouteInterface
+    chat_restriction_duration: RouteInterface
     allowed_user: RouteInterface
     subscription: RouteInterface
     tariffs: RouteInterface
@@ -90,7 +91,8 @@ class RouteMap:
             'available_from': ['call'],
             'routes': [
                 'add_to_chat_whitelist',
-                'chat_whitelist'
+                'chat_whitelist',
+                'chat_restriction_duration'
             ],
             'actions': {
                 'switch_active': {
@@ -112,6 +114,12 @@ class RouteMap:
             'method': allowed_users_controller.chat_whitelist,
             'available_from': ['message', 'call'],
             'routes': ['allowed_user'],
+            'wait_for_input': True,
+            'validator': chat_access_validator
+        },
+        'chat_restriction_duration': {
+            'method': chats_controller.restriction_duration,
+            'available_from': ['message', 'call'],
             'wait_for_input': True,
             'validator': chat_access_validator
         },
