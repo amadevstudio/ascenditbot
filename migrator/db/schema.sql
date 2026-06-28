@@ -125,7 +125,8 @@ CREATE TABLE public.moderated_chats (
     allowed_keywords character varying(255)[],
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    name character varying(255)
+    name character varying(255),
+    restriction_duration_minutes integer DEFAULT 5 NOT NULL
 );
 
 

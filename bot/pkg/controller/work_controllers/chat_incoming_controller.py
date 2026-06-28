@@ -6,6 +6,10 @@ from pkg.system.logger import logger
 
 
 async def incoming_chat_message(message: telegram_types.Message):
+    if message.from_user is None:
+        logger.warning("Incoming chat message has no sender")
+        return
+
     # Ignore messages sent by bots
     if message.from_user.is_bot:  # and message.from_user.username != 'GroupAnonymousBot'
         return
@@ -30,6 +34,9 @@ async def incoming_chat_message(message: telegram_types.Message):
 
     try:
         await message.delete()
+    except telegram_exceptions.TelegramForbiddenError as e:
+        logger.warning(e)
+        return
     except telegram_exceptions.TelegramBadRequest as e:
         if "message can't be deleted" in str(e):
             return
@@ -38,3 +45,13 @@ async def incoming_chat_message(message: telegram_types.Message):
             return
 
         logger.error(e)
+        return
+    except Exception as e:
+        logger.error(e)
+        return
+
+    await Chat.restrict_user(
+        chat_service_id,
+        message.from_user.id,
+        chat_data.get('restriction_duration_minutes', 5),
+        message.chat.type)

@@ -18,3 +18,4 @@ ChatMember = types.ChatMember
 ChatMemberAdministrator = types.ChatMemberAdministrator
 ChatMemberOwner = types.ChatMemberOwner
 ChatAdministratorRights = types.ChatAdministratorRights
+ChatPermissions = types.ChatPermissions

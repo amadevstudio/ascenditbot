@@ -173,6 +173,12 @@ async def switch_active(chat_id: int) -> bool:
     """, (chat_id,), returning='active'))['active']
 
 
+async def update_restriction_duration(chat_id: int, duration_minutes: int) -> int:
+    return (await databaseExecutor.run(db.execute_single_model, """
+        UPDATE moderated_chats SET restriction_duration_minutes = %s WHERE id = %s
+    """, (duration_minutes, chat_id,), returning='restriction_duration_minutes'))['restriction_duration_minutes']
+
+
 async def delete(chat_id: int) -> int | None:
     connection: Connection
     async with db.get_connection() as connection:

@@ -1,3 +1,4 @@
+import datetime
 import typing
 from typing import TypedDict, List, Literal
 
@@ -25,6 +26,10 @@ class AccessValidationInterface(ErrorDictInterface, total=False):
 
 class Chat(Service):
     BOT = bot
+
+    @staticmethod
+    def _chat_type_value(chat_type) -> str:
+        return getattr(chat_type, 'value', chat_type)
 
     @staticmethod
     async def find(chat_id: int) -> ModeratedChatInterface | None:
@@ -220,6 +225,61 @@ class Chat(Service):
     @staticmethod
     async def switch_active(chat_id: int) -> bool:
         return await chat_repository.switch_active(chat_id)
+
+    @staticmethod
+    async def update_restriction_duration(chat_id: int, duration_minutes: int) -> int:
+        return await chat_repository.update_restriction_duration(chat_id, duration_minutes)
+
+    @classmethod
+    async def validate_restriction_access(cls, chat_service_id: int) -> ErrorDictInterface:
+        try:
+            chat_info = await cls.BOT.get_chat(chat_service_id)
+        except telegram_exceptions.TelegramForbiddenError:
+            return {'error': 'not_member'}
+        except telegram_exceptions.TelegramBadRequest:
+            return {'error': 'not_found'}
+        except Exception as e:
+            logger.error(e)
+            return {'error': 'unknown'}
+
+        if cls._chat_type_value(chat_info.type) != 'supergroup':
+            return {'error': 'restriction_supergroup_required'}
+
+        chat_member = await cls._get_chat_member(chat_service_id, bot.id)
+        if 'error' in chat_member:
+            return {'error': chat_member['error']}
+
+        bot_rights_validation = await cls._validate_bot_rights(chat_member)
+        if 'error' in bot_rights_validation:
+            return {'error': bot_rights_validation['error']}
+
+        if isinstance(chat_member, telegram_types.ChatMemberOwner):
+            return {}
+
+        if isinstance(chat_member, telegram_types.ChatMemberAdministrator) and chat_member.can_restrict_members:
+            return {}
+
+        return {'error': 'cant_restrict_members'}
+
+    @classmethod
+    async def restrict_user(
+            cls, chat_service_id: int, user_service_id: int, duration_minutes: int, chat_type: str | None = None):
+        if duration_minutes <= 0 or cls._chat_type_value(chat_type) != 'supergroup':
+            return
+
+        try:
+            until_date = (
+                datetime.datetime.now(datetime.timezone.utc)
+                + datetime.timedelta(minutes=duration_minutes))
+            await cls.BOT.restrict_chat_member(
+                chat_id=chat_service_id,
+                user_id=user_service_id,
+                permissions=telegram_types.ChatPermissions(can_send_messages=False),
+                until_date=until_date)
+        except (telegram_exceptions.TelegramBadRequest, telegram_exceptions.TelegramForbiddenError) as e:
+            logger.warning(e)
+        except Exception as e:
+            logger.error(e)
 
     @staticmethod
     async def delete(chat_id: int, user_service_id: int) -> int | ErrorDictInterface | None:
