@@ -15,6 +15,8 @@ from pkg.service.chat import Chat
 from project.types import ModeratedChatInterface
 
 _PER_PAGE = 5
+_MIN_RESTRICTION_DURATION_MINUTES = 1
+_MAX_RESTRICTION_DURATION_MINUTES = 1440
 
 
 async def add_chat(params: ControllerParams):
@@ -208,6 +210,14 @@ async def show(params: ControllerParams):
         'callback_data': {'tp': 'chat_whitelist'}}
     reply_markup.append([whitelist_button])
 
+    restriction_duration_button = {
+        'text': localization.get_message(
+            ['chat', 'show', 'restriction_duration_button'],
+            params['language_code'],
+            duration=chat_data.get('restriction_duration_minutes', 5)),
+        'callback_data': {'tp': 'chat_restriction_duration'}}
+    reply_markup.append([restriction_duration_button])
+
     state_button = {
         'text': localization.get_message(
             [
@@ -237,6 +247,89 @@ async def show(params: ControllerParams):
     await message_sender(message.chat.id, message_structures=message_structures)
 
     UserStorage.add_user_state_data(message.chat.id, 'chat', {**params['state_data'], **chat_data})
+
+
+async def restriction_duration(params: ControllerParams):
+    call, message = params['call'], params['message']
+    chat_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('chat'))
+
+    if 'id' not in chat_state_data:
+        await raise_error(None, message, 'state_data_none')
+        return False
+
+    if is_call_or_command(call, message):
+        chat_data = await Chat.find(chat_state_data['id'])
+        if chat_data is None:
+            await notify(
+                call, message, localization.get_message(['chat', 'errors', 'not_found'], params['language_code']))
+            return False
+
+        restriction_access = await Chat.validate_restriction_access(int(chat_data['service_id']))
+        if 'error' in restriction_access:
+            await notify(call, message, localization.get_message(
+                ['chat', 'restriction_duration', 'warnings', restriction_access['error']],
+                params['language_code']), alert=True)
+
+        message_structures = [{
+            'type': 'text',
+            'text': localization.get_message(
+                ['chat', 'restriction_duration', 'text'],
+                params['language_code'],
+                duration=chat_data.get('restriction_duration_minutes', 5),
+                min_duration=_MIN_RESTRICTION_DURATION_MINUTES,
+                max_duration=_MAX_RESTRICTION_DURATION_MINUTES),
+            'reply_markup': go_back_inline_markup(params['language_code']),
+            'parse_mode': 'HTML'
+        }]
+        await message_sender(message.chat.id, message_structures=message_structures)
+        return
+
+    try:
+        duration_minutes = int(message.text)
+    except ValueError:
+        await notify(None, message, localization.get_message(
+            ['chat', 'restriction_duration', 'errors', 'invalid'],
+            params['language_code'],
+            min_duration=_MIN_RESTRICTION_DURATION_MINUTES,
+            max_duration=_MAX_RESTRICTION_DURATION_MINUTES), save_state=True, button_text='cancel')
+        return False
+
+    if (
+            duration_minutes < _MIN_RESTRICTION_DURATION_MINUTES
+            or duration_minutes > _MAX_RESTRICTION_DURATION_MINUTES):
+        await notify(None, message, localization.get_message(
+            ['chat', 'restriction_duration', 'errors', 'invalid'],
+            params['language_code'],
+            min_duration=_MIN_RESTRICTION_DURATION_MINUTES,
+            max_duration=_MAX_RESTRICTION_DURATION_MINUTES), save_state=True, button_text='cancel')
+        return False
+
+    duration_minutes = await Chat.update_restriction_duration(chat_state_data['id'], duration_minutes)
+    chat_state_data['restriction_duration_minutes'] = duration_minutes
+    UserStorage.add_user_state_data(message.chat.id, 'chat', chat_state_data)
+
+    chat_data = await Chat.find(chat_state_data['id'])
+    if chat_data is None:
+        await notify(
+            None, message, localization.get_message(['chat', 'errors', 'not_found'], params['language_code']))
+        return False
+
+    restriction_access = await Chat.validate_restriction_access(int(chat_data['service_id']))
+    if 'error' in restriction_access:
+        result_message = localization.get_message(
+            ['chat', 'restriction_duration', 'success_with_warning'],
+            params['language_code'],
+            duration=duration_minutes)
+        result_message += "\n\n" + localization.get_message(
+            ['chat', 'restriction_duration', 'warnings', restriction_access['error']],
+            params['language_code'])
+    else:
+        result_message = localization.get_message(
+            ['chat', 'restriction_duration', 'success'],
+            params['language_code'],
+            duration=duration_minutes)
+
+    await notify(None, message, result_message, save_state=True)
 
 
 async def switch_active(params: ControllerParams):

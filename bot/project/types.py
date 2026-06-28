@@ -28,6 +28,7 @@ class ModeratedChatInterface(TypedDict, total=False):
     created_at: datetime.datetime
     updated_at: datetime.datetime
     name: str
+    restriction_duration_minutes: int
 
 
 class UserModeratedChatConnectionInterface(TypedDict, total=False):

@@ -359,6 +359,10 @@ routed_messages = {
                 'en': "Add to allowed users",
                 'ru': "Добавить в белый список"
             },
+            'restriction_duration_button': {
+                'en': "Restriction: {duration} min",
+                'ru': "Ограничение: {duration} мин"
+            },
             'active_button': {
                 'active': {
                     'en': emoji_codes.get('heavy_check_mark', '') + " Chat is connected",
@@ -384,6 +388,90 @@ routed_messages = {
             'confirm': {
                 'en': "Click the button again to delete",
                 'ru': "Для удаления нажмите на кнопку ещё раз"
+            }
+        },
+        'restriction_duration': {
+            'text': {
+                'en':
+                    "Current restriction time: <b>{duration} min</b>\n\n"
+                    "Send a number from {min_duration} to {max_duration}. "
+                    "Users outside the allowed list will be restricted for this time after their message is deleted.",
+                'ru':
+                    "Текущее время ограничения: <b>{duration} мин</b>\n\n"
+                    "Пришлите число от {min_duration} до {max_duration}. "
+                    "Пользователи вне белого списка будут ограничены на это время после удаления сообщения."
+            },
+            'success': {
+                'en': "Restriction time saved: {duration} min",
+                'ru': "Время ограничения сохранено: {duration} мин"
+            },
+            'success_with_warning': {
+                'en': "Restriction time saved: {duration} min, but temporary restriction needs attention.",
+                'ru': "Время ограничения сохранено: {duration} мин, но временное ограничение требует внимания."
+            },
+            'errors': {
+                'invalid': {
+                    'en': "Send a whole number from {min_duration} to {max_duration}",
+                    'ru': "Пришлите целое число от {min_duration} до {max_duration}"
+                }
+            },
+            'warnings': {
+                'restriction_supergroup_required': {
+                    'en':
+                        "Temporary restriction works only in supergroups. "
+                        "Messages outside the allowed list will still be deleted.",
+                    'ru':
+                        "Временное ограничение работает только в супергруппах. "
+                        "Сообщения вне белого списка всё равно будут удаляться."
+                },
+                'cant_restrict_members': {
+                    'en':
+                        "The bot needs administrator permission to restrict members. "
+                        "Messages outside the allowed list will still be deleted.",
+                    'ru':
+                        "Боту нужны права администратора на ограничение участников. "
+                        "Сообщения вне белого списка всё равно будут удаляться."
+                },
+                'not_member': {
+                    'en':
+                        "The bot is not a chat member. "
+                        "Messages can be moderated again after the bot is added as an administrator.",
+                    'ru':
+                        "Бота нет в группе. "
+                        "Модерация продолжит работать после добавления бота администратором."
+                },
+                'not_found': {
+                    'en':
+                        "The chat was not found. "
+                        "Check that the bot is still in the chat and has administrator permissions.",
+                    'ru':
+                        "Группа не найдена. "
+                        "Проверьте, что бот всё ещё в группе и имеет права администратора."
+                },
+                'not_admin': {
+                    'en':
+                        "The bot must be a chat administrator. "
+                        "Messages outside the allowed list will be deleted only when delete permission is available.",
+                    'ru':
+                        "Бот должен быть администратором группы. "
+                        "Сообщения вне белого списка будут удаляться только при наличии права удаления."
+                },
+                'cant_edit_messages': {
+                    'en':
+                        "The bot needs permission to delete messages. "
+                        "Temporary restriction is an addition to deletion, not a replacement.",
+                    'ru':
+                        "Боту нужны права на удаление сообщений. "
+                        "Временное ограничение дополняет удаление, а не заменяет его."
+                },
+                'unknown': {
+                    'en':
+                        "Restriction permissions could not be checked. "
+                        "Messages outside the allowed list will still be deleted when possible.",
+                    'ru':
+                        "Не удалось проверить права на ограничение. "
+                        "Сообщения вне белого списка всё равно будут удаляться, если это возможно."
+                }
             }
         },
         'add_to_whitelist': {
