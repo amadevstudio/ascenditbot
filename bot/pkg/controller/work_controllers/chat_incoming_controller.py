@@ -6,6 +6,10 @@ from pkg.system.logger import logger
 
 
 async def incoming_chat_message(message: telegram_types.Message):
+    if message.from_user is None:
+        logger.warning("Incoming chat message has no sender")
+        return
+
     # Ignore messages sent by bots
     if message.from_user.is_bot:  # and message.from_user.username != 'GroupAnonymousBot'
         return

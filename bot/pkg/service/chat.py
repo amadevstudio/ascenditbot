@@ -268,11 +268,14 @@ class Chat(Service):
             return
 
         try:
+            until_date = (
+                datetime.datetime.now(datetime.timezone.utc)
+                + datetime.timedelta(minutes=duration_minutes))
             await cls.BOT.restrict_chat_member(
                 chat_id=chat_service_id,
                 user_id=user_service_id,
                 permissions=telegram_types.ChatPermissions(can_send_messages=False),
-                until_date=datetime.datetime.now() + datetime.timedelta(minutes=duration_minutes))
+                until_date=until_date)
         except (telegram_exceptions.TelegramBadRequest, telegram_exceptions.TelegramForbiddenError) as e:
             logger.warning(e)
         except Exception as e:
