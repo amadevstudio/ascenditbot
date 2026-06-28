@@ -31,9 +31,11 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           password: ${{ secrets.SERVER_PASSWORD }}
           script: |
+            set -eu
             cd ${{ secrets.PROJECT_PATH }}
-            git pull
-            docker system prune -f
+            git restore migrator/db/schema.sql
+            git pull --ff-only origin main
             docker compose -f docker-compose.yml -f docker-compose.prod.yml build
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml stop -t 1 bot
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d db storage
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm migrator
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps bot

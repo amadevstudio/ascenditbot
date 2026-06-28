@@ -60,4 +60,6 @@ Migrate with
 View help and rest of the commands with  
 `docker compose run migrator --help`
 
+Commit `migrator/db/schema.sql` together with migrations after running dbmate locally or in a controlled development environment. Production should apply migrations without writing schema dumps back into the server checkout.
+
 Don't forget to own the project if necessary.

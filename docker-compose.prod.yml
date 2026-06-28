@@ -18,6 +18,7 @@ services:
   migrator:
     build:
       target: prod
+    volumes: !reset []
     env_file:
       - env/.env
       - env/.env.prod
@@ -28,5 +29,4 @@ services:
       - env/.env
       - env/.env.prod
       - env/.env.local
-
 

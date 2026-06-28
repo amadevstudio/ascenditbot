@@ -2,10 +2,12 @@
 FROM python:3.11 as base
 # set work directory
 WORKDIR /usr/src/bot/
+
+COPY requirements.txt /usr/src/bot/
+RUN pip install -r requirements.txt # Install packages from requirements.txt
+
 # copy project
 COPY . /usr/src/bot/
-
-RUN pip install -r requirements.txt # Install packages from requirements.txt
 
 # RUN pip-upgrade --skip-virtualenv-check # Interactively upgrade packages from requirements file, and also update the pinned version from requirements file(s).
 
