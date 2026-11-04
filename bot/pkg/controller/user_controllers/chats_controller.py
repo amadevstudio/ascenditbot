@@ -49,8 +49,12 @@ async def add_chat(params: ControllerParams):
     # ---
     # Chat adding
 
-    if message.forward_from_chat is not None:
-        chat_service_id = message.forward_from_chat.id
+    # Bot API 7.0 replaced forward_from_chat with forward_origin: a message an anonymous admin sent in a group
+    # carries the group as sender_chat (MessageOriginChat), a channel post carries chat (MessageOriginChannel)
+    forward_origin = message.forward_origin
+    forwarded_chat = getattr(forward_origin, 'sender_chat', None) or getattr(forward_origin, 'chat', None)
+    if forwarded_chat is not None:
+        chat_service_id = forwarded_chat.id
     elif message.chat_shared is not None:
         chat_service_id = message.chat_shared.chat_id
     else:
