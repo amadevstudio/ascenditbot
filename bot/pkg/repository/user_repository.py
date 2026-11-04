@@ -21,7 +21,7 @@ async def register_or_update_by_service_id(user_data: UserInterface, referral_se
     if user is None:
         if referral_service_id is not None:
             ref_user_id = await get_id_by_service_id(str(referral_service_id))
-            user_data = {**user, 'ref_id': ref_user_id}
+            user_data = {**user_data, 'ref_id': ref_user_id}
         user = await databaseExecutor.run(db.insert_model, 'users', user_data)
         return {'user': user, 'is_new': True}
 
