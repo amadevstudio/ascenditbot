@@ -25,5 +25,5 @@ async def get_privileges(nickname: str, chat_service_id: str) -> AllowedUserInte
             au.period_quantity, au.period_type, au.period_quantity_left, au.ban_expiration_date
         FROM allowed_users AS au
         INNER JOIN moderated_chats AS mc ON au.moderated_chat_id = mc.id
-        WHERE mc.service_id = %s AND au.nickname = %s
+        WHERE mc.service_id = %s AND LOWER(au.nickname) = LOWER(%s)
     """, (chat_service_id, nickname,))
