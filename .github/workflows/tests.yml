@@ -1,0 +1,17 @@
+name: Tests
+
+on:
+  pull_request:
+  # The deploy calls it first, so main is never deployed with failing tests
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      # The bot with a fake Telegram against a throwaway Postgres (all migrations) and Redis; no secrets needed
+      - name: Run the bench
+        run: ./scripts/test.sh

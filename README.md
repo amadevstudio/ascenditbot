@@ -49,6 +49,10 @@ Additional steps for production:
   <code>./scripts/own_project.sh</code>
 </details>
 
+## Tests
+`./scripts/test.sh` runs the bot with a fake Telegram against a throwaway database and Redis
+(Docker only, no secrets). How it works and how to add a case: [bot/tests/README.md](bot/tests/README.md).
+
 ## Migrations
 Using [dbmate](https://github.com/amacneil/dbmate)
 as migration engine.

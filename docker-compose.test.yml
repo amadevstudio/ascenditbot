@@ -1,0 +1,67 @@
+# The bot's tests: the real dispatcher, routers, services and a real Postgres and Redis, with Telegram faked.
+# Everything here is throwaway: no published ports, the database lives in memory, nothing reaches Telegram.
+#
+#   ./scripts/test.sh                 # or by hand:
+#   docker compose -f docker-compose.test.yml run --rm --build tests
+#   docker compose -f docker-compose.test.yml down -v
+name: ascenditbot-test
+
+x-test-env: &test-env
+  ENVIRONMENT: development
+  # Any token of the right shape: the fake session answers instead of api.telegram.org
+  TELEGRAM_BOT_TOKEN: "100000001:TEST-TOKEN"
+  TELEGRAM_ADMIN_GROUP_ID: "-1000000000001"
+  REDIS_PASSWORD: test
+  POSTGRES_DB: test
+  POSTGRES_USER: test
+  POSTGRES_PASSWORD: test
+  ROBOKASSA_LOGIN: test
+  ROBOKASSA_PAYMENT_P1: test
+  ROBOKASSA_PAYMENT_P2: test
+  ROBOKASSA_PAYMENT_P1_TEST: test
+  ROBOKASSA_PAYMENT_P2_TEST: test
+
+services:
+  db:
+    image: postgres:15.1-alpine
+    environment: *test-env
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d test"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+
+  # All migrations from an empty database: the tariffs, prices and currencies are seeded by them
+  migrator:
+    build:
+      context: ./migrator
+      target: base
+    environment:
+      POSTGRES_URL: postgres://test:test@db:5432/test?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+
+  storage:
+    image: redis:7.0-alpine
+    command: redis-server --save "" --requirepass test
+
+  tests:
+    build:
+      context: ./bot
+      target: base
+    command: python tests/run.py
+    working_dir: /usr/src/bot
+    volumes:
+      - ./bot:/usr/src/bot:ro
+    environment:
+      <<: *test-env
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      storage:
+        condition: service_started

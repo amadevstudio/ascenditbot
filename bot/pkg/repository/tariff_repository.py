@@ -453,9 +453,11 @@ async def increase_amount(user_id: int, amount: int, currency_code: str) -> int:
 
 
 async def move_end_date(user_id: int, days: int) -> datetime:
+    # From today when there is no end date (the free tariff) or it has passed, so the days given are not lost.
+    # The days go in as a parameter: interval '%s day' became a literal '$1 day' with asyncpg and failed
     return (await databaseExecutor.run(db.execute_single_model, """
         UPDATE user_tariff_connections
-        SET end_date = end_date + interval '%s day'
+        SET end_date = GREATEST(COALESCE(end_date, LOCALTIMESTAMP), LOCALTIMESTAMP) + make_interval(days => %s)
         WHERE user_id = %s
     """, (days, user_id,), returning='end_date'))['end_date']
 
