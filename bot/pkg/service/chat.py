@@ -36,6 +36,10 @@ class Chat(Service):
         return await chat_repository.find(chat_id)
 
     @staticmethod
+    async def owner_tariff_id(chat_id: int) -> int | None:
+        return await chat_repository.owner_tariff_id(chat_id)
+
+    @staticmethod
     async def find_by(chat: ModeratedChatInterface) -> ModeratedChatInterface | None:
         return await chat_repository.find_by(chat)
 

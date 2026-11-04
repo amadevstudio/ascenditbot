@@ -640,12 +640,14 @@ routed_messages = {
                     f"{emoji_codes.get('credit_card', '')} Subscription\n\n"
                     "A subscription allows you to moderate more chats and access new bot features."
                     " Familiarize yourself with the tariffs by the button \"Select tariff\","
-                    " and then replenish the balance for the required amount using the button \"Top up\"",
+                    " and then replenish the balance for the required amount using the button \"Top up\"\n\n"
+                    "One chat is moderated for free, forever",
                 'ru':
                     f"{emoji_codes.get('credit_card', '')} Подписка\n\n"
                     "Подписка позволяет модерировать больше чатов и получить доступ к новым функциям бота."
                     " Ознакомьтесь с тарифами по кнопке \"Выбрать тариф\","
-                    " а затем пополните баланс на нужную сумму с помощью кнопки \"Пополнить\""
+                    " а затем пополните баланс на нужную сумму с помощью кнопки \"Пополнить\"\n\n"
+                    "Одну группу бот модерирует бесплатно и навсегда"
             },
             'balance_warning': {
                 'en':
@@ -717,11 +719,15 @@ routed_messages = {
                 'en':
                     emoji_codes.get('warning_sign', '') +
                     " Insufficient funds to renew!\n\n"
-                    "Your subscription is disabled. To keep the bot running, top up your account and select a plan",
+                    "The subscription has ended, you are on the free tariff: the bot keeps working in one chat"
+                    " (the first one you added), the others are switched off."
+                    " To bring all chats back, top up your account and select a plan",
                 'ru':
                     emoji_codes.get('warning_sign', '') +
                     " Недостаточно средств для продления!\n\n"
-                    "Ваша подписка отключена. Чтобы бот продолжал работать, пополните счёт и выберите тариф"
+                    "Подписка закончилась, вы на бесплатном тарифе: бот продолжает работать в одной группе"
+                    " (первой добавленной), остальные выключены."
+                    " Чтобы вернуть все группы, пополните счёт и выберите тариф"
             }
         },
         'fund': {
@@ -805,6 +811,22 @@ routed_messages = {
             }
         }
     },
+    'work': {
+        'removed_notice': {
+            'text': {
+                'en':
+                    "Your message was removed: only whitelisted members can write in this group."
+                    " If you need access, ask the group admin.",
+                'ru':
+                    "Ваше сообщение удалено: писать в этой группе могут только участники из белого списка."
+                    " Если вам нужен доступ, обратитесь к администратору группы."
+            },
+            'promo': {
+                'en': f"Want the same for your group? Free for one group: @{constants.bot_nickname}",
+                'ru': f"Хотите так же в своей группе? Одна группа бесплатно: @{constants.bot_nickname}"
+            }
+        }
+    },
     'tariffs': {
         'index': {
             'en':
@@ -830,8 +852,8 @@ routed_messages = {
                 'ru': "{tariff_text} тариф"
             },
             0: {
-                'en': "No subscription",
-                'ru': "Без подписки"
+                'en': "Free",
+                'ru': "Бесплатный"
             },
             1: {
                 'en': emoji_codes.get('bronze_medal', '') + " Initial",
