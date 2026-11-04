@@ -201,3 +201,37 @@ async def test_test_payment_only_for_admins_in_production(bench: Bench):
 
     assert await _balance(bench, user['id'], 'rub') == 0
     assert await _balance(bench, admin['id'], 'rub') == 100000
+
+
+async def test_hourly_round_disables_expired(bench: Bench):
+    """the hourly round moves an expired paid subscription without money back to the free tariff and tells the
+    owner"""
+    from pkg.background.async_tasks.subscription_handler import subscription_handler_round
+    from pkg.service.tariff import Tariff
+
+    owner = await bench.owner(OWNER)
+    await Tariff.change(owner['id'], 1, force=True)
+    await bench.sql("UPDATE user_tariff_connections SET end_date = LOCALTIMESTAMP - interval '1 hour'")
+    await subscription_handler_round()
+
+    assert (await _subscription(bench, owner['id']))['tariff_id'] == 0
+    assert len(bench.telegram.sent_to(OWNER['id'])) == 1
+
+
+async def test_hourly_round_survives_failure(bench: Bench):
+    """a failing round (the database away for a moment) is logged and does not end the hourly task"""
+    import os
+    from unittest import mock
+
+    from pkg.background.async_tasks import subscription_handler
+
+    async def unreachable():
+        raise ConnectionError('database unreachable')
+        yield  # pragma: no cover
+
+    os.environ['ENVIRONMENT'] = 'production'  # the logger raises errors in development
+    try:
+        with mock.patch.object(subscription_handler.Tariff, 'process_all_subscription_validity', unreachable):
+            await subscription_handler.subscription_handler_round()
+    finally:
+        os.environ['ENVIRONMENT'] = 'development'

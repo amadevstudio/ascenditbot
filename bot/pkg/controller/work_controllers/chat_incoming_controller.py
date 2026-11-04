@@ -42,6 +42,11 @@ async def incoming_chat_message(message: telegram_types.Message):
     if allowed:
         return
 
+    # The owner and the admins write without being on the whitelist (moderated_chats.allow_administrators)
+    if chat_data.get('allow_administrators', True) \
+            and await Chat.is_administrator(chat_service_id, message.from_user.id):
+        return
+
     try:
         await message.delete()
     except telegram_exceptions.TelegramForbiddenError as e:

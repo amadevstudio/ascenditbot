@@ -180,3 +180,26 @@ async def test_notice_failure_harmless(bench: Bench):
     await bench.group_message(GROUP, STRANGER)
     assert len(bench.telegram.calls_of('deleteMessage')) == 1
     assert len(bench.telegram.calls_of('restrictChatMember')) == 1
+
+
+async def test_owner_and_admins_write(bench: Bench):
+    """the group's owner and admins write without being on the whitelist"""
+    from tests.bench import administrator
+
+    await _scene(bench)
+    admin = person(611, 'moderator')
+    bench.telegram.members[(GROUP, admin['id'])] = administrator(admin)
+    await bench.group_message(GROUP, OWNER)
+    await bench.group_message(GROUP, admin)
+    assert not bench.telegram.calls_of('deleteMessage', 'restrictChatMember', 'sendMessage'), bench.telegram.calls
+
+
+async def test_admins_moderated_when_not_allowed(bench: Bench):
+    """with admins not allowed (allow_administrators off) an admin off the whitelist is moderated too"""
+    from tests.bench import administrator
+
+    await _scene(bench, allow_administrators=False)
+    admin = person(611, 'moderator')
+    bench.telegram.members[(GROUP, admin['id'])] = administrator(admin)
+    await bench.group_message(GROUP, admin)
+    assert len(bench.telegram.calls_of('deleteMessage')) == 1

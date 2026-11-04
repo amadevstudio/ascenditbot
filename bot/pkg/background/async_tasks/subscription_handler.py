@@ -10,14 +10,7 @@ from pkg.template.tariff import auto_update
 
 async def subscription_handler():
     while True:
-        # await asyncio.sleep(5)
-        logger.info("Subscription Handler:", datetime.datetime.now())
-
-        # Prolong or disable users
-        await subscription_handler_action()
-
-        # Notify about days left
-        await subscription_handler_notifier()
+        await subscription_handler_round()
 
         # Wait to the next hour
         delta = datetime.timedelta(hours=1)
@@ -27,6 +20,20 @@ async def subscription_handler():
         logger.info("Subscription Handler:", f"Sleeping for {wait_seconds}")
         await asyncio.sleep(1)  # Ensure unique per interval
         await asyncio.sleep(wait_seconds)
+
+
+async def subscription_handler_round():
+    """One hourly round. A failure (the database unreachable for a moment) must not end the task: it did twice
+    in 2026 and subscriptions were neither prolonged nor disabled until the bot restarted."""
+    logger.info("Subscription Handler:", datetime.datetime.now())
+    try:
+        # Prolong or disable users
+        await subscription_handler_action()
+
+        # Notify about days left
+        await subscription_handler_notifier()
+    except Exception as e:
+        logger.error(e, "Subscription Handler: the round failed, the next one is in an hour")
 
 
 async def subscription_handler_action():

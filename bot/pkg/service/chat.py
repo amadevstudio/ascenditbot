@@ -57,6 +57,14 @@ class Chat(Service):
             logger.error(e)
             return {'error': 'unknown'}
 
+    @classmethod
+    async def is_administrator(cls, chat_service_id: int, user_service_id: int) -> bool:
+        """The member is the group's owner or one of its admins (False when Telegram cannot say)."""
+        chat_member = await cls._get_chat_member(chat_service_id, user_service_id)
+        if isinstance(chat_member, dict):
+            return False
+        return chat_member.status in ('creator', 'administrator')
+
     @staticmethod
     async def _validate_bot_rights(chat_member: telegram_types.ChatMember) -> ErrorDictInterface:
         if chat_member.status in ['user', 'member'] or chat_member.can_delete_messages is None:
