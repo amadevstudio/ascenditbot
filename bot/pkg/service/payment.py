@@ -53,6 +53,12 @@ class BalanceHandler(Service):
             logger.warning('Error wrong_signature', result, user, result['error'])
             return
 
+        # A test payment moves no money. The test passwords sign it, and anyone can build a test payment
+        # link, so in production only bot administrators may get a test payment credited.
+        if result.get('is_test') and environment['ENVIRONMENT'] == 'production' and not user['is_admin']:
+            logger.warning('Test payment from a non-admin user ignored', result, user)
+            return
+
         available_currency_codes = [currency['code'] for currency in await Tariff.enabled_currencies()]
         if result['currency'] not in available_currency_codes:
             await chat_id_sender(int(user['service_id']), message_structures=[{

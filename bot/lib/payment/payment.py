@@ -21,6 +21,7 @@ class CallableInterface(ErrorDictInterface, total=False):
     provider_inc_sum: str
     provider_inc_curr_label: str
     provider_payment_method: str
+    is_test: bool  # the provider marked the payment as a test (no real money)
 
 
 class PaymentProcessor(ABC):

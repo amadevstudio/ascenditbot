@@ -63,7 +63,8 @@ class RobokassaPaymentProcessor(PaymentProcessor):
                 'provider_out_sum': out_sum,
                 'provider_inc_sum': package_params.get('IncSum', ''),
                 'provider_inc_curr_label': package_params.get('IncCurrLabel', ''),
-                'provider_payment_method': package_params.get('PaymentMethod', '')
+                'provider_payment_method': package_params.get('PaymentMethod', ''),
+                'is_test': package_params.get('IsTest') == '1'
             })
         else:
             result_text = 'BAD'
