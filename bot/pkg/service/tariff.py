@@ -12,6 +12,9 @@ from project.types import UserTariffConnectionInterface, ErrorDictInterface, Pay
 
 
 class Tariff(Service):
+    # Moderates one chat for free, forever (tariffs.channels_count = 1 since 2026-11)
+    FREE_TARIFF_ID = 0
+
     @staticmethod
     async def tariff_info(tariff_id: int, user_id: int) -> TariffInfoInterface:
         tariff_info = await tariff_repository.tariff_info(tariff_id, user_id)

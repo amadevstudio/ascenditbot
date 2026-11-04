@@ -35,6 +35,19 @@ async def chat_creator(chat_id: int) -> UserInterface:
     """, (chat_id,))
 
 
+async def owner_tariff_id(chat_id: int) -> int | None:
+    result = await databaseExecutor.run(db.fetchone, """
+        SELECT utc.tariff_id
+        FROM user_moderated_chat_connections AS umcc
+        INNER JOIN user_tariff_connections AS utc ON (utc.user_id = umcc.user_id)
+        WHERE
+            umcc.moderated_chat_id = %s
+            AND umcc.owner IS TRUE
+        LIMIT 1
+    """, (chat_id,))
+    return None if result is None else result['tariff_id']
+
+
 # async def chat_creator_by_service_id(chat_service_id: str) -> UserInterface:
 #     return await databaseExecutor.run(db.fetchone, """
 #         SELECT u.*
