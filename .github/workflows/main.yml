@@ -1,41 +1,31 @@
-name: Continous deployment
+name: Continuous deployment
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   push:
     branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+# One deploy at a time; a newer push waits for the running one instead of cancelling it mid-way
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 jobs:
-
-  deploy-build-restart:
-    # The type of runner that the job will run on
+  deploy:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-      
-      
-
-      # Runs a set of commands using the runners shell
-      - name: Push to production server and restart
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USERNAME }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          script: |
-            set -eu
-            cd ${{ secrets.PROJECT_PATH }}
-            git restore migrator/db/schema.sql
-            git pull --ff-only origin main
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml build
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d db storage
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm migrator
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps bot
+      # The key is limited on the server to one forced command (a deploy script that pulls origin/main,
+      # builds, runs the migrator and restarts the bot), so nothing is sent from here but the connection.
+      - name: Deploy to the production server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" deploy
