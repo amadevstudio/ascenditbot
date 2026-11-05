@@ -394,6 +394,7 @@ async def test_select_a_group_adds_the_bot_with_rights_and_shows_one_page(bench:
     await bench.private_message(OWNER, '/add_chat')
     [keyboard] = [call.reply_markup for call in bench.telegram.sent_to(OWNER['id'])
                   if getattr(call.reply_markup, 'keyboard', None)]
+    assert keyboard.resize_keyboard  # as tall as the button, not a whole keyboard
     request = keyboard.keyboard[0][0].request_chat
     assert request.chat_is_channel is False and not request.bot_is_member
     rights = request.bot_administrator_rights
