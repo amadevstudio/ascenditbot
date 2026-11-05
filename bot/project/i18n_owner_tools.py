@@ -721,25 +721,27 @@ owner_tools_messages = {
             },
             'prompt': {
                 'prices': {
-                    'en': "💰 Send the prices in one message, a line per option: the term and the price.\n\n"
-                          "For example:\n<code>7 3\n30 10\nforever 30</code>\n\nThe term can be days, weeks "
-                          "or months: <code>month 10$</code>. Currency: ₽, $, €, USDT or TON, {currency} if "
-                          "none is named.",
-                    'ru': "💰 Пришлите цены одним сообщением, по строке на вариант: срок и цена.\n\nНапример:\n"
-                          "<code>7 300\n30 1000\nнавсегда 3000</code>\n\nСрок можно писать днями, неделями, "
-                          "месяцами: <code>месяц 1000 ₽</code>. Валюта: ₽, $, €, USDT или TON, без неё – {currency}."
+                    'en': "💰 Send the prices in one message, a line per term: the days, then the price.\n\n"
+                          "For example:\n<code>7 3$\n30 10$\nforever 30$</code>\nThat is 7 days for $3, 30 days "
+                          "for $10 and access for good for $30.\n\nThe term in words works too: <code>week 3$</code>, "
+                          "<code>month 10$</code>. Currency: ₽, $, €, USDT or TON, {currency} if none is named.",
+                    'ru': "💰 Пришлите цены одним сообщением, по строке на срок: сначала дни, потом цена.\n\n"
+                          "Например:\n<code>7 300 ₽\n30 1000 ₽\nнавсегда 3000 ₽</code>\nЭто 7 дней за 300 ₽, 30 дней "
+                          "за 1000 ₽ и доступ навсегда за 3000 ₽.\n\nСрок можно писать и словами: <code>неделя 300 ₽"
+                          "</code>, <code>месяц 1000 ₽</code>. Валюта: ₽, $, €, USDT или TON, без неё – {currency}."
                 },
                 'payment': {
-                    'en': "💳 How do you take payment?\n\n🔗 <b>Your link or details</b>: send them in a message "
-                          "(PayPal, Boosty, Tribute, a bank transfer link). A member pays and taps \"I paid\", you "
-                          "confirm in one tap.\n\nOr a service that tells the bot about the payment, and access opens by "
-                          "itself (a button below):\n💎 <b>CryptoBot</b>: crypto\n🟣 <b>YooMoney</b>: cards, in rubles\n"
-                          "🎫 <b>Tribute</b>: cards, a product per term",
-                    'ru': "💳 Как принимать оплату?\n\n🔗 <b>Своя ссылка или реквизиты</b>: пришлите их сообщением "
-                          "(ЮMoney, Boosty, Tribute, ссылка банка на перевод). Участник оплатит и нажмёт \"Я "
-                          "оплатил(а)\", а вы подтвердите в одно нажатие.\n\nИли сервис, который сам сообщает боту об "
-                          "оплате, и доступ открывается сам (кнопка ниже):\n💎 <b>CryptoBot</b>: криптовалюта\n"
-                          "🟣 <b>ЮMoney</b>: карты, в рублях\n🎫 <b>Tribute</b>: карты, товар на каждый срок"
+                    'en': "💳 How will members pay? Pick one:\n\n🔗 <b>Your link or details</b>: just send them as "
+                          "the next message, e.g. <code>https://boosty.to/you</code> or a card number. A member pays "
+                          "and taps \"I paid\", you confirm in one tap.\n\n⚡ <b>Or connect a service</b> with a "
+                          "button below, and access opens by itself once paid:\n💎 CryptoBot: crypto\n"
+                          "🟣 YooMoney: cards, rubles only\n🎫 Tribute: cards, a product per term",
+                    'ru': "💳 Как участники будут платить? Выберите одно:\n\n🔗 <b>Своя ссылка или реквизиты</b>: "
+                          "просто пришлите их следующим сообщением, например <code>https://boosty.to/you</code> или "
+                          "номер карты. Участник оплатит и нажмёт \"Я оплатил(а)\", вы подтвердите в одно "
+                          "нажатие.\n\n⚡ <b>Или подключите сервис</b> кнопкой ниже, и доступ откроется сам после "
+                          "оплаты:\n💎 CryptoBot: криптовалюта\n🟣 ЮMoney: карты, только рубли\n"
+                          "🎫 Tribute: карты, товар на каждый срок"
                 },
                 'yoomoney_wallet': {
                     'en': "🟣 <b>Connecting YooMoney</b>\n\nSend the number of your YooMoney wallet: 15 to 20 "
