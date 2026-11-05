@@ -17,4 +17,9 @@ def work_router():
     async def main_message_filter(message: telegram_types.Message):
         await incoming_chat_message(message)
 
+    # An old message edited: someone whose access has ended could otherwise turn it into a new ad
+    @router.edited_message(ChatTypeFilter([GROUP, SUPERGROUP]))
+    async def edited_message_filter(message: telegram_types.Message):
+        await incoming_chat_message(message, edited=True)
+
     return router

@@ -23,9 +23,9 @@ from pkg.service import access, access_payments
 from pkg.service.access import Requests
 from pkg.service.access_messages import (callback, declined_message, request_markup, request_member, request_text,
                                          send_request, tell_member_decision)
-from pkg.service.allowed_user import full_name
+from pkg.service.allowed_user import AllowedUser, full_name
 from pkg.service.chat import Chat
-from pkg.service.member_alerts import format_date, save_token
+from pkg.service.member_alerts import access_buttons, format_date, save_token
 from pkg.service.tariff import Tariff
 from pkg.system.logger import logger
 from project import constants
@@ -386,11 +386,12 @@ def access_router() -> Router:
         row = [_button(localization.get_message(['alerts', 'buttons', 'group'], language_code),
                        {'tp': 'chat', 'id': chat['id']})]
         if before is None:
-            # Undo, the same as under an alert about a stranger; not for an extension, which it would wipe out
+            # Undo, the same as under an alert about a stranger; not for an extension, which it would wipe out.
+            # After a payment it first asks what happens to the payment
             token = save_token({'c': chat['id'], 'u': request['user_service_id'], 'n': request['nickname'],
                                 'name': request['display_name']})
-            row.insert(0, _button(localization.get_message(['alerts', 'buttons', 'undo'], language_code),
-                                  {'tp': 'qu', 'k': token}))
+            undo = {'tp': 'pu', 'r': request['id']} if request['kind'] == 'paid_manual' else {'tp': 'qu', 'k': token}
+            row.insert(0, _button(localization.get_message(['alerts', 'buttons', 'undo'], language_code), undo))
         await _edit(call, text, InlineKeyboardMarkup(inline_keyboard=[row]))
         await call.answer(_text(['alert', 'approved_toast'], language_code))
 
@@ -411,6 +412,60 @@ def access_router() -> Router:
         await _edit(call, *declined_message(chat, {**request, 'decided_at': None}, language_code))
         await call.answer(_text(['alert', 'rejected_toast'], language_code))
         await tell_member_decision(chat, request, None, False)
+
+    @router.callback_query(QuickAction('pu'))
+    async def undo_paid(call: CallbackQuery, data: dict):
+        """Undo after a confirmed payment: take the access away, and the payment too (the owner returns the money)
+        or not."""
+        language_code = call.from_user.language_code
+        request = await Requests.find(int(data.get('r') or 0))
+        if request is None or request['status'] != 'approved':
+            await call.answer(localization.get_message(['alerts', 'expired'], language_code), show_alert=True)
+            return
+        chat = await _managed_chat(call, request['moderated_chat_id'], language_code)
+        if chat is None:
+            return
+        plan = {'days': request['days'] or 0, 'amount': request['amount'], 'currency': request['currency']}
+        await _edit(call, _text(['alert', 'undo_paid'], language_code, member=request_member(request),
+                                chat_name=html.escape(await Chat.name_of(chat)),
+                                plan=access.plan_text(plan, language_code)), InlineKeyboardMarkup(inline_keyboard=[
+            [_button(_text(['alert', 'buttons', 'undo_refund'], language_code), {'tp': 'pv', 'r': request['id'], 'm': 'r'})],
+            [_button(_text(['alert', 'buttons', 'undo_keep'], language_code), {'tp': 'pv', 'r': request['id'], 'm': 'k'})],
+            [_button(_text(['alert', 'buttons', 'undo_no'], language_code), {'tp': 'pv', 'r': request['id'], 'm': 'n'})]]))
+        await call.answer()
+
+    @router.callback_query(QuickAction('pv'))
+    async def undo_paid_answer(call: CallbackQuery, data: dict):
+        language_code = call.from_user.language_code
+        request = await Requests.find(int(data.get('r') or 0))
+        if request is None or request['status'] != 'approved':
+            await call.answer(localization.get_message(['alerts', 'expired'], language_code), show_alert=True)
+            return
+        chat = await _managed_chat(call, request['moderated_chat_id'], language_code)
+        if chat is None:
+            return
+        chat_name = html.escape(await Chat.name_of(chat))
+        member = request_member(request)
+        if data.get('m') == 'n':
+            # Keeps the access: back to what the answer said
+            await _edit(call, _text(['alert', 'kept'], language_code, member=member, chat_name=chat_name),
+                        InlineKeyboardMarkup(inline_keyboard=[[
+                            _button(localization.get_message(['alerts', 'buttons', 'undo'], language_code),
+                                    {'tp': 'pu', 'r': request['id']}),
+                            _button(localization.get_message(['alerts', 'buttons', 'group'], language_code),
+                                    {'tp': 'chat', 'id': chat['id']})]]))
+            await call.answer()
+            return
+        await AllowedUser.disallow(chat['id'], request['user_service_id'], request['nickname'])
+        refund = data.get('m') == 'r'
+        if refund:
+            await Requests.revoke(request['id'])
+        token = save_token({'c': chat['id'], 'u': request['user_service_id'], 'n': request['nickname'],
+                            'name': request['display_name']})
+        text = localization.get_message(['alerts', 'undone'], language_code, member=member, chat_name=chat_name)
+        text += "\n\n" + _text(['alert', 'refunded' if refund else 'payment_kept'], language_code)
+        await _edit(call, text, access_buttons(token, chat['id'], language_code))
+        await call.answer()
 
     @router.callback_query(QuickAction('au'))
     async def undo_reject(call: CallbackQuery, data: dict):

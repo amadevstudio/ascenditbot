@@ -40,6 +40,14 @@ async def decide(request_id: int, status: str, decided_by: str | None,
     """, (status, decided_by, request_id, list(from_statuses)), returning='*')
 
 
+async def revoke(request_id: int) -> dict | None:
+    """A confirmed payment taken back by the owner (they return the money themselves): no longer counted."""
+    return await databaseExecutor.run(db.execute_single_model, """
+        UPDATE access_requests SET status = 'revoked', updated_at = LOCALTIMESTAMP
+        WHERE id = %s AND status = 'approved'
+    """, (request_id,), returning='*')
+
+
 async def declined(chat_id: int, days: int = 7, limit: int = 10) -> list[dict]:
     """Members whose last request to the group was declined in these days, the latest first."""
     return await databaseExecutor.run(db.fetchall, """

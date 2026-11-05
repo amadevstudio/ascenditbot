@@ -252,6 +252,7 @@ class Requests:
     decide = staticmethod(access_repository.decide)
     reopen = staticmethod(access_repository.reopen)
     declined = staticmethod(access_repository.declined)
+    revoke = staticmethod(access_repository.revoke)
     update = staticmethod(access_repository.update)
     pending = staticmethod(access_repository.pending)
     pending_count = staticmethod(access_repository.pending_count)

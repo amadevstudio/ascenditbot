@@ -116,9 +116,18 @@ async def test_owner_posts_the_button_in_the_group(bench: Bench):
     await bench.private_message(OWNER, f'/start chat_{chat["id"]}')
     await bench.tap(OWNER, '{"tp":"chat_access"}')
     await bench.tap(OWNER, '{"tp":"acc_post"}')
+    # First what it is: the message the members will see; nothing posted yet
+    confirm = _last_to(bench, OWNER)
+    assert 'опубликует в группе такое сообщение' in confirm.text and 'Получить доступ' in confirm.text, confirm.text
+    assert not [call for call in bench.telegram.calls_of('sendMessage') if int(call.chat_id) == GROUP]
+    await bench.tap(OWNER, _press(confirm, 'Опубликовать и закрепить'))
     [post] = [call for call in bench.telegram.calls_of('sendMessage') if int(call.chat_id) == GROUP]
     assert _buttons(post)[0]['url'].endswith(f'start=j_{chat["id"]}')
     assert bench.telegram.calls_of('pinChatMessage')
+    # Posting again replaces the old message
+    await bench.tap(OWNER, '{"tp":"acc_post_go"}')
+    assert len([call for call in bench.telegram.calls_of('deleteMessage') if int(call.chat_id) == GROUP]) == 1
+    assert len([call for call in bench.telegram.calls_of('sendMessage') if int(call.chat_id) == GROUP]) == 2
 
 
 # The member's side, paid
@@ -169,6 +178,34 @@ async def test_member_pays_by_the_owners_link_and_the_owner_confirms(bench: Benc
     assert any('Продлить' in b['text'] and b['data'] == {'tp': 'jo', 'c': chat['id']} for b in _buttons(mine))
     await bench.private_message(OWNER, '/stats')
     assert 'Оплат за вход за 30 дней: 1, на 1 000 ₽' in _last_to(bench, OWNER).text
+
+
+async def test_undo_after_a_payment_asks_about_the_payment(bench: Bench):
+    """Undo under a confirmed payment asks: keep the access, take it away with the payment cancelled (not counted
+    in /stats any more), or take it away and keep the payment"""
+    chat = await _paid_scene(bench)
+    await bench.private_message(BUYER, f'/start j_{chat["id"]}')
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), '7 дней'))
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), 'Я оплатил'))
+    await bench.tap(OWNER, _press(_last_to(bench, OWNER), 'Подтвердить'))
+    confirmed = _last_to(bench, OWNER)
+    await bench.tap(OWNER, _press(confirmed, 'Отменить'))
+    question = _last_to(bench, OWNER)
+    assert 'Оплата была: 7 дней – 300 ₽' in question.text, question.text
+    assert await bench.sql('SELECT 1 FROM allowed_users')  # nothing changed yet
+
+    await bench.tap(OWNER, _press(question, 'Оставить доступ'))
+    assert 'остаётся' in _last_to(bench, OWNER).text
+    assert await bench.sql('SELECT 1 FROM allowed_users')
+
+    await bench.tap(OWNER, _press(_last_to(bench, OWNER), 'Отменить'))
+    await bench.tap(OWNER, _press(_last_to(bench, OWNER), 'оплату отменить'))
+    assert 'Деньги верните сами' in _last_to(bench, OWNER).text
+    assert not await bench.sql('SELECT 1 FROM allowed_users')
+    [request] = await bench.sql('SELECT status FROM access_requests')
+    assert request['status'] == 'revoked'
+    await bench.private_message(OWNER, '/stats')
+    assert 'Оплат за вход' not in _last_to(bench, OWNER).text
 
 
 async def test_access_list_empty_and_waiting(bench: Bench):

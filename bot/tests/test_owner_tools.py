@@ -667,3 +667,21 @@ async def test_help_has_a_button_to_write_to_us(bench: Bench):
     [page] = [call for call in bench.telegram.sent_to(OWNER['id']) if 'Вопросы и идеи' in (call.text or '')]
     urls = [button.url for row in page.reply_markup.inline_keyboard for button in row if button.url]
     assert urls == ['https://t.me/ascendit_group?direct'], urls
+
+
+async def test_an_edit_by_someone_who_may_not_write_goes(bench: Bench):
+    """an old message edited after the access ended goes, without a mute or an alert; edits of those allowed stay"""
+    _, chat = await _scene(bench)
+    await bench.sql("INSERT INTO allowed_users (moderated_chat_id, nickname, user_service_id, created_at, updated_at) "
+                    "VALUES ($1, 'stranger', $2, NOW(), NOW())", chat['id'], str(STRANGER['id']))
+    message = await bench.group_message(GROUP, STRANGER, 'my ad')
+    edit = {**message, 'text': 'my ad, edited', 'edit_date': message['date'] + 60}
+    await bench.feed({'edited_message': edit})
+    assert not _deleted(bench)
+
+    await bench.sql('DELETE FROM allowed_users')
+    bench.telegram.calls.clear()
+    await bench.feed({'edited_message': {**edit, 'text': 'a new ad', 'edit_date': message['date'] + 120}})
+    assert _deleted(bench) == [message['message_id']]
+    assert not bench.telegram.calls_of('restrictChatMember')
+    assert not [call for call in bench.telegram.sent_to(OWNER['id'])]
