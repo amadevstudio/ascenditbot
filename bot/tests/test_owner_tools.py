@@ -428,33 +428,55 @@ async def test_add_members_picked_from_contacts(bench: Bench):
 
 # The bot's admins
 
-async def test_stats_for_bot_admins_only(bench: Bench):
-    """/stats answers a bot admin with the numbers and nobody else"""
-    owner, _ = await _scene(bench)
-    await bench.private_message(OWNER, '/stats')
-    assert not any('Пользователи' in text for text in bench.telegram.texts_to(OWNER['id']))
+async def test_users_count_for_a_group_owner(bench: Bench):
+    """/usersCount for a group owner: their groups with members, whitelist and removed messages, nothing of the bot"""
+    await bench.private_message(STRANGER, '/stats')
+    assert 'No groups yet' in bench.telegram.texts_to(STRANGER['id'])[-1]
 
-    await bench.sql('UPDATE users SET is_admin = TRUE')
+    owner, chat = await _scene(bench, paid=True)
+    bench.telegram.answers['getChatMemberCount'] = 1234
+    await bench.sql("INSERT INTO allowed_users (moderated_chat_id, nickname, expires_at, created_at, updated_at) "
+                    "VALUES ($1, 'anna', NULL, NOW(), NOW()), ($1, 'bob', NOW() + interval '7 days', NOW(), NOW()), "
+                    "($1, 'old', NOW() - interval '1 day', NOW(), NOW())", chat['id'])
+    await bench.sql("INSERT INTO moderated_chat_statistics (moderated_chat_id, deleted_messages_count, day, "
+                    "created_at, updated_at) VALUES ($1, 5, CURRENT_DATE, NOW(), NOW()), "
+                    "($1, 7, CURRENT_DATE - 3, NOW(), NOW()), ($1, 100, CURRENT_DATE - 20, NOW(), NOW())", chat['id'])
     bench.telegram.calls.clear()
     await bench.private_message(OWNER, '/usersCount')
     [stats] = bench.telegram.texts_to(OWNER['id'])
-    assert 'Всего: 1' in stats and 'Модерируются: 1' in stats, stats
+    assert 'Ваши группы: 1' in stats and 'Участников всего: 1 234' in stats, stats
+    assert 'В белых списках: 2 (на срок: 1)' in stats, stats
+    assert 'сегодня 5, за 7 дней 12, за 30 дней 112' in stats, stats
+    assert f'Group {GROUP}' in stats or 'Модерация включена' in stats, stats
+    assert 'Пользователи' not in stats and 'Деньги' not in stats, stats
+
+
+async def test_users_count_extended_for_the_bot_owner(bench: Bench):
+    """/usersCount for the bot's owner: the whole bot (users, groups, money), then their own groups"""
+    owner, _ = await _scene(bench)
+    bench.telegram.answers['getChatMemberCount'] = 10
+    await bench.sql('UPDATE users SET is_admin = TRUE')
+    await bench.private_message(OWNER, '/usersCount')
+    [stats] = bench.telegram.texts_to(OWNER['id'])
+    assert 'Всего: 1' in stats and 'Модерируются: 1' in stats and 'Деньги' in stats, stats
+    assert stats.index('Деньги') < stats.index('Ваши группы: 1'), stats
 
 
 async def test_command_menus(bench: Bench):
-    """the menus: private commands for everyone, group commands for group admins, /usersCount in none of them"""
+    """the menus: private commands (/stats among them) for everyone, group commands for group admins, /usersCount
+    in none of them"""
     import re
     from pkg.service.bot_commands import set_bot_commands
 
     await bench.owner(OWNER)
-    await bench.sql('UPDATE users SET is_admin = TRUE')
+    bench.telegram.answers['getChatMemberCount'] = 3
     bench.telegram.calls.clear()
     await set_bot_commands(bench.bot)
 
     menus = {(call.scope.type, getattr(call.scope, 'chat_id', None), call.language_code):
              {c.command: c.description for c in call.commands} for call in bench.telegram.calls_of('setMyCommands')}
     assert set(menus[('all_private_chats', None, 'ru')]) == {
-        'menu', 'my_chats', 'add_chat', 'subscription', 'settings', 'help'}
+        'menu', 'my_chats', 'stats', 'add_chat', 'subscription', 'settings', 'help'}
     assert menus[('all_private_chats', None, None)]['my_chats'] == 'My groups'
     assert set(menus[('all_chat_administrators', None, 'ru')]) == {'allow', 'deny', 'settings'}
     assert not any(scope == 'chat' or 'userscount' in menu for (scope, _, _), menu in menus.items())

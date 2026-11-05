@@ -530,11 +530,47 @@ owner_tools_messages = {
                 "с правом удалять сообщения (и ограничивать участников), и он сам подключит группу."
         },
     },
+    # /usersCount (also /stats) for a group owner, HTML
+    'stats': {
+        'no_groups': {
+            'en': "📊 No groups yet, so nothing to count. Connect the first one: /add_chat",
+            'ru': "📊 Групп пока нет, считать нечего. Подключите первую: /add_chat"
+        },
+        'title': {
+            'en': "📊 <b>Your groups: {count}</b> (moderated {on}, off or paused {off})",
+            'ru': "📊 <b>Ваши группы: {count}</b> (модерируются {on}, на паузе или отключены {off})"
+        },
+        'members': {
+            'en': "👥 Members in all: {count}",
+            'ru': "👥 Участников всего: {count}"
+        },
+        'whitelist': {
+            'en': "✅ On whitelists: {count} (for a term: {timed})",
+            'ru': "✅ В белых списках: {count} (на срок: {timed})"
+        },
+        'removed': {
+            'en': "🗑 Deleted: today {day}, 7 days {week}, 30 days {month}",
+            'ru': "🗑 Удалено: сегодня {day}, за 7 дней {week}, за 30 дней {month}"
+        },
+        'group_members': {
+            'en': "👥 {count} members",
+            'ru': "👥 Участников: {count}"
+        },
+        'group_whitelist': {
+            'en': "✅ whitelist {count} (for a term: {timed})",
+            'ru': "✅ в списке {count} (на срок: {timed})"
+        },
+        'more': {
+            'en': "…and {count} more groups, counted above",
+            'ru': "…и ещё групп: {count}, они учтены в сумме выше"
+        },
+    },
     # The command menus (setMyCommands): up to 256 characters each, plain text
     'commands': {
         'private': {
             'menu': {'en': "Main menu", 'ru': "Главное меню"},
             'my_chats': {'en': "My groups", 'ru': "Мои группы"},
+            'stats': {'en': "Members and statistics of my groups", 'ru': "Участники и статистика моих групп"},
             'add_chat': {'en': "Connect a group", 'ru': "Подключить группу"},
             'subscription': {'en': "Tariff and payment", 'ru': "Тариф и оплата"},
             'settings': {'en': "Settings", 'ru': "Настройки"},

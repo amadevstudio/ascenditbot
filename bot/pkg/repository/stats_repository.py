@@ -1,4 +1,5 @@
-"""The numbers of the bot for its admins (/usersCount): users, groups, removed messages, money."""
+"""The numbers of the bot (/usersCount): for its owner, users, groups, removed messages, money; for a group owner,
+their groups."""
 from framework.repository.database_executor import databaseExecutor
 from pkg.repository.database_connection import Database
 
@@ -69,3 +70,25 @@ async def collect() -> dict:
                          for row in balances],
         },
     }
+
+
+async def owner_groups(user_id: int) -> list[dict]:
+    """The groups of one user (/usersCount for a group owner): state, whitelist and removed messages per group."""
+    rows = await databaseExecutor.run(db.fetchall, """
+        SELECT mc.id, mc.service_id, mc.name, mc.active, mc.disabled,
+            (SELECT COUNT(*) FROM allowed_users AS au WHERE au.moderated_chat_id = mc.id AND au.active
+                AND (au.expires_at IS NULL OR au.expires_at > LOCALTIMESTAMP)) AS whitelisted,
+            (SELECT COUNT(*) FROM allowed_users AS au WHERE au.moderated_chat_id = mc.id AND au.active
+                AND au.expires_at > LOCALTIMESTAMP) AS timed,
+            (SELECT COALESCE(SUM(s.deleted_messages_count), 0) FROM moderated_chat_statistics AS s
+                WHERE s.moderated_chat_id = mc.id AND s.day = CURRENT_DATE) AS removed_day,
+            (SELECT COALESCE(SUM(s.deleted_messages_count), 0) FROM moderated_chat_statistics AS s
+                WHERE s.moderated_chat_id = mc.id AND s.day > CURRENT_DATE - 7) AS removed_week,
+            (SELECT COALESCE(SUM(s.deleted_messages_count), 0) FROM moderated_chat_statistics AS s
+                WHERE s.moderated_chat_id = mc.id AND s.day > CURRENT_DATE - 30) AS removed_month
+        FROM moderated_chats AS mc
+        INNER JOIN user_moderated_chat_connections AS umcc ON umcc.moderated_chat_id = mc.id
+        WHERE umcc.user_id = %s
+        ORDER BY mc.id
+    """, (user_id,))
+    return [dict(row) for row in rows]
