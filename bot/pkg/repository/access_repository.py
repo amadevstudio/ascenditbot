@@ -30,13 +30,14 @@ async def latest(chat_id: int, user_service_id: str) -> dict | None:
     """, (chat_id, user_service_id))
 
 
-async def decide(request_id: int, status: str, decided_by: str | None) -> dict | None:
-    """Approves or rejects a pending request; None when someone has decided it already."""
+async def decide(request_id: int, status: str, decided_by: str | None,
+                 from_statuses: tuple[str, ...] = ('pending',)) -> dict | None:
+    """Approves or rejects a pending request (or one in these statuses); None when it is decided already."""
     return await databaseExecutor.run(db.execute_single_model, """
         UPDATE access_requests
         SET status = %s, decided_by = %s, decided_at = LOCALTIMESTAMP, updated_at = LOCALTIMESTAMP
-        WHERE id = %s AND status = 'pending'
-    """, (status, decided_by, request_id), returning='*')
+        WHERE id = %s AND status = ANY(%s)
+    """, (status, decided_by, request_id, list(from_statuses)), returning='*')
 
 
 async def declined(chat_id: int, days: int = 7, limit: int = 10) -> list[dict]:
@@ -91,8 +92,11 @@ async def waiting_payments(providers: tuple[str, ...], request_id: int | None = 
         SELECT ar.*, mc.access_secret, mc.access_provider, mc.service_id AS chat_service_id
         FROM access_requests AS ar
         INNER JOIN moderated_chats AS mc ON mc.id = ar.moderated_chat_id
-        WHERE ar.status = 'pending' AND ar.kind = 'paid_auto' AND ar.provider = ANY(%s)
+        WHERE ar.kind = 'paid_auto' AND ar.provider = ANY(%s)
             AND ar.external_id IS NOT NULL AND (%s::bigint IS NULL OR ar.id = %s)
+            -- and those replaced by another term lately: their invoice may still be paid
+            AND (ar.status = 'pending' OR (ar.status = 'cancelled' AND ar.decided_by IS NULL
+                                           AND ar.created_at > LOCALTIMESTAMP - interval '2 hours'))
         ORDER BY ar.id
         LIMIT 1000
     """, (list(providers), request_id, request_id)) or []

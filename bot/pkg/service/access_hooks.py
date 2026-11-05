@@ -56,8 +56,8 @@ async def on_yoomoney(hook_key: str, params: dict) -> int:
     if request is None or request['provider'] != yoomoney.NAME \
             or request['moderated_chat_id'] not in {chat['id'] for chat in chats}:
         return 200  # another transfer to the wallet
-    if request['status'] != 'pending':
-        return 200
+    if request['status'] not in ('pending', 'cancelled', 'expired'):
+        return 200  # settled already
     paid = yoomoney.paid_amount(params)
     if paid < request['amount']:
         chat = next(chat for chat in chats if chat['id'] == request['moderated_chat_id'])

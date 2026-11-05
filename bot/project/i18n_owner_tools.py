@@ -429,8 +429,14 @@ owner_tools_messages = {
     'work': {
         # Plain text, ephemeral: only the member sees it
         'limit_notice': {
-            'en': "Your message was removed: members post up to {limit} here. Next one after {next_at}.",
-            'ru': "Сообщение удалено: здесь можно писать не больше {limit}. Следующее – после {next_at}."
+            'en': "Your message was removed: members post up to {limit} here. Next one in {wait}.",
+            'ru': "Сообщение удалено: здесь можно писать не больше {limit}. Следующее – через {wait}."
+        },
+        # How long until the next post: "45 min", "3 h 20 min", "2 d 4 h"
+        'wait_units': {
+            'minutes': {'en': "{n} min", 'ru': "{n} мин"},
+            'hours': {'en': "{n} h", 'ru': "{n} ч"},
+            'days': {'en': "{n} d", 'ru': "{n} дн."},
         },
     },
     # To the group's managers in private, HTML
