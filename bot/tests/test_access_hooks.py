@@ -111,6 +111,30 @@ async def test_member_pays_by_yoomoney(bench: Bench):
     assert await on_yoomoney(key, {**_transfer('r1', '1000.00'), 'sign': '0' * 64}) == 400
 
 
+async def test_yoomoney_paid_late_still_opens_access(bench: Bench):
+    """the payment page of a term replaced by another, or of a request the bot stopped waiting for, has no end
+    in YooMoney: paid late, it opens access all the same"""
+    from pkg.service.access_hooks import on_yoomoney
+    from pkg.service.access_providers import hook_key
+
+    _hooks_on()
+    chat = await _yoomoney_scene(bench)
+    key = hook_key('yoomoney', WALLET)
+    await bench.private_message(BUYER, f'/start j_{chat["id"]}')
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), '7 дней'))
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), 'Другой срок'))
+    assert await on_yoomoney(key, _transfer('r1', '300.00')) == 200
+    [entry] = await bench.sql('SELECT expires_at FROM allowed_users')
+    assert datetime.timedelta(days=6) < entry['expires_at'] - datetime.datetime.now() <= datetime.timedelta(days=7)
+
+    await bench.sql("DELETE FROM allowed_users")
+    await bench.private_message(BUYER, f'/start j_{chat["id"]}')
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), '30 дней'))
+    await bench.sql("UPDATE access_requests SET status = 'expired' WHERE id = 2")
+    assert await on_yoomoney(key, _transfer('r2', '1000.00')) == 200
+    assert await bench.sql('SELECT 1 FROM allowed_users')
+
+
 async def test_owner_connects_tribute_and_maps_terms(bench: Bench):
     """Tribute: the key (deleted, checked by listing products), a product for each term, then the webhook
     address"""

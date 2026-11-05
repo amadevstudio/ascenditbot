@@ -134,7 +134,11 @@ async def test_post_limit_on_paid_tariff(bench: Bench):
     assert _deleted(bench) == [second['message_id']]
     [notice] = bench.telegram.sent_to(GROUP)
     assert notice.ephemeral_message_parameters.receiver_user_id == STRANGER['id']
-    assert 'up to 1 a day' in notice.text, notice.text
+    assert 'up to 1 a day' in notice.text and 'Next one in 1 d.' in notice.text, notice.text
+    from pkg.controller.work_controllers.chat_incoming_controller import wait_text
+    assert wait_text(datetime.timedelta(seconds=10), 'ru') == '1 мин'
+    assert wait_text(datetime.timedelta(minutes=200), 'en') == '3 h 20 min'
+    assert wait_text(datetime.timedelta(hours=52), 'ru') == '2 дн. 4 ч'
 
 
 async def test_post_limit_spares_admins(bench: Bench):

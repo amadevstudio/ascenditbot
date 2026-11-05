@@ -157,5 +157,22 @@ async def notify_over_limit(message: telegram_types.Message, limit: tuple[int, i
     language_code = message.from_user.language_code
     text = localization.get_message(
         ['work', 'limit_notice'], language_code, limit=post_limit.limit_text(*limit, language_code),
-        next_at=next_at.strftime('%d.%m %H:%M') + ' UTC')
+        wait=wait_text(next_at - datetime.datetime.now(datetime.timezone.utc), language_code))
     await _ephemeral(message, text)
+
+
+def wait_text(left: datetime.timedelta, language_code: str | None) -> str:
+    """"45 min", "3 h 20 min", "2 d 4 h": no clock time, which would be in a time zone not the member's."""
+    minutes = max(1, -(-int(left.total_seconds()) // 60))
+    days, hours, minutes = minutes // 1440, minutes % 1440 // 60, minutes % 60
+
+    def unit(name: str, n: int) -> str:
+        return localization.get_message(['work', 'wait_units', name], language_code, n=n)
+
+    if days:
+        parts = [unit('days', days)] + ([unit('hours', hours)] if hours else [])
+    elif hours:
+        parts = [unit('hours', hours)] + ([unit('minutes', minutes)] if minutes else [])
+    else:
+        parts = [unit('minutes', minutes)]
+    return ' '.join(parts)

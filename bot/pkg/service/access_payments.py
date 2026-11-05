@@ -84,12 +84,17 @@ async def start(chat: dict, user, language_code: str | None, plan: dict) -> dict
 async def settle(request: dict, status: str) -> dict | None:
     """A provider's answer about one request: paid opens access (once), expired closes the request. The entry
     of the whitelist when access opened."""
+    if request['status'] == 'cancelled' and status != 'paid':
+        return None  # replaced by another term: watched only in case its invoice is paid all the same
     if status == 'expired' or (status != 'paid' and request['created_at'] < datetime.datetime.now() - WAIT):
         await Requests.decide(request['id'], 'expired', None)
         return None
     if status != 'paid':
         return None
-    if await Requests.decide(request['id'], 'approved', request['provider']) is None:
+    # Paid late (after another term was picked, or after the bot stopped waiting) still opens access: the
+    # money has reached the owner
+    if await Requests.decide(request['id'], 'approved', request['provider'],
+                             ('pending', 'cancelled', 'expired')) is None:
         return None  # settled already
 
     from pkg.controller.routers.quick_actions_router import lift_restriction

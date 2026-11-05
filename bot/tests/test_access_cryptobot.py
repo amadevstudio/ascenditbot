@@ -153,6 +153,27 @@ async def test_another_term_and_expired_invoices(bench: Bench):
     assert 'Выберите срок' in _last_to(bench, BUYER).text
 
 
+async def test_invoice_paid_after_another_term_still_opens_access(bench: Bench):
+    """the member picks another term but pays the first invoice anyway: the money is the owner's, access opens"""
+    from pkg.service.access_payments import poll_round
+
+    fake = _fake()
+    chat = await _cryptobot_scene(bench)
+    await bench.private_message(BUYER, f'/start j_{chat["id"]}')
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), '7 дней'))
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), 'Другой срок'))
+    await poll_round()
+    fake.pay('100')
+    await poll_round()
+    await poll_round()
+    [entry] = await bench.sql('SELECT expires_at FROM allowed_users')
+    assert datetime.timedelta(days=6) < entry['expires_at'] - datetime.datetime.now() <= datetime.timedelta(days=7)
+    [request] = await bench.sql('SELECT status FROM access_requests')
+    assert request['status'] == 'approved'
+    paid = [c for c in bench.telegram.calls_of('sendMessage') if int(c.chat_id) == BUYER['id'] and 'Оплата получена' in c.text]
+    assert len(paid) == 1
+
+
 async def test_cryptobot_down(bench: Bench):
     """CryptoBot does not answer: the member is told to try later, nothing is left waiting"""
     fake = _fake()
