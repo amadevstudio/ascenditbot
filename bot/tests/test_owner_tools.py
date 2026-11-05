@@ -381,8 +381,37 @@ async def test_added_without_rights_asks_for_them(bench: Bench):
         'chat': {'id': GROUP, 'type': 'supergroup', 'title': 'Ads'}, 'from': OWNER, 'date': now,
         'old_chat_member': {'status': 'left', 'user': BOT_USER}, 'new_chat_member': member(BOT_USER)}})
     assert await bench.sql('SELECT * FROM moderated_chats') == []
-    assert bench.telegram.texts_to(OWNER['id']) == [
-        localization.get_message(['group', 'needs_admin'], 'ru', chat_name='Ads')]
+    [told] = bench.telegram.sent_to(OWNER['id'])
+    assert told.text == localization.get_message(['group', 'needs_admin'], 'ru', chat_name='Ads')
+    [button] = [b for row in told.reply_markup.inline_keyboard for b in row]
+    assert 'startgroup=connect&admin=delete_messages+restrict_members+pin_messages' in button.url
+
+
+async def test_select_a_group_adds_the_bot_with_rights_and_shows_one_page(bench: Bench):
+    """/add_chat: "Select a group" asks Telegram to add the bot with its rights in any group the owner runs;
+    the bot then gets my_chat_member and chat_shared, and the owner gets one "connected" and one page"""
+    owner = await bench.owner(OWNER)
+    await bench.private_message(OWNER, '/add_chat')
+    [keyboard] = [call.reply_markup for call in bench.telegram.sent_to(OWNER['id'])
+                  if getattr(call.reply_markup, 'keyboard', None)]
+    request = keyboard.keyboard[0][0].request_chat
+    assert request.chat_is_channel is False and not request.bot_is_member
+    rights = request.bot_administrator_rights
+    assert rights.can_delete_messages and rights.can_restrict_members and rights.can_pin_messages
+    assert not rights.can_promote_members and request.user_administrator_rights.can_promote_members
+
+    bench.telegram.calls.clear()
+    bench.group_in_telegram(GROUP, owner)
+    now = int(datetime.datetime.now().timestamp())
+    await bench.feed({'my_chat_member': {
+        'chat': {'id': GROUP, 'type': 'supergroup', 'title': f'Group {GROUP}'}, 'from': OWNER, 'date': now,
+        'old_chat_member': {'status': 'left', 'user': BOT_USER}, 'new_chat_member': administrator(BOT_USER)}})
+    await bench.private_message(OWNER, None, chat_shared={'request_id': 1, 'chat_id': GROUP})
+    connected = localization.get_message(['group', 'auto_connected'], 'ru', chat_name=f'Group {GROUP}')
+    texts = bench.telegram.texts_to(OWNER['id'])
+    assert texts.count(connected) == 1, texts
+    assert len([text for text in texts if 'Модерация включена' in text]) == 1, texts
+    assert len(await bench.sql('SELECT * FROM moderated_chats')) == 1
 
 
 # The group page in private
@@ -398,7 +427,7 @@ async def test_page_by_deep_link(bench: Bench):
     page = await _open_page(bench, chat)
     assert 'Модерация включена' in page.text and 'Удалено за 7 дней: 0' in page.text, page.text
     kinds = {b['data']['tp'] for b in _buttons(page)}
-    assert {'add_to_chat_whitelist', 'chat_whitelist', 'switch_mode', 'chat_post_limit', 'switch_alerts'} <= kinds
+    assert {'add_to_chat_whitelist', 'chat_whitelist', 'switch_mode', 'chat_post_limit', 'chat_access', 'switch_admins'} <= kinds
 
 
 def _shown(bench: Bench):
@@ -594,3 +623,19 @@ async def test_help_is_html(bench: Bench):
     await bench.private_message(OWNER, '/help')
     [page] = [call for call in bench.telegram.sent_to(OWNER['id']) if '<b>' in (call.text or '')]
     assert page.parse_mode == 'HTML'
+
+
+async def test_select_a_group_chat_shared_first(bench: Bench):
+    """the other order: chat_shared before my_chat_member, still one "connected" and one page"""
+    owner = await bench.owner(OWNER)
+    await bench.private_message(OWNER, '/add_chat')
+    bench.telegram.calls.clear()
+    bench.group_in_telegram(GROUP, owner)
+    await bench.private_message(OWNER, None, chat_shared={'request_id': 1, 'chat_id': GROUP})
+    now = int(datetime.datetime.now().timestamp())
+    await bench.feed({'my_chat_member': {
+        'chat': {'id': GROUP, 'type': 'supergroup', 'title': f'Group {GROUP}'}, 'from': OWNER, 'date': now,
+        'old_chat_member': {'status': 'left', 'user': BOT_USER}, 'new_chat_member': administrator(BOT_USER)}})
+    texts = bench.telegram.texts_to(OWNER['id'])
+    assert len([text for text in texts if 'подключена' in text]) == 1, texts
+    assert len([text for text in texts if 'Модерация включена' in text]) == 1, texts

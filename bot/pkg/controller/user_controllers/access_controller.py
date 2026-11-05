@@ -86,11 +86,19 @@ async def _render(params: ControllerParams, chat: dict, notice: str | None = Non
     def button(key: str, data: dict, **kwargs) -> dict:
         return _button(_text(['buttons', key], language_code, **kwargs), data)
 
+    # One choice for what happens to outsiders: quietly, tell me, by request, paid
+    current = access.outsiders_mode(chat)
+
+    def mode_button(choice: str) -> dict:
+        mark = _text(['buttons', 'current'], language_code) if choice == current else ''
+        lock = _text(['buttons', 'locked'], language_code) if choice == 'paid' and not paid_tariff else ''
+        return _button(mark + lock + _text(['buttons', 'modes', choice], language_code),
+                       {'tp': 'acc_mode', 'm': choice})
+
+    rows += [[mode_button('silent'), mode_button('alert')], [mode_button('request'), mode_button('paid')]]
     if mode == 'off':
-        lines.append(_text(['intro_off'], language_code))
-        lock = '' if paid_tariff else _text(['buttons', 'locked'], language_code)
-        rows += [[button('mode_request', {'tp': 'acc_mode', 'm': 'request'})],
-                 [_button(lock + _text(['buttons', 'mode_paid'], language_code), {'tp': 'acc_mode', 'm': 'paid'})]]
+        lines.append(_text(['intro'], language_code))
+        lines.append(_text(['mode', current], language_code))
     else:
         lines.append(_text(['mode', mode], language_code))
         if mode == 'paid':
@@ -126,9 +134,6 @@ async def _render(params: ControllerParams, chat: dict, notice: str | None = Non
         rows.append([button('terms', {'tp': 'acc_edit', 'f': 'terms'}), button('post', {'tp': 'acc_post'})])
         if pending:
             rows.append([button('requests', {'tp': 'acc_requests'}, count=pending)])
-        rows.append([button('to_request', {'tp': 'acc_mode', 'm': 'request'}) if mode == 'paid'
-                     else button('to_paid', {'tp': 'acc_mode', 'm': 'paid'})])
-        rows.append([button('off', {'tp': 'acc_mode', 'm': 'off'})])
 
     if editing:
         # Waiting for the text: the title, the step of the walk through paid entry, the prompt
@@ -353,16 +358,18 @@ async def set_mode(params: ControllerParams):
     if chat is None:
         return
     mode = params['state_data'].get('m')
-    if mode not in access.MODES:
+    if mode not in access.OUTSIDER_MODES:
         return
     if mode == 'paid' and not Tariff.is_paid(await Chat.owner_tariff_id(chat['id'])):
         await notify(call, params['message'], _text(['errors', 'paid_only'], language_code), alert=True)
         return
-    chat = await Chat.update_settings(chat['id'], {'access_mode': mode})
+    # Quietly and "tell me" are no way in, only the owner's alerts on or off
+    settings = {'access_mode': mode} if mode in ('request', 'paid') else {
+        'access_mode': 'off', 'owner_alerts': mode == 'alert'}
+    chat = await Chat.update_settings(chat['id'], settings)
     # Paid entry without prices: straight to typing them
     _set_editing(params, 'prices' if mode == 'paid' and not access.plans_of(chat) else None)
-    await notify(call, params['message'], _text(['toasts', {'off': 'off', 'request': 'request_on',
-                                                            'paid': 'paid_on'}[mode]], language_code))
+    await notify(call, params['message'], _text(['toasts', f'{mode}_on'], language_code))
     await _render(params, chat)
 
 

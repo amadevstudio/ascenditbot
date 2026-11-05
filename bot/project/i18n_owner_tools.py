@@ -5,7 +5,7 @@ Keys are lower case (get_message lowers the route). Which texts are HTML is said
 from project import constants
 
 _bot = constants.bot_nickname
-ADD_TO_GROUP_URL = f"https://t.me/{_bot}?startgroup=connect&admin=delete_messages+restrict_members"
+ADD_TO_GROUP_URL = f"https://t.me/{_bot}?startgroup=connect&admin=delete_messages+restrict_members+pin_messages"
 
 owner_tools_messages = {
     'welcome': {
@@ -18,7 +18,7 @@ owner_tools_messages = {
                 "● access for 7 or 30 days, ending on its own\n"
                 "● a posting limit: 1 ad a day, 3 an hour, 10 in 2 days\n"
                 "● a message when a stranger writes, with \"Allow\" in one tap\n"
-                "● joining via the bot: newcomers ask or pay you, you confirm in one tap\n\n"
+                "● outsiders ask you for access or pay for it, you confirm in one tap\n\n"
                 "One group is free.",
             'ru':
                 "Привет! Я слежу за порядком в группе: писать в ней могут только те, кого вы разрешили, "
@@ -28,7 +28,7 @@ owner_tools_messages = {
                 "● доступ на 7 или 30 дней, который сам заканчивается\n"
                 "● лимит постов: 1 объявление в день, 3 в час, 10 за 2 дня\n"
                 "● сообщение, когда пишет посторонний, и \"Разрешить\" в одно нажатие\n"
-                "● вход через бота: новые просят доступ или платят вам, вы подтверждаете в одно нажатие\n\n"
+                "● посторонние просят доступ или платят вам, вы подтверждаете в одно нажатие\n\n"
                 "Одна группа бесплатно."
         },
     },
@@ -36,13 +36,13 @@ owner_tools_messages = {
         'text': {
             'en':
                 f"@{_bot} lets only the people you allow write in your group.\n\n"
-                "<b>Connect a group</b>: /add_chat, then \"Add to a group\" and pick it. The bot needs to be "
-                "an admin that can delete messages (and restrict members, to mute offenders for a while).\n\n"
+                "<b>Connect a group</b>: /add_chat, then \"Select a group\" and pick it: Telegram adds the bot "
+                "as an admin with the rights it needs.\n\n"
                 "<b>Manage it</b>: /my_chats. On the group's page: the whitelist, who may write (the whitelist or "
-                "everyone), the posting limit, alerts about off-list members, how long offenders stay muted.\n\n"
-                "<b>Joining via the bot</b>: on the group's page, \"Joining via the bot\". Whoever is "
-                "not on the list gets a link to the group's page in the bot: they ask for access (free) or pick a "
-                "term and pay by your link (paid tariffs), and you confirm in one tap.\n\n"
+                "everyone), whether admins are checked too, the posting limit, how long offenders stay muted.\n\n"
+                "<b>Outsiders</b> (someone off the whitelist writes): on the group's page, \"🚪 Outsiders\". "
+                "The bot deletes the message and then does nothing more, tells you (with \"Allow\"), lets them "
+                "ask for access, or sells it for a term (paid tariffs). You confirm in one tap.\n\n"
                 "<b>Right in the group</b> (admins only, nobody else sees the answers):\n"
                 "/allow in reply to a message, or /allow @nick 7d – let a member write (for 7 days)\n"
                 "/deny @nick – take them off the list\n"
@@ -52,13 +52,13 @@ owner_tools_messages = {
                 "Questions and ideas: @ascendit_chat",
             'ru':
                 f"@{_bot} разрешает писать в группе только тем, кого вы допустили.\n\n"
-                "<b>Подключить группу</b>: /add_chat, затем \"Добавить в группу\" и выберите её. Бот должен быть "
-                "администратором с правом удалять сообщения (и ограничивать участников – для мута нарушителей).\n\n"
+                "<b>Подключить группу</b>: /add_chat, затем \"Выбрать группу\" и выберите её: Telegram сам "
+                "добавит бота администратором с нужными правами.\n\n"
                 "<b>Управлять</b>: /my_chats. На странице группы: белый список, кто пишет (белый список или все), "
-                "лимит постов, оповещения о чужих, мут нарушителей.\n\n"
-                "<b>Вход через бота</b>: на странице группы, \"Вход через бота\". Тем, кто не в списке, бот даёт "
-                "ссылку на страницу группы: там просят доступ (бесплатно) или выбирают срок и платят по вашей "
-                "ссылке (платные тарифы), а вы подтверждаете в одно нажатие.\n\n"
+                "проверять ли админов, лимит постов, мут нарушителей.\n\n"
+                "<b>Посторонние</b> (пишет тот, кого нет в белом списке): на странице группы, \"🚪 Посторонние\". "
+                "Бот удаляет сообщение, а дальше молчит, сообщает вам (с кнопкой \"Разрешить\"), даёт попросить "
+                "доступ или продаёт его на срок (платные тарифы). Вы подтверждаете в одно нажатие.\n\n"
                 "<b>Прямо в группе</b> (только админам, ответы видите только вы):\n"
                 "/allow в ответ на сообщение или /allow @ник 7d – разрешить писать (на 7 дней)\n"
                 "/deny @ник – убрать из списка\n"
@@ -73,30 +73,36 @@ owner_tools_messages = {
         'instruction': {
             'en':
                 "<b>Connect a group</b>\n\n"
-                "1. Tap \"Add to a group\" below and pick your group. Telegram will offer to make the bot an "
-                "admin with the rights it needs – agree.\n"
-                "2. That's it: the bot connects the group and sends you its page.\n\n"
-                "Already added the bot as an admin? Tap \"Select a group\" at the bottom of the screen, or forward "
-                "here a message written in the group on behalf of the group (anonymous admin).",
+                "Tap <b>➕ Select a group</b> at the bottom of the screen and pick it. Telegram adds the bot as an "
+                "admin with the rights it needs, and the bot sends you the group's page. That's all.\n\n"
+                "The bot asks to:\n"
+                "● delete messages – of those you have not allowed\n"
+                "● restrict members – to mute offenders for a few minutes\n"
+                "● pin messages – to pin the \"Get access\" button, if you use it\n\n"
+                "No button at the bottom (Telegram on a computer sometimes hides it)? Use \"Add to a group\" "
+                "below: it does the same.",
             'ru':
                 "<b>Подключить группу</b>\n\n"
-                "1. Нажмите \"Добавить в группу\" ниже и выберите вашу группу. Telegram предложит сделать бота "
-                "администратором с нужными правами – согласитесь.\n"
-                "2. Готово: бот подключит группу и пришлёт её страницу.\n\n"
-                "Бот уже администратор? Нажмите \"Выбрать группу\" внизу экрана или перешлите сюда сообщение, "
-                "написанное в группе от имени группы (анонимный администратор)."
+                "Нажмите <b>➕ Выбрать группу</b> внизу экрана и выберите её. Telegram сам добавит бота "
+                "администратором с нужными правами, а бот пришлёт страницу группы. Это всё.\n\n"
+                "Бот просит права:\n"
+                "● удалять сообщения – тех, кому вы не разрешили писать\n"
+                "● ограничивать участников – чтобы на несколько минут мутить нарушителей\n"
+                "● закреплять сообщения – чтобы закрепить кнопку \"Получить доступ\", если она вам нужна\n\n"
+                "Кнопки внизу нет (Telegram на компьютере иногда её прячет)? Нажмите \"Добавить в группу\" "
+                "ниже: это то же самое."
         },
         'add_to_group_button': {
             'en': "➕ Add to a group",
             'ru': "➕ Добавить в группу"
         },
         'add_chat_reply_button_text': {
-            'en': "Or pick a group where the bot is already an admin:",
-            'ru': "Или выберите группу, где бот уже администратор:"
+            'en': "👇 Pick the group with the button below",
+            'ru': "👇 Выберите группу кнопкой внизу"
         },
         'add_chat_reply_button': {
-            'en': "✅ Select a group",
-            'ru': "✅ Выбрать группу"
+            'en': "➕ Select a group",
+            'ru': "➕ Выбрать группу"
         },
         'success': {
             'en': "Group {chat_name} is connected!",
@@ -241,23 +247,14 @@ owner_tools_messages = {
                 'ru': "⏱ Лимит: {limit}"
             },
             'access_button': {
-                'off': {'en': "🔑 Joining via the bot: off", 'ru': "🔑 Вход через бота: выкл"},
-                'request': {'en': "🔑 Joining via the bot: by request", 'ru': "🔑 Вход через бота: по заявке"},
-                'paid': {'en': "🔑 Joining via the bot: paid", 'ru': "🔑 Вход через бота: за плату"},
+                'silent': {'en': "🚪 Outsiders: 🔕 quietly", 'ru': "🚪 Посторонние: 🔕 молча"},
+                'alert': {'en': "🚪 Outsiders: 🔔 tell me", 'ru': "🚪 Посторонние: 🔔 сообщать мне"},
+                'request': {'en': "🚪 Outsiders: 📨 by request", 'ru': "🚪 Посторонние: 📨 по заявке"},
+                'paid': {'en': "🚪 Outsiders: 💳 paid", 'ru': "🚪 Посторонние: 💳 за плату"},
             },
             'restriction_duration_button': {
                 'en': "🔇 Mute offenders: {duration} min",
                 'ru': "🔇 Мут нарушителю: {duration} мин"
-            },
-            'alerts_button': {
-                'on': {
-                    'en': "🔔 Off-list alerts",
-                    'ru': "🔔 Сообщать о чужих"
-                },
-                'off': {
-                    'en': "🔕 Off-list alerts",
-                    'ru': "🔕 Сообщать о чужих"
-                },
             },
             'active_button': {
                 'active': {
@@ -292,16 +289,6 @@ owner_tools_messages = {
                     'en': "Admins are checked too now: off the whitelist, their messages are deleted, yours too",
                     'ru': "Теперь админов тоже проверяем: если их нет в белом списке, сообщения удаляются. "
                           "Ваши тоже"
-                },
-            },
-            'alerts_toast': {
-                'on': {
-                    'en': "You will be told when someone off the list writes",
-                    'ru': "Будем сообщать, когда пишет кто-то не из списка"
-                },
-                'off': {
-                    'en': "Alerts are off for this group",
-                    'ru': "Оповещения по этой группе выключены"
                 },
             },
         },
@@ -601,17 +588,21 @@ owner_tools_messages = {
             'en': "✅ Group <b>{chat_name}</b> is connected. Here is its page:",
             'ru': "✅ Группа <b>{chat_name}</b> подключена. Вот её страница:"
         },
+        'give_rights_button': {
+            'en': "🔧 Give the bot its rights",
+            'ru': "🔧 Дать боту права"
+        },
         'auto_connect_failed': {
             'en': "Could not connect <b>{chat_name}</b>: {reason}",
             'ru': "Не удалось подключить <b>{chat_name}</b>: {reason}"
         },
         'needs_admin': {
             'en':
-                "The bot is in <b>{chat_name}</b>, but cannot delete messages yet. Make it an admin with the right "
-                "to delete messages (and to restrict members), and it will connect the group by itself.",
+                "The bot is in <b>{chat_name}</b>, but cannot delete messages yet. Tap the button below and pick "
+                "the group again: Telegram will offer the rights, ticked. Then the bot connects the group itself.",
             'ru':
-                "Бот в группе <b>{chat_name}</b>, но пока не может удалять сообщения. Сделайте его администратором "
-                "с правом удалять сообщения (и ограничивать участников), и он сам подключит группу."
+                "Бот в группе <b>{chat_name}</b>, но пока не может удалять сообщения. Нажмите кнопку ниже и снова "
+                "выберите группу: Telegram предложит права, уже отмеченные. После этого бот сам подключит группу."
         },
     },
     # The way in through the bot (pkg/service/access.py). HTML unless noted
@@ -624,17 +615,34 @@ owner_tools_messages = {
         },
         # The owner's page of the way in
         'owner': {
-            'title': {'en': "🔑 <b>Joining via the bot: {chat_name}</b>",
-                      'ru': "🔑 <b>Вход через бота: {chat_name}</b>"},
-            'intro_off': {
-                'en': "Whoever is not on the whitelist gets a page of the group in the bot, where they can ask for "
-                      "access or pay for it. You approve in one tap.\n\nHow do newcomers get in?",
-                'ru': "Тем, кто не в белом списке, бот покажет страницу группы: там можно попросить доступ или "
-                      "оплатить его. Вы одобряете в одно нажатие.\n\nКак пускать новых?"
+            'title': {'en': "🚪 <b>Outsiders: {chat_name}</b>",
+                      'ru': "🚪 <b>Посторонние: {chat_name}</b>"},
+            'intro': {
+                'en': "What happens when someone off the whitelist writes? The bot always deletes the message, "
+                      "and then:\n\n"
+                      "🔕 <b>Quietly</b> – nothing more.\n"
+                      "🔔 <b>Tell me</b> – you get their message and an \"Allow\" button.\n"
+                      "📨 <b>By request</b> – they get a link and ask for access; you approve in one tap.\n"
+                      "💳 <b>Paid</b> – they pick a term and pay; you confirm the payment, or it confirms itself.",
+                'ru': "Что делать, когда пишет тот, кого нет в белом списке? Сообщение бот удаляет всегда, а "
+                      "дальше:\n\n"
+                      "🔕 <b>Молча</b> – больше ничего.\n"
+                      "🔔 <b>Сообщать мне</b> – вам приходит его сообщение и кнопка \"Разрешить\".\n"
+                      "📨 <b>По заявке</b> – бот даёт ему ссылку, он просит доступ, вы одобряете в одно нажатие.\n"
+                      "💳 <b>За плату</b> – он выбирает срок и платит, вы подтверждаете оплату, или она "
+                      "подтверждается сама."
             },
             'mode': {
-                'request': {'en': "Mode: 📨 by request, free", 'ru': "Режим: 📨 по заявке, бесплатно"},
-                'paid': {'en': "Mode: 💳 paid", 'ru': "Режим: 💳 за плату"},
+                'silent': {'en': "Now: 🔕 quietly", 'ru': "Сейчас: 🔕 молча"},
+                'alert': {'en': "Now: 🔔 tell me", 'ru': "Сейчас: 🔔 сообщать мне"},
+                'request': {
+                    'en': "Now: 📨 by request, free. They ask for access on the group's page in the bot, "
+                          "you approve.",
+                    'ru': "Сейчас: 📨 по заявке, бесплатно. Человек просит доступ на странице группы в боте, "
+                          "вы одобряете."},
+                'paid': {
+                    'en': "Now: 💳 paid. They pick a term on the group's page in the bot and pay.",
+                    'ru': "Сейчас: 💳 за плату. Человек выбирает срок на странице группы в боте и платит."},
             },
             'prices': {'en': "Prices: {plans}", 'ru': "Цены: {plans}"},
             'prices_none': {'en': "Prices: not set", 'ru': "Цены: не заданы"},
@@ -686,22 +694,24 @@ owner_tools_messages = {
             'everyone_note': {
                 'en': "ℹ️ Everyone writes in the group now, so nobody needs a way in. It works again once you "
                       "turn the whitelist back on.",
-                'ru': "ℹ️ Сейчас в группе пишут все, вход через бота не нужен. Он заработает, когда вы вернёте "
+                'ru': "ℹ️ Сейчас в группе пишут все, заявки не нужны. Они заработают, когда вы вернёте "
                       "белый список."
             },
             'step': {'en': "<b>Step {step} of 2</b>", 'ru': "<b>Шаг {step} из 2</b>"},
             'buttons': {
-                'mode_request': {'en': "📨 By request, free", 'ru': "📨 По заявке, бесплатно"},
-                'mode_paid': {'en': "💳 Paid", 'ru': "💳 За плату"},
+                'modes': {
+                    'silent': {'en': "🔕 Quietly", 'ru': "🔕 Молча"},
+                    'alert': {'en': "🔔 Tell me", 'ru': "🔔 Сообщать мне"},
+                    'request': {'en': "📨 By request", 'ru': "📨 По заявке"},
+                    'paid': {'en': "💳 Paid", 'ru': "💳 За плату"},
+                },
+                'current': {'en': "• ", 'ru': "• "},
                 'locked': {'en': "🔒 ", 'ru': "🔒 "},
                 'prices': {'en': "💰 Prices", 'ru': "💰 Цены"},
                 'payment': {'en': "💳 Way to pay", 'ru': "💳 Способ оплаты"},
                 'terms': {'en': "✏️ Terms", 'ru': "✏️ Условия"},
                 'post': {'en': "📌 Button in the group", 'ru': "📌 Кнопка в группе"},
                 'requests': {'en': "📨 Requests ({count})", 'ru': "📨 Заявки ({count})"},
-                'to_paid': {'en': "💳 Switch to paid entry", 'ru': "💳 Перейти на платный вход"},
-                'to_request': {'en': "📨 Switch to entry by request", 'ru': "📨 Перейти на вход по заявке"},
-                'off': {'en': "⏹ Turn the way in off", 'ru': "⏹ Выключить вход"},
                 'cancel': {'en': "✖️ Cancel", 'ru': "✖️ Отмена"},
                 'use_cryptobot': {'en': "💎 CryptoBot: access opens by itself",
                                   'ru': "💎 CryptoBot: доступ открывается сам"},
@@ -807,9 +817,11 @@ owner_tools_messages = {
             },
             'toasts': {
                 'saved': {'en': "Saved", 'ru': "Сохранено"},
-                'request_on': {'en': "Entry by request is on", 'ru': "Вход по заявке включён"},
-                'paid_on': {'en': "Paid entry is on", 'ru': "Платный вход включён"},
-                'off': {'en': "The way in is off", 'ru': "Вход через бота выключен"},
+                'request_on': {'en': "Outsiders can ask for access now", 'ru': "Теперь посторонние могут попросить доступ"},
+                'paid_on': {'en': "Outsiders can pay for access now", 'ru': "Теперь посторонние могут оплатить доступ"},
+                'silent_on': {'en': "Off-list messages go quietly", 'ru': "Чужие сообщения удаляются молча"},
+                'alert_on': {'en': "You will be told when someone off the list writes",
+                             'ru': "Будем сообщать, когда пишет кто-то не из списка"},
                 'posted': {'en': "Posted in the group and pinned", 'ru': "Отправлено в группу и закреплено"},
                 'posted_unpinned': {'en': "Posted in the group. Pin it so that everyone sees it.",
                                     'ru': "Отправлено в группу. Закрепите сообщение, чтобы его видели все."},
@@ -902,6 +914,14 @@ owner_tools_messages = {
             },
         },
         'member': {
+            'admin': {
+                'en': "👮 You are an admin of <b>{chat_name}</b>, so you write without access. Members off the "
+                      "whitelist see here a way to ask for it or pay.\n\nTo try it yourself, turn on "
+                      "\"👮 Admins: checked too\" on the group's page.",
+                'ru': "👮 Вы администратор <b>{chat_name}</b> и пишете без доступа. Те, кого нет в белом списке, "
+                      "видят здесь, как попросить доступ или оплатить его.\n\nЧтобы попробовать самому, включите "
+                      "\"👮 Админы: тоже проверять\" на странице группы."
+            },
             'title': {'en': "✍️ <b>{chat_name}</b>", 'ru': "✍️ <b>{chat_name}</b>"},
             'intro': {'en': "Only members on the list write in this group.",
                       'ru': "Писать в этой группе могут только участники из списка."},
@@ -970,6 +990,7 @@ owner_tools_messages = {
                 'ru': "<i>Бот не принимает и не проверяет платежи: деньги идут владельцу группы.</i>"
             },
             'buttons': {
+                'settings': {'en': "⚙️ The group's page", 'ru': "⚙️ Страница группы"},
                 'request': {'en': "📨 Ask for access", 'ru': "📨 Попросить доступ"},
                 'remind': {'en': "🔔 Remind the owner", 'ru': "🔔 Напомнить владельцу"},
                 'pay': {'en': "💳 Pay {amount}", 'ru': "💳 Оплатить {amount}"},

@@ -293,3 +293,27 @@ async def test_member_hears_that_the_term_ends(bench: Bench):
 
     await MemberAlerts.expiry_round(datetime.datetime.now() + datetime.timedelta(days=1))
     assert 'закончился' in _last_to(bench, BUYER).text
+
+
+async def test_outsiders_quietly_or_tell_me_and_admins_on_the_join_page(bench: Bench):
+    """"Outsiders": quietly turns the owner's alerts off, "tell me" back on, the group's page names the choice;
+    the group's admin on the join page is told they need no access"""
+    chat = await _scene(bench)
+    await bench.private_message(OWNER, f'/start chat_{chat["id"]}')
+    await bench.tap(OWNER, '{"tp":"chat_access"}')
+    page = _last_to(bench, OWNER)
+    assert 'Сообщение бот удаляет всегда' in page.text and 'Сейчас: 🔔 сообщать мне' in page.text, page.text
+    assert '• 🔔 Сообщать мне' in [b['text'] for b in _buttons(page)]
+    await bench.tap(OWNER, '{"tp":"acc_mode","m":"silent"}')
+    [row] = await bench.sql('SELECT access_mode, owner_alerts FROM moderated_chats')
+    assert row == {'access_mode': 'off', 'owner_alerts': False}
+    assert 'Сейчас: 🔕 молча' in _last_to(bench, OWNER).text
+    await bench.tap(OWNER, '{"tp":"acc_mode","m":"request"}')
+    [row] = await bench.sql('SELECT access_mode FROM moderated_chats')
+    assert row['access_mode'] == 'request'
+    await bench.private_message(OWNER, f'/start chat_{chat["id"]}')
+    assert '🚪 Посторонние: 📨 по заявке' in [b['text'] for b in _buttons(_last_to(bench, OWNER))]
+
+    await bench.private_message(OWNER, f'/start j_{chat["id"]}')
+    page = _last_to(bench, OWNER)
+    assert 'Вы администратор' in page.text and 'Попросить' not in str(_buttons(page)), page.text

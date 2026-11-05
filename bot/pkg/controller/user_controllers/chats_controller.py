@@ -14,7 +14,8 @@ from pkg.config import routes
 from pkg.controller.user_controllers.common_controller import chat_access_denied, raise_error
 from pkg.service.user_storage import UserStorage
 from pkg.service.chat import Chat
-from pkg.service import post_limit
+from pkg.service import group_connect, post_limit
+from pkg.service.access import outsiders_mode
 from pkg.service.tariff import Tariff
 from project.i18n_owner_tools import ADD_TO_GROUP_URL
 from project.types import ModeratedChatInterface
@@ -35,7 +36,10 @@ async def add_chat(params: ControllerParams):
         'reply_markup': [[{
             'text': localization.get_message(
                 ['add_chat', 'add_chat_reply_button'], params['language_code']),
-            'request_id': 1, 'chat_is_channel': False, 'bot_is_member': True}]]
+            # Any group the user may give the bot rights in: Telegram adds the bot as an admin with these rights
+            'request_id': 1, 'chat_is_channel': False,
+            'user_administrator_rights': group_connect.USER_RIGHTS,
+            'bot_administrator_rights': group_connect.BOT_RIGHTS}]]
     }
 
     if is_call_or_command(call, message):
@@ -68,34 +72,29 @@ async def add_chat(params: ControllerParams):
     else:
         chat_service_id = message.text
 
-    result_connection = await Chat.add(chat_service_id, message.from_user.id)
-
-    if 'error' in result_connection:
-        if result_connection['error'] == 'connection_exists':
-            result_connection = result_connection['connection']
-        else:
-            await chat_access_denied(call, message, result_connection)
-            return False
-
-    chat_info = await Chat.load_info(chat_service_id=str(chat_service_id))
-    if 'error' in chat_info:
+    if not chat_service_id:
         await notify(call, message, localization.get_message(
             ['chat', 'errors', 'not_found_tg'], params['language_code']))
         return False
 
-    reply_markup = [[{
-        'text': localization.get_message(['buttons', 'go_to_settings'], params['language_code']),
-        'callback_data': {'tp': 'chat', 'id': result_connection['moderated_chat_id']}
-    }], [go_back_inline_button(params['language_code'])]]
+    # Picked with the button, the bot is being added right now: a few tries while Telegram makes it an admin
+    if message.chat_shared is not None:
+        connected = await group_connect.connect_soon(chat_service_id, message.from_user.id)
+    else:
+        connected = await group_connect.connect(chat_service_id, message.from_user.id)
+    if 'error' in connected:
+        await chat_access_denied(call, message, connected)
+        return False
 
-    message_structures = [{
-        'type': 'text',
-        'text': localization.get_message(
-            ['add_chat', 'success'], params['language_code']).format(chat_name=chat_info['title']),
-        'reply_markup': reply_markup
-    }, reply_add_chat_structure]
-
-    await message_sender(message.chat.id, message_structures=message_structures)
+    # my_chat_member may have shown the group already
+    if not group_connect.first_to_announce(connected['moderated_chat_id'], message.from_user.id):
+        return
+    chat_data = await Chat.find(connected['moderated_chat_id'])
+    await message_sender(message.chat.id, message_structures=[{
+        'type': 'text', 'parse_mode': 'HTML',
+        'text': localization.get_message(['group', 'auto_connected'], params['language_code'],
+                                         chat_name=html.escape(await Chat.name_of(chat_data) if chat_data else ''))}])
+    await open_chat_page(message, connected['moderated_chat_id'], params['language_code'])
 
 
 async def my_chats(params: ControllerParams):
@@ -276,14 +275,13 @@ async def show(params: ControllerParams):
                 {'tp': 'switch_mode'})],
         [button(['admins_button', 'free' if chat_data.get('allow_administrators', True) else 'checked'],
                 {'tp': 'switch_admins'})],
-        [button(['access_button', chat_data.get('access_mode') or 'off'], {'tp': 'chat_access'})],
+        [button(['access_button', outsiders_mode(chat_data)], {'tp': 'chat_access'})],
         [{'text': ('' if paid else localization.get_message(['chat', 'show', 'locked'], language_code))
             + localization.get_message(['chat', 'show', 'limit_button'], language_code,
                                        limit=_limit_text(chat_data, language_code)),
           'callback_data': {'tp': 'chat_post_limit'}}],
         [button(['restriction_duration_button'], {'tp': 'chat_restriction_duration'},
-                duration=chat_data.get('restriction_duration_minutes', 5)),
-         button(['alerts_button', 'on' if chat_data.get('owner_alerts', True) else 'off'], {'tp': 'switch_alerts'})],
+                duration=chat_data.get('restriction_duration_minutes', 5))],
         [button(['active_button', 'active' if chat_data['active'] else 'inactive'], {'tp': 'switch_active'})],
         [button(['delete_button', 'deleting' if params['state_data'].get('deleting') else 'initial'],
                 {'tp': 'delete'})],
@@ -354,15 +352,6 @@ async def switch_admins(params: ControllerParams):
     await notify(params['call'], params['message'], localization.get_message(
         ['chat', 'show', 'admins_toast', 'free' if allowed else 'checked'], params['language_code']),
         alert=not allowed)
-    await _refresh(params, chat_data)
-
-
-async def switch_alerts(params: ControllerParams):
-    current = params['state_data']
-    enabled = not current.get('owner_alerts', True)
-    chat_data = await Chat.update_settings(current['id'], {'owner_alerts': enabled})
-    await notify(params['call'], params['message'], localization.get_message(
-        ['chat', 'show', 'alerts_toast', 'on' if enabled else 'off'], params['language_code']))
     await _refresh(params, chat_data)
 
 

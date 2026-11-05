@@ -40,8 +40,17 @@ class InlineButtonData(TypedDict):
     callback_data: str | dict[str, Any]
 
 
-class ChatAdministratorData(TypedDict):
-    can_delete_messages: Optional[bool]
+class ChatAdministratorData(TypedDict, total=False):
+    can_delete_messages: bool
+    can_restrict_members: bool
+    can_pin_messages: bool
+    can_promote_members: bool
+
+
+def _administrator_rights(rights: dict) -> telegram_types.ChatAdministratorRights:
+    required = {name: False for name, field in telegram_types.ChatAdministratorRights.model_fields.items()
+                if field.is_required()}
+    return telegram_types.ChatAdministratorRights(**{**required, **rights})
 
 
 class ButtonRequestChatData(TypedDict):
@@ -135,13 +144,11 @@ def build_markup(message_structure: MessageStructuresInterface):
                 if validate_typed_dict_interface(button_data, ButtonRequestChatData):
                     button_data = cast(ButtonRequestChatData, button_data)
 
-                    user_administrator_rights, bot_administrator_rights = [telegram_types.ChatAdministratorRights(
-                        can_delete_messages=rights.get('can_delete_messages', None)
-                    ) if rights is not None else None for rights in [
-                                                                               button_data.get(
-                                                                                   'user_administrator_rights', None),
-                                                                               button_data.get(
-                                                                                   'bot_administrator_rights', None)]]
+                    # The rights named are asked for, the others not required (Telegram wants each one stated)
+                    user_administrator_rights, bot_administrator_rights = [_administrator_rights(rights)
+                        if rights is not None else None for rights in [
+                            button_data.get('user_administrator_rights', None),
+                            button_data.get('bot_administrator_rights', None)]]
 
                     row_buttons.append(keyboard.KeyboardButton(
                         text=button_data.get('text', ''),

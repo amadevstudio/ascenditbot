@@ -111,9 +111,6 @@ class RouteMap:
                 'switch_mode': {
                     'method': chats_controller.switch_mode
                 },
-                'switch_alerts': {
-                    'method': chats_controller.switch_alerts
-                },
                 'switch_admins': {
                     'method': chats_controller.switch_admins
                 }
