@@ -45,8 +45,9 @@ async def run():
     await before_bot_startup()
 
     await bot.delete_webhook(drop_pending_updates=False)
-    await dp.start_polling(bot)  # , on_startup=on_bot_startup)
-    await on_bot_startup(bot)
+    # Runs once polling has started (called after start_polling, it ran at shutdown, on a closed session)
+    dp.startup.register(on_bot_startup)
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
