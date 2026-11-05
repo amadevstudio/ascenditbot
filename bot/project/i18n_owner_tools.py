@@ -49,7 +49,7 @@ owner_tools_messages = {
                 "/settings – open the group's page here\n\n"
                 "<b>Free</b>: one group with a whitelist and alerts. <b>Paid</b> (/subscription): more groups, "
                 "access for a term and posting limits.\n\n"
-                "Questions and ideas: @ascendit_chat",
+                "Questions and ideas: the button below, we answer in person.",
             'ru':
                 f"@{_bot} разрешает писать в группе только тем, кого вы допустили.\n\n"
                 "<b>Подключить группу</b>: /add_chat, затем \"Выбрать группу\" и выберите её: Telegram сам "
@@ -65,8 +65,9 @@ owner_tools_messages = {
                 "/settings – открыть страницу группы здесь\n\n"
                 "<b>Бесплатно</b>: одна группа с белым списком и оповещениями. <b>Платно</b> (/subscription): "
                 "больше групп, доступ на срок и лимиты постов.\n\n"
-                "Вопросы и идеи: @ascendit_chat"
+                "Вопросы и идеи: кнопка ниже, отвечаем лично."
         },
+        'contact_button': {'en': "💬 Write to us", 'ru': "💬 Написать нам"},
     },
     'add_chat': {
         # HTML
