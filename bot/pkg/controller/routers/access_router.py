@@ -21,7 +21,8 @@ from pkg.controller.routers.quick_actions_router import QuickAction, _managed_ch
 from pkg.repository import access_repository, allowed_user_repository
 from pkg.service import access, access_payments
 from pkg.service.access import Requests
-from pkg.service.access_messages import callback, request_member, send_request, tell_member_decision
+from pkg.service.access_messages import (callback, declined_message, request_markup, request_member, request_text,
+                                         send_request, tell_member_decision)
 from pkg.service.allowed_user import full_name
 from pkg.service.chat import Chat
 from pkg.service.member_alerts import format_date, save_token
@@ -392,9 +393,31 @@ def access_router() -> Router:
             await _edit(call, _text(['alert', 'decided'], language_code), None)
             await call.answer()
             return
-        await _edit(call, _text(['alert', 'rejected'], language_code, member=request_member(request),
-                                chat_name=html.escape(chat['name'])), None)
+        await _edit(call, *declined_message(chat, {**request, 'decided_at': None}, language_code))
         await call.answer(_text(['alert', 'rejected_toast'], language_code))
         await tell_member_decision(chat, request, None, False)
+
+    @router.callback_query(QuickAction('au'))
+    async def undo_reject(call: CallbackQuery, data: dict):
+        """The declined request waits again, with its answers, and the member is no longer muted in the group."""
+        language_code = call.from_user.language_code
+        request = await Requests.find(int(data.get('r') or 0))
+        if request is None:
+            await call.answer(localization.get_message(['alerts', 'expired'], language_code), show_alert=True)
+            return
+        chat = await _managed_chat(call, request['moderated_chat_id'], language_code)
+        if chat is None:
+            return
+        reopened = await Requests.reopen(request['id'])
+        if reopened is None:
+            await _edit(call, _text(['alert', 'decided'], language_code), None)
+            await call.answer()
+            return
+        await lift_restriction(int(chat['service_id']), int(reopened['user_service_id']))
+        chat = {**chat, 'name': await Chat.name_of(chat)}
+        paid = Tariff.is_paid(await Chat.owner_tariff_id(chat['id']))
+        await _edit(call, request_text(chat, reopened, language_code),
+                    request_markup(chat, reopened, language_code, paid))
+        await call.answer(_text(['alert', 'reopened_toast'], language_code))
 
     return router

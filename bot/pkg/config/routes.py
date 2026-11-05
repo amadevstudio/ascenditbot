@@ -156,6 +156,7 @@ class RouteMap:
                 'acc_cancel': {'method': access_controller.cancel},
                 'acc_post': {'method': access_controller.post},
                 'acc_requests': {'method': access_controller.requests},
+                'acc_declined': {'method': access_controller.declined},
                 'acc_map': {'method': access_controller.map_product},
             },
             'validator': chat_access_validator

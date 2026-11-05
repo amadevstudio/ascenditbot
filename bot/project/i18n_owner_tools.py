@@ -712,6 +712,7 @@ owner_tools_messages = {
                 'terms': {'en': "✏️ Terms", 'ru': "✏️ Условия"},
                 'post': {'en': "📌 Button in the group", 'ru': "📌 Кнопка в группе"},
                 'requests': {'en': "📨 Requests ({count})", 'ru': "📨 Заявки ({count})"},
+                'declined': {'en': "🚫 Declined ({count})", 'ru': "🚫 Отклонённые ({count})"},
                 'cancel': {'en': "✖️ Cancel", 'ru': "✖️ Отмена"},
                 'use_cryptobot': {'en': "💎 CryptoBot: access opens by itself",
                                   'ru': "💎 CryptoBot: доступ открывается сам"},
@@ -833,6 +834,9 @@ owner_tools_messages = {
                                 'ru': "Не получилось отправить в группу: у бота нет права писать сообщения."},
                 'no_requests': {'en': "No requests waiting", 'ru': "Новых заявок нет"},
                 'requests_sent': {'en': "The requests are below", 'ru': "Заявки ниже"},
+                'no_declined': {'en': "Nobody declined in the last 7 days", 'ru': "За 7 дней никого не отклоняли"},
+                'declined_sent': {'en': "Declined in the last 7 days are below. Undo lets them ask again and unmutes "
+                                        "them", 'ru': "Отклонённые за 7 дней ниже. \"Отменить\" вернёт заявку и снимет мут"},
                 'yoomoney_connected': {
                     'en': "✅ YooMoney is connected. Tap \"Test\" on its notifications page: the bot will confirm.",
                     'ru': "✅ ЮMoney подключён. Нажмите \"Протестировать\" на странице уведомлений: бот подтвердит."
@@ -1067,6 +1071,8 @@ owner_tools_messages = {
             'paid_auto_forever': {'en': "Access is open for good.", 'ru': "Доступ открыт навсегда."},
             'approved_toast': {'en': "Access given", 'ru': "Доступ открыт"},
             'rejected_toast': {'en': "Declined", 'ru': "Отклонено"},
+            'reopened_toast': {'en': "The request is waiting for your answer again",
+                               'ru': "Заявка снова ждёт ответа"},
         },
     },
     # /usersCount (also /stats) for a group owner, HTML

@@ -17,7 +17,7 @@ from lib.language import localization
 from pkg.controller.user_controllers.common_controller import raise_error
 from pkg.service import access
 from pkg.service.access import Requests
-from pkg.service.access_messages import send_request
+from pkg.service.access_messages import send_declined, send_request
 from pkg.service.access_providers import cryptobot, hook_key, tribute, yoomoney
 from pkg.service.secret_box import seal
 from project import constants
@@ -132,8 +132,10 @@ async def _render(params: ControllerParams, chat: dict, notice: str | None = Non
             rows.append([button('prices', {'tp': 'acc_edit', 'f': 'prices'}),
                          button('payment', {'tp': 'acc_edit', 'f': 'payment'})])
         rows.append([button('terms', {'tp': 'acc_edit', 'f': 'terms'}), button('post', {'tp': 'acc_post'})])
-        if pending:
-            rows.append([button('requests', {'tp': 'acc_requests'}, count=pending)])
+        declined = len(await Requests.declined(chat['id']))
+        if pending or declined:
+            rows.append([*([button('requests', {'tp': 'acc_requests'}, count=pending)] if pending else []),
+                         *([button('declined', {'tp': 'acc_declined'}, count=declined)] if declined else [])])
 
     if editing:
         # Waiting for the text: the title, the step of the walk through paid entry, the prompt
@@ -415,6 +417,23 @@ async def post(params: ControllerParams):
     except (telegram_exceptions.TelegramBadRequest, telegram_exceptions.TelegramForbiddenError):
         toast = 'posted_unpinned'
     await notify(call, params['message'], _text(['toasts', toast], language_code), alert=toast != 'posted')
+
+
+async def declined(params: ControllerParams):
+    """Those declined in the last days, below the page, each with Undo: the request waits again and the mute is
+    lifted."""
+    call, language_code = params['call'], params['language_code']
+    chat = await _chat(params)
+    if chat is None:
+        return
+    found = await Requests.declined(chat['id'])
+    if not found:
+        await notify(call, params['message'], _text(['toasts', 'no_declined'], language_code))
+        return
+    await notify(call, params['message'], _text(['toasts', 'declined_sent'], language_code))
+    named = {**chat, 'name': await Chat.name_of(chat)}
+    for request in found:
+        await send_declined(named, request, params['message'].chat.id, language_code)
 
 
 async def requests(params: ControllerParams):
