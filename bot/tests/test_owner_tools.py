@@ -438,6 +438,30 @@ async def test_page_switch_mode_and_limit(bench: Bench):
     assert await _limit_row(bench) == {'post_limit': None, 'post_limit_hours': None}
 
 
+async def test_page_check_admins_too(bench: Bench):
+    """"Admins: checked too": the owner's own message off the whitelist goes, the page says nobody can write;
+    switched back, the owner writes again"""
+    _, chat = await _scene(bench)
+    await bench.group_message(GROUP, OWNER, 'mine stays')
+    assert not _deleted(bench)
+    await _open_page(bench, chat)
+    await bench.tap(OWNER, json.dumps({'tp': 'switch_admins'}))
+    [row] = await bench.sql('SELECT allow_administrators FROM moderated_chats')
+    assert row['allow_administrators'] is False
+    assert 'Ваши тоже' in bench.telegram.calls_of('answerCallbackQuery')[-1].text
+    page = _shown(bench)
+    assert 'админы тоже проверяются' in page.text and 'даже вы' in page.text, page.text
+    assert '👮 Админы: тоже проверять' in [b['text'] for b in _buttons(page)]
+
+    bench.telegram.calls.clear()
+    gone = await bench.group_message(GROUP, OWNER, 'mine goes')
+    assert _deleted(bench) == [gone['message_id']]
+    await bench.tap(OWNER, json.dumps({'tp': 'switch_admins'}))
+    bench.telegram.calls.clear()
+    await bench.group_message(GROUP, OWNER, 'mine stays again')
+    assert not _deleted(bench)
+
+
 async def test_page_limit_is_paid(bench: Bench):
     """on the free tariff the limit page says it works on a paid one; set now, it waits for the tariff"""
     _, chat = await _scene(bench)

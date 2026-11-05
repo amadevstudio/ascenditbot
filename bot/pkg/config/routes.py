@@ -113,6 +113,9 @@ class RouteMap:
                 },
                 'switch_alerts': {
                     'method': chats_controller.switch_alerts
+                },
+                'switch_admins': {
+                    'method': chats_controller.switch_admins
                 }
             },
             'validator': chat_access_validator
