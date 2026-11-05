@@ -856,6 +856,24 @@ owner_tools_messages = {
                   "Получить доступ: {link}"
         },
         # The member's page of the group
+        # /access: the member's groups, HTML
+        'mine': {
+            'title': {'en': "🔑 <b>Where you can write</b>\n", 'ru': "🔑 <b>Где вы можете писать</b>\n"},
+            'until': {'en': "✅ {chat_name}: until {date}", 'ru': "✅ {chat_name}: до {date}"},
+            'forever': {'en': "✅ {chat_name}: for good", 'ru': "✅ {chat_name}: бессрочно"},
+            'waiting': {'en': "⏳ {chat_name}: your request of {date} is waiting for the owner",
+                        'ru': "⏳ {chat_name}: заявка от {date} ждёт ответа владельца"},
+            'empty': {
+                'en': "🔑 No access through the bot yet. A group's owner gives the link to get in; the bot also "
+                      "sends it when it deletes a message of someone off the list.",
+                'ru': "🔑 Доступов через бота пока нет. Ссылку на вход даёт владелец группы, а ещё бот присылает "
+                      "её, когда удаляет сообщение того, кого нет в списке."
+            },
+            'buttons': {
+                'extend': {'en': "⏳ Extend: {chat_name}", 'ru': "⏳ Продлить: {chat_name}"},
+                'open': {'en': "{chat_name}", 'ru': "{chat_name}"},
+            },
+        },
         'member': {
             'title': {'en': "✍️ <b>{chat_name}</b>", 'ru': "✍️ <b>{chat_name}</b>"},
             'intro': {'en': "Only members on the list write in this group.",
@@ -881,8 +899,10 @@ owner_tools_messages = {
             'not_found': {'en': "The group is not found. The link may be old.",
                           'ru': "Группа не найдена. Возможно, ссылка устарела."},
             'footer': {
-                'en': "<i>This is @{bot}: it lets into a group only those its owner allows. Your own group: /start</i>",
-                'ru': "<i>Это @{bot}: он пускает в группу только тех, кого разрешил владелец. Своя группа: /start</i>"
+                'en': "<i>This is @{bot}: it lets into a group only those its owner allows. All your access: "
+                      "/access. Your own group: /start</i>",
+                'ru': "<i>Это @{bot}: он пускает в группу только тех, кого разрешил владелец. Все ваши доступы: "
+                      "/access. Своя группа: /start</i>"
             },
             'plan': {
                 'en': "💳 <b>{chat_name}</b>: {plan}\n\n1. Pay the group's owner by the link below.\n"
@@ -1027,6 +1047,10 @@ owner_tools_messages = {
             'en': "✅ whitelist {count} (for a term: {timed})",
             'ru': "✅ в списке {count} (на срок: {timed})"
         },
+        'payments': {
+            'en': "💰 Paid entries in 30 days: {count}, {amount}",
+            'ru': "💰 Оплат за вход за 30 дней: {count}, на {amount}"
+        },
         'more': {
             'en': "…and {count} more groups, counted above",
             'ru': "…и ещё групп: {count}, они учтены в сумме выше"
@@ -1038,6 +1062,7 @@ owner_tools_messages = {
             'menu': {'en': "Main menu", 'ru': "Главное меню"},
             'my_chats': {'en': "My groups", 'ru': "Мои группы"},
             'stats': {'en': "Members and statistics of my groups", 'ru': "Участники и статистика моих групп"},
+            'access': {'en': "Groups where I can write", 'ru': "Группы, где я могу писать"},
             'add_chat': {'en': "Connect a group", 'ru': "Подключить группу"},
             'subscription': {'en': "Tariff and payment", 'ru': "Тариф и оплата"},
             'settings': {'en': "Settings", 'ru': "Настройки"},

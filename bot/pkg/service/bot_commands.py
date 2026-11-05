@@ -8,7 +8,7 @@ from aiogram.types import BotCommand, BotCommandScope, BotCommandScopeAllChatAdm
 from lib.language import localization
 from pkg.system.logger import logger
 
-PRIVATE = ['menu', 'my_chats', 'stats', 'add_chat', 'subscription', 'settings', 'help']
+PRIVATE = ['menu', 'my_chats', 'stats', 'add_chat', 'subscription', 'settings', 'access', 'help']
 GROUP = ['allow', 'deny', 'settings']
 
 # The menu in English for every language but Russian

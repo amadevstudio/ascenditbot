@@ -144,3 +144,17 @@ async def mark_expiry_notice(allowed_user_id: int, expiry_notice: int):
     await databaseExecutor.run(db.execute_single_model, """
         UPDATE allowed_users SET expiry_notice = %s WHERE id = %s
     """, (expiry_notice, allowed_user_id))
+
+
+async def of_member(user_service_id: str, nickname: str | None, limit: int = 30) -> list[dict]:
+    """Where a member may write (/access): their running entries in groups the bot moderates, one per group,
+    the ones ending soonest first, those for good last."""
+    return [dict(row) for row in await databaseExecutor.run(db.fetchall, f"""
+        SELECT DISTINCT ON (mc.id) mc.id AS chat_id, mc.service_id, mc.name, mc.access_mode, au.expires_at
+        FROM allowed_users AS au
+        INNER JOIN moderated_chats AS mc ON au.moderated_chat_id = mc.id
+        WHERE {_MATCH} AND au.active AND mc.active AND NOT mc.disabled
+            AND (au.expires_at IS NULL OR au.expires_at > LOCALTIMESTAMP)
+        ORDER BY mc.id, au.expires_at IS NULL DESC, au.expires_at DESC
+        LIMIT %s
+    """, (*_match_params(user_service_id, nickname), limit))]
