@@ -732,12 +732,14 @@ owner_tools_messages = {
                 'payment': {
                     'en': "💳 How do you take payment?\n\n🔗 <b>Your link or details</b>: send them in a message "
                           "(PayPal, Boosty, Tribute, a bank transfer link). A member pays and taps \"I paid\", you "
-                          "confirm in one tap.\n\n💎 <b>CryptoBot</b>: payment in crypto; the bot sees it and opens "
-                          "access by itself. Tap the button below.",
+                          "confirm in one tap.\n\nOr a service that tells the bot about the payment, and access opens by "
+                          "itself (a button below):\n💎 <b>CryptoBot</b>: crypto\n🟣 <b>YooMoney</b>: cards, in rubles\n"
+                          "🎫 <b>Tribute</b>: cards, a product per term",
                     'ru': "💳 Как принимать оплату?\n\n🔗 <b>Своя ссылка или реквизиты</b>: пришлите их сообщением "
                           "(ЮMoney, Boosty, Tribute, ссылка банка на перевод). Участник оплатит и нажмёт \"Я "
-                          "оплатил(а)\", а вы подтвердите в одно нажатие.\n\n💎 <b>CryptoBot</b>: оплата "
-                          "криптовалютой, бот сам видит оплату и открывает доступ. Нажмите кнопку ниже."
+                          "оплатил(а)\", а вы подтвердите в одно нажатие.\n\nИли сервис, который сам сообщает боту об "
+                          "оплате, и доступ открывается сам (кнопка ниже):\n💎 <b>CryptoBot</b>: криптовалюта\n"
+                          "🟣 <b>ЮMoney</b>: карты, в рублях\n🎫 <b>Tribute</b>: карты, товар на каждый срок"
                 },
                 'yoomoney_wallet': {
                     'en': "🟣 <b>Connecting YooMoney</b>\n\nSend the number of your YooMoney wallet: 15 to 20 "
