@@ -18,7 +18,6 @@ from pkg.controller.user_controllers.common_controller import raise_error
 from pkg.service import access
 from pkg.service.access import Requests
 from pkg.service.access_messages import send_request
-from pkg.service import access_providers
 from pkg.service.access_providers import cryptobot, hook_key, tribute, yoomoney
 from pkg.service.secret_box import seal
 from project import constants
@@ -149,9 +148,8 @@ async def _render(params: ControllerParams, chat: dict, notice: str | None = Non
         if editing == 'payment':
             # A link is typed; a provider that confirms payments is picked
             rows.append([button('use_cryptobot', {'tp': 'acc_edit', 'f': 'cryptobot'})])
-            if access_providers.HOOKS_ENABLED:
-                rows.append([button('use_yoomoney', {'tp': 'acc_edit', 'f': 'yoomoney_wallet'})])
-                rows.append([button('use_tribute', {'tp': 'acc_edit', 'f': 'tribute_key'})])
+            rows.append([button('use_yoomoney', {'tp': 'acc_edit', 'f': 'yoomoney_wallet'})])
+            rows.append([button('use_tribute', {'tp': 'acc_edit', 'f': 'tribute_key'})])
         elif editing == 'tribute_map':
             rows += [[_button(product['name'], {'tp': 'acc_map', 'p': product['id']})]
                      for product in state.get('products', [])[:20]]

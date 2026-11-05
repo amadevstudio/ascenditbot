@@ -18,10 +18,7 @@ PRODUCTS = [{'id': 11, 'name': 'Неделя', 'link': 'https://t.me/tribute/app
 
 
 def _hooks_on():
-    from pkg.service import access_providers
     from pkg.service.access_providers import tribute, yoomoney
-
-    access_providers.HOOKS_ENABLED = True
 
     async def post(form):
         return f"https://yoomoney.ru/transfer/quickpay?requestId={form['label']}"
