@@ -4,7 +4,6 @@ from typing import TypedDict, List, Literal
 
 from framework.system import telegram_types, telegram_exceptions
 
-import pkg.repository.allowed_user_repository
 import pkg.repository.chat_repository
 from framework.system.bot_setup import bot
 from pkg.repository import chat_repository
@@ -42,6 +41,22 @@ class Chat(Service):
     @staticmethod
     async def find_by(chat: ModeratedChatInterface) -> ModeratedChatInterface | None:
         return await chat_repository.find_by(chat)
+
+    @staticmethod
+    async def update_settings(chat_id: int, settings: dict) -> ModeratedChatInterface | None:
+        return await chat_repository.update_settings(chat_id, settings)
+
+    @staticmethod
+    async def removed_count(chat_id: int, days: int) -> int:
+        return await chat_repository.removed_count(chat_id, days)
+
+    @staticmethod
+    async def neighbours(chat_id: int, user_service_id: int) -> tuple[int | None, int | None]:
+        return await chat_repository.neighbours(chat_id, str(user_service_id))
+
+    @staticmethod
+    async def is_manager(chat_id: int, user_service_id: int) -> bool:
+        return await chat_repository.is_manager(chat_id, str(user_service_id))
 
     @classmethod
     async def _get_chat_member(cls, chat_service_id: int, user_id: int) \
@@ -312,21 +327,6 @@ class Chat(Service):
         except Exception as e:
             logger.error(e)
             return {'error': 'unexpected'}
-
-    @staticmethod
-    async def add_to_whitelist(chat_id: int, user_nickname: str) \
-            -> ModeratedChatInterface | None | TypedDict('AddToWhitelistError', {'error': Literal['unexpected']}):
-        # chat_member = await Chat._get_chat_member(bot, chat_service_id, user_)
-        # if "error" in chat_member:
-        #     return {"error": chat_member["error"]}
-
-        try:
-            result_whitelisted = await chat_repository.add_to_whitelist(chat_id, user_nickname)
-        except Exception as e:
-            logger.error(e)
-            return {"error": "unexpected"}
-
-        return result_whitelisted
 
     @staticmethod
     async def whitelist_data_count_provider(chat_id: int, search_query: str | None = None) -> int:

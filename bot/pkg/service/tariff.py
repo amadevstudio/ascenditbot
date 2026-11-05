@@ -16,6 +16,11 @@ class Tariff(Service):
     FREE_TARIFF_ID = 0
 
     @staticmethod
+    def is_paid(tariff_id: int | None) -> bool:
+        """A paid tariff (or its trial): the paid features of groups work."""
+        return tariff_id is not None and tariff_id != Tariff.FREE_TARIFF_ID
+
+    @staticmethod
     async def tariff_info(tariff_id: int, user_id: int) -> TariffInfoInterface:
         tariff_info = await tariff_repository.tariff_info(tariff_id, user_id)
 

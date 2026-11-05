@@ -1,4 +1,7 @@
+import datetime
+import html
 from framework.controller.types import ControllerParams
+from framework.system import telegram_types
 
 from framework.controller.message_tools import notify, message_sender, is_call_or_command, go_back_inline_markup, \
     go_back_inline_button, determine_search_query
@@ -9,63 +12,91 @@ from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
 from pkg.controller.user_controllers.chats_controller import _PER_PAGE
 from pkg.controller.user_controllers.common_controller import raise_error
-from pkg.service.allowed_user import AllowedUser
+from pkg.service.allowed_user import AllowedUser, parse_members
 from pkg.service.chat import Chat
+from pkg.service.member_alerts import format_date, member_label
+from pkg.service.tariff import Tariff
 from pkg.service.user_storage import UserStorage
 from project.types import AllowedUserInterface
+
+
+_TERM_CHOICES = (0, 7, 30)  # days; 0: for good
+
+
+def member_text(entry: dict) -> str:
+    """A whitelist entry in plain text: @nickname, else the name, else the id."""
+    if entry.get('nickname'):
+        return '@' + entry['nickname']
+    return entry.get('display_name') or f"id {entry.get('user_service_id')}"
+
+
+def _add_markup(language_code: str) -> list:
+    return [[{'text': localization.get_message(['chat', 'add_to_whitelist', 'pick_button'], language_code),
+              'request_users': {'request_id': 2, 'max_quantity': 10}}]]
 
 
 # Add user to whitelist
 async def add_to_chat_whitelist(params: ControllerParams):
     call, message = params['call'], params['message']
+    language_code = params['language_code']
 
     if is_call_or_command(call, message):
-        message_structures = [{
+        await message_sender(message.chat.id, message_structures=[{
             'type': 'text',
-            'text': localization.get_message(['chat', 'add_to_whitelist', 'text'], params['language_code']),
-            'reply_markup': go_back_inline_markup(params['language_code']),
+            'text': localization.get_message(['chat', 'add_to_whitelist', 'text'], language_code),
+            'reply_markup': go_back_inline_markup(language_code),
             'parse_mode': 'HTML'
-        }]
-        await message_sender(message.chat.id, message_structures=message_structures)
-
+        }, {
+            'type': 'text',
+            'text': localization.get_message(['chat', 'add_to_whitelist', 'pick_hint'], language_code),
+            'markup_type': 'reply',
+            'reply_markup': _add_markup(language_code)
+        }])
         return
 
     # ---
     # User adding
 
-    # Separate and Rid of the leading @: @zxc -> zxc
-    user_nicknames = [un[1:] if un[0] == '@' else un for un in message.text.split()]
-
     chat_state_data = state_data.get_local_state_data(message, 'chat')
+    members, unknown, days = parse_members(message)
+    if days and members and not Tariff.is_paid(await Chat.owner_tariff_id(chat_state_data['id'])):
+        await notify(None, message, localization.get_message(['alerts', 'paid_only'], language_code),
+                     save_state=True)
+        return
 
-    for user_nickname in user_nicknames:
-        result_connection = await Chat.add_to_whitelist(chat_state_data['id'], user_nickname)
-
-        if 'error' in result_connection:
-            error_trace = ['errors', result_connection['error']]  # == 'unexpected'
-            # if result_connection['error'] == 'unexpected':
-            #     error_trace = ['errors', result_connection['error']]
-            # else:
-            #     error_trace = ['chat', 'add_to_whitelist', 'errors', result_connection['error']]
-            await notify(
-                call, message, localization.get_message(error_trace, params['language_code']),
-                alert=True, button_text='cancel')
+    added = []
+    for member in members:
+        result = await AllowedUser.allow(chat_state_data['id'], **member, days=days)
+        if result is None:
+            await notify(call, message, localization.get_message(['errors', 'unexpected'], language_code),
+                         alert=True, button_text='cancel')
             return False
+        added.append(member_text(member))
 
-    if len(user_nicknames) == 1:
-        answer_message = localization.get_message(
-            ['chat', 'add_to_whitelist', 'success'], params['language_code'], nickname=user_nicknames[0])
-    else:
-        answer_message = localization.get_message(
-            ['chat', 'add_to_whitelist', 'success_plural'], params['language_code'])
+    lines = []
+    if added:
+        if days:
+            lines.append(localization.get_message(
+                ['chat', 'add_to_whitelist', 'success_list_until'], language_code, members=', '.join(added),
+                date=format_date(datetime.datetime.now() + datetime.timedelta(days=days))))
+        else:
+            lines.append(localization.get_message(
+                ['chat', 'add_to_whitelist', 'success_list'], language_code, members=', '.join(added)))
+    if unknown:
+        lines.append(localization.get_message(
+            ['chat', 'add_to_whitelist', 'not_understood'], language_code, words=', '.join(unknown)))
+    lines.append(localization.get_message(['chat', 'add_to_whitelist', 'more'], language_code))
 
-    message_structures = [{
+    await message_sender(message.chat.id, message_structures=[{
         'type': 'text',
-        'text': answer_message,
-        'reply_markup': go_back_inline_markup(params['language_code'])
-    }]
-
-    await message_sender(message.chat.id, message_structures=message_structures)
+        'text': '\n\n'.join(lines),
+        'reply_markup': go_back_inline_markup(language_code)
+    }, {
+        'type': 'text',
+        'text': localization.get_message(['chat', 'add_to_whitelist', 'pick_hint'], language_code),
+        'markup_type': 'reply',
+        'reply_markup': _add_markup(language_code)
+    }])
 
 
 # Show chat whitelist
@@ -136,7 +167,11 @@ async def chat_whitelist(params: ControllerParams):
     for whitelist_data in chat_whitelist_page_data['data']:
         button_text = localization.get_message(
             ['whitelist', 'list', 'button', 'active' if whitelist_data['active'] else 'inactive'],
-            params['language_code'], nickname=whitelist_data['nickname'])
+            params['language_code'], nickname=member_text(whitelist_data))
+        if whitelist_data.get('expires_at') is not None:
+            button_text += ' · ' + localization.get_message(
+                ['allowed_user', 'show', 'term', 'until_short'], params['language_code'],
+                date=format_date(whitelist_data['expires_at']))
 
         reply_markup.append([{
             'text': button_text, 'callback_data': {'tp': 'allowed_user', 'id': whitelist_data['id']}}])
@@ -189,25 +224,45 @@ async def show(params: ControllerParams):
             ['chat', 'errors', 'not_found_tg'], params['language_code']))
         return False
 
+    language_code = params['language_code']
     message_text = localization.get_message(
-        ['allowed_user', 'show', 'text'], params['language_code'],
-        chat_name=chat_info['title'], nickname=allowed_user_data['nickname'])
+        ['allowed_user', 'show', 'text'], language_code, chat_name=html.escape(chat_info['title']),
+        member=member_label(allowed_user_data.get('nickname'), allowed_user_data.get('display_name'),
+                            allowed_user_data.get('user_service_id')))
+    expires_at = allowed_user_data.get('expires_at')
+    if expires_at is None:
+        message_text += "\n" + localization.get_message(['allowed_user', 'show', 'term', 'forever'], language_code)
+    elif expires_at <= datetime.datetime.now():
+        message_text += "\n" + localization.get_message(
+            ['allowed_user', 'show', 'term', 'ended'], language_code, date=format_date(expires_at))
+    else:
+        message_text += "\n" + localization.get_message(
+            ['allowed_user', 'show', 'term', 'until'], language_code, date=format_date(expires_at))
+    if not allowed_user_data.get('user_service_id'):
+        message_text += "\n\n" + localization.get_message(['allowed_user', 'show', 'no_id_hint'], language_code)
 
     reply_markup = []
 
     state_button = {
         'text': localization.get_message(
             ['allowed_user', 'show', 'active_button', 'active' if allowed_user_data['active'] else 'inactive'],
-            params['language_code'],
+            language_code,
         ), 'callback_data': {'tp': 'switch_active'}}
     reply_markup.append([state_button])
+
+    paid = Tariff.is_paid(await Chat.owner_tariff_id(chat_state_data['id']))
+    reply_markup.append([{
+        'text': ('' if paid or days == 0 else localization.get_message(['chat', 'show', 'locked'], language_code))
+        + localization.get_message(['allowed_user', 'show', 'term_button', 'forever' if days == 0 else 'days'],
+                                   language_code, days=days),
+        'callback_data': {'tp': 'set_term', 'd': days}} for days in _TERM_CHOICES])
 
     reply_markup.append([{
         'text': localization.get_message(
             [
                 'allowed_user', 'show', 'delete_button',
                 'initial' if 'deleting' not in params['state_data'] else 'deleting'],
-            params['language_code']),
+            language_code),
         'callback_data': {'tp': 'delete'}}])
 
     reply_markup.append([go_back_inline_button(params['language_code'])])
@@ -215,7 +270,9 @@ async def show(params: ControllerParams):
     message_structures = [{
         'type': 'text',
         'text': message_text,
-        'reply_markup': reply_markup
+        'reply_markup': reply_markup,
+        'parse_mode': 'HTML',
+        'disable_web_page_preview': True
     }]
     await message_sender(message.chat.id, message_structures=message_structures)
 
@@ -264,4 +321,27 @@ async def delete(params: ControllerParams):
     await notify(call, message, localization.get_message(
         ['allowed_user', 'delete', 'confirm'], params['language_code']), alert=True)
 
+    await show(params)
+
+
+async def set_term(params: ControllerParams):
+    """How long the member may write: for good, or 7 or 30 days from now (timed access is a paid feature)."""
+    call, message, current_state_data = params['call'], params['message'], params['state_data']
+    language_code = params['language_code']
+    chat_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('chat'))
+    days = int(current_state_data.pop('d', 0) or 0)
+
+    if days and not Tariff.is_paid(await Chat.owner_tariff_id(chat_state_data['id'])):
+        await notify(call, message, localization.get_message(['alerts', 'paid_only'], language_code), alert=True)
+        return
+
+    updated = await AllowedUser.set_term(current_state_data['id'], days)
+    if updated is None:
+        await raise_error(call, message, 'unexpected')
+        return
+    await notify(call, message, localization.get_message(
+        ['allowed_user', 'show', 'term_toast', 'forever' if days == 0 else 'days'], language_code, days=days))
+    current_state_data.pop('deleting', None)
+    params['state_data'] = {**current_state_data, **dict(updated)}
+    UserStorage.add_user_state_data(message.chat.id, 'allowed_user', params['state_data'])
     await show(params)

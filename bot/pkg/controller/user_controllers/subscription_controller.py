@@ -87,6 +87,7 @@ async def tariffs(params: ControllerParams):
         reply_markup.append([{
             'text': tariff_button_text, 'callback_data': {'tp': 'change_tariff', 'id': tariff['id']}}])
 
+    tariffs_message += "\n\n" + localization.get_message(['tariffs', 'features'], params['language_code'])
     tariffs_message += "\n\n" + localization.get_message(['tariffs', 'current'], params['language_code'])
     tariffs_message += "\n" + build_subscription_info(user_tariff_info, params['language_code'])
 

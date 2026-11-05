@@ -29,6 +29,10 @@ class ModeratedChatInterface(TypedDict, total=False):
     updated_at: datetime.datetime
     name: str
     restriction_duration_minutes: int
+    everyone_can_write: bool
+    post_limit: int | None
+    post_limit_period: str | None
+    owner_alerts: bool
 
 
 class UserModeratedChatConnectionInterface(TypedDict, total=False):
@@ -53,6 +57,10 @@ class AllowedUserInterface(TypedDict, total=False):
     ban_expiration_date: datetime.datetime
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    user_service_id: str | None
+    display_name: str | None
+    expires_at: datetime.datetime | None
+    expiry_notice: int
 
 
 class TariffInterface(TypedDict, total=False):

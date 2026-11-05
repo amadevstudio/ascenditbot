@@ -37,6 +37,13 @@ def user_router():
         handler = partial(event_wrapper, 'add_chat')
         await handler(message)
 
+    # People picked with the contacts button, or a forwarded message without text (a photo, a sticker)
+    @router.message(
+        F.users_shared | (F.forward_origin & ~F.text), ChatTypeFilter(PRIVATE_CHAT),
+        CurrentStateMessageFilter(['add_to_chat_whitelist']))
+    async def add_to_whitelist_result(message: telegram_types.Message):
+        await event_wrapper('add_to_chat_whitelist', message)
+
     route: AvailableRoutes
     for route in RouteMap.ROUTES:
         if route == 'nowhere':

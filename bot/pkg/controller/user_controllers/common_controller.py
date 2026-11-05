@@ -2,7 +2,7 @@ from typing import Literal
 
 from framework.system import telegram_types
 
-from framework.controller.message_tools import notify
+from framework.controller.message_tools import notify, user_language
 from lib.language import localization
 from project.types import ErrorDictInterface
 
@@ -15,7 +15,7 @@ async def raise_error(
     error_trace = ['errors', raised_type]
 
     await notify(
-        call, message, localization.get_message(error_trace, message.from_user.language_code),
+        call, message, localization.get_message(error_trace, user_language(call, message)),
         alert=alert, button_text=button_text)
 
 
@@ -25,5 +25,5 @@ async def chat_access_denied(call: telegram_types.CallbackQuery, message: telegr
     else:
         error_trace = ['access', 'chat', 'errors', result_connection['error']]
     await notify(
-        call, message, localization.get_message(error_trace, message.from_user.language_code),
+        call, message, localization.get_message(error_trace, user_language(call, message)),
         alert=True, button_text='cancel')

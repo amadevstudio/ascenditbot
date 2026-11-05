@@ -26,7 +26,7 @@ def collect(filters: list[str]):
         for name, function in inspect.getmembers(module, inspect.iscoroutinefunction):
             if not name.startswith('test_') or function.__module__ != module.__name__:
                 continue
-            description = inspect.getdoc(function) or name
+            description = ' '.join((inspect.getdoc(function) or name).split())
             label = f'{file_name[5:-3]}: {description}'
             if filters and not any(f.lower() in f'{label} {name}'.lower() for f in filters):
                 continue
