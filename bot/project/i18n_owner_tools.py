@@ -705,6 +705,16 @@ owner_tools_messages = {
                       "белый список."
             },
             'step': {'en': "<b>Step {step} of 2</b>", 'ru': "<b>Шаг {step} из 2</b>"},
+            'post_confirm': {
+                'en': "📌 <b>The way in, in the group: {chat_name}</b>\n\nThe bot posts this message in the group and "
+                      "pins it, so that everyone sees it:\n\n<blockquote>{text}\n[ {button} ]</blockquote>\n\nThe "
+                      "button opens the group's page in the bot, where an outsider asks for access or pays for it. "
+                      "Posted before? The bot deletes the old message.",
+                'ru': "📌 <b>Вход прямо в группе: {chat_name}</b>\n\nБот опубликует в группе такое сообщение и "
+                      "закрепит его, чтобы его видели все:\n\n<blockquote>{text}\n[ {button} ]</blockquote>\n\n"
+                      "Кнопка ведёт на страницу группы в боте: там посторонний попросит доступ или оплатит его. "
+                      "Если публиковали раньше, старое сообщение бот удалит."
+            },
             'buttons': {
                 'modes': {
                     'silent': {'en': "🔕 Quietly", 'ru': "🔕 Молча"},
@@ -718,6 +728,7 @@ owner_tools_messages = {
                 'payment': {'en': "💳 Way to pay", 'ru': "💳 Способ оплаты"},
                 'terms': {'en': "✏️ Terms", 'ru': "✏️ Условия"},
                 'post': {'en': "📌 Button in the group", 'ru': "📌 Кнопка в группе"},
+                'post_go': {'en': "📌 Post and pin", 'ru': "📌 Опубликовать и закрепить"},
                 'requests': {'en': "📨 Requests ({count})", 'ru': "📨 Заявки ({count})"},
                 'declined': {'en': "🚫 Declined ({count})", 'ru': "🚫 Отклонённые ({count})"},
                 'cancel': {'en': "✖️ Cancel", 'ru': "✖️ Отмена"},
@@ -1066,6 +1077,9 @@ owner_tools_messages = {
                 'forever': {'en': "✅ For good", 'ru': "✅ Навсегда"},
                 'days': {'en': "✅ {days} days", 'ru': "✅ {days} дней"},
                 'reject': {'en': "❌ Decline", 'ru': "❌ Отклонить"},
+                'undo_refund': {'en': "💸 Take away, cancel the payment", 'ru': "💸 Убрать, оплату отменить"},
+                'undo_keep': {'en': "↩️ Take away, the payment stays", 'ru': "↩️ Убрать, оплата остаётся"},
+                'undo_no': {'en': "✅ Keep the access", 'ru': "✅ Оставить доступ"},
             },
             'approved_forever': {'en': "✅ {member} may write in <b>{chat_name}</b> for good.",
                                  'ru': "✅ {member}: доступ к <b>{chat_name}</b> открыт навсегда."},
@@ -1080,6 +1094,15 @@ owner_tools_messages = {
             'paid_auto_forever': {'en': "Access is open for good.", 'ru': "Доступ открыт навсегда."},
             'approved_toast': {'en': "Access given", 'ru': "Доступ открыт"},
             'rejected_toast': {'en': "Declined", 'ru': "Отклонено"},
+            'undo_paid': {
+                'en': "Take the access of {member} to <b>{chat_name}</b> away? They paid: {plan}.",
+                'ru': "Убрать доступ {member} к <b>{chat_name}</b>? Оплата была: {plan}."
+            },
+            'refunded': {'en': "💸 The payment is cancelled and no longer counted. Return the money yourself.",
+                         'ru': "💸 Оплата отменена и больше не считается. Деньги верните сами."},
+            'payment_kept': {'en': "💰 The payment stays counted.", 'ru': "💰 Оплата остаётся в статистике."},
+            'kept': {'en': "✅ {member} keeps the access to <b>{chat_name}</b>.",
+                     'ru': "✅ Доступ {member} к <b>{chat_name}</b> остаётся."},
             'reopened_toast': {'en': "The request is waiting for your answer again",
                                'ru': "Заявка снова ждёт ответа"},
         },

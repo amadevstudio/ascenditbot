@@ -12,6 +12,7 @@ from framework.controller import state_data
 from framework.controller.message_tools import go_back_inline_button, message_sender, notify
 from framework.controller.types import ControllerParams
 from framework.system import telegram_exceptions
+from framework.repository.storage_connection import Storage
 from framework.system.bot_setup import bot
 from lib.language import localization
 from pkg.controller.user_controllers.common_controller import raise_error
@@ -395,7 +396,27 @@ async def cancel(params: ControllerParams):
 
 
 async def post(params: ControllerParams):
-    """A message in the group with a button to the group's page in the bot, pinned if the bot may pin."""
+    """What "Button in the group" does, before it does it: the message the members will see, then "Post"."""
+    language_code = params['language_code']
+    chat = await _chat(params)
+    if chat is None:
+        return
+    text = _text(['post_confirm'], language_code, chat_name=html.escape(await Chat.name_of(chat)),
+                 text=html.escape(localization.get_message(['access', 'group_post', 'text'], language_code)),
+                 button=html.escape(localization.get_message(['access', 'group_post', 'button'], language_code)))
+    await message_sender(params['message'].chat.id, message_structures=[{
+        'type': 'text', 'text': text, 'parse_mode': 'HTML', 'reply_markup': [
+            [_button(_text(['buttons', 'post_go'], language_code), {'tp': 'acc_post_go'})],
+            [_button(_text(['buttons', 'cancel'], language_code), {'tp': 'acc_cancel'})]]}])
+
+
+def _post_key(chat_id: int) -> str:
+    return f'group_post:{chat_id}'
+
+
+async def post_go(params: ControllerParams):
+    """The message in the group with a button to the group's page in the bot, pinned if the bot may pin; the one
+    posted before is deleted, so that the group has one."""
     call, language_code = params['call'], params['language_code']
     chat = await _chat(params)
     if chat is None:
@@ -404,6 +425,13 @@ async def post(params: ControllerParams):
     markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
         text=localization.get_message(['access', 'group_post', 'button'], language_code),
         url=access.join_link(chat['id']))]])
+    storage = Storage().connection
+    previous = storage.get(_post_key(chat['id']))
+    if previous:
+        try:
+            await bot.delete_message(int(chat['service_id']), int(previous))
+        except (telegram_exceptions.TelegramBadRequest, telegram_exceptions.TelegramForbiddenError):
+            pass  # deleted by hand already, or too old for the bot to delete
     try:
         sent = await bot.send_message(int(chat['service_id']), localization.get_message(
             ['access', 'group_post', 'text'], language_code), reply_markup=markup)
@@ -416,7 +444,9 @@ async def post(params: ControllerParams):
         toast = 'posted'
     except (telegram_exceptions.TelegramBadRequest, telegram_exceptions.TelegramForbiddenError):
         toast = 'posted_unpinned'
+    storage.set(_post_key(chat['id']), sent.message_id)
     await notify(call, params['message'], _text(['toasts', toast], language_code), alert=toast != 'posted')
+    await _render(params, chat)
 
 
 async def declined(params: ControllerParams):

@@ -155,6 +155,7 @@ class RouteMap:
                 'acc_edit': {'method': access_controller.edit},
                 'acc_cancel': {'method': access_controller.cancel},
                 'acc_post': {'method': access_controller.post},
+                'acc_post_go': {'method': access_controller.post_go},
                 'acc_requests': {'method': access_controller.requests},
                 'acc_declined': {'method': access_controller.declined},
                 'acc_map': {'method': access_controller.map_product},

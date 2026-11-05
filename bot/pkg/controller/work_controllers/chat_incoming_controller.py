@@ -22,7 +22,10 @@ _last_notice: dict[tuple[int, int, str], float] = {}
 _TELEGRAM_SERVICE_ID = 777000
 
 
-async def incoming_chat_message(message: telegram_types.Message):
+async def incoming_chat_message(message: telegram_types.Message, edited: bool = False):
+    """A new message in a group, or an edit of an old one (edited): an edit by someone who may not write now (an
+    access that has ended, an outsider's old message) goes as a new message would, but without the mute, the
+    owner's alert and the posting limit: it is not a new post."""
     if message.from_user is None:
         logger.warning("Incoming chat message has no sender")
         return
@@ -64,13 +67,17 @@ async def incoming_chat_message(message: telegram_types.Message):
         if not await _remove(message):
             return
         await chat_repository.count_removed(chat_data['id'])
+        if edited:
+            await notify_removed(message, chat_data['id'])
+            return
         await Chat.restrict_user(
             chat_service_id, sender.id, chat_data.get('restriction_duration_minutes', 5), message.chat.type)
         await notify_removed(message, chat_data['id'])
         await MemberAlerts.removed(chat_data, message)
         return
 
-    await _apply_post_limit(message, chat_data, is_admin)
+    if not edited:
+        await _apply_post_limit(message, chat_data, is_admin)
 
 
 async def _apply_post_limit(message: telegram_types.Message, chat_data: dict, is_admin: bool | None):
