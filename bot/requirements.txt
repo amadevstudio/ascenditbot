@@ -7,6 +7,6 @@ redis==5.0.1
 asyncpg==0.29.0
 
 # Owners' payment credentials (access_secret), encrypted at rest
-cryptography==43.0.3
+cryptography==50.0.2
 
 pip-upgrader==1.4.15
