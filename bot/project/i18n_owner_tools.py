@@ -530,6 +530,23 @@ owner_tools_messages = {
                 "с правом удалять сообщения (и ограничивать участников), и он сам подключит группу."
         },
     },
+    # The command menus (setMyCommands): up to 256 characters each, plain text
+    'commands': {
+        'private': {
+            'menu': {'en': "Main menu", 'ru': "Главное меню"},
+            'my_chats': {'en': "My groups", 'ru': "Мои группы"},
+            'add_chat': {'en': "Connect a group", 'ru': "Подключить группу"},
+            'subscription': {'en': "Tariff and payment", 'ru': "Тариф и оплата"},
+            'settings': {'en': "Settings", 'ru': "Настройки"},
+            'help': {'en': "How it works", 'ru': "Как это работает"},
+        },
+        'group': {
+            'allow': {'en': "Allow a member (in reply or @nick, 7d for a week)",
+                      'ru': "Разрешить участнику (ответом или @ник, 7d на неделю)"},
+            'deny': {'en': "Remove a member from the whitelist", 'ru': "Убрать участника из белого списка"},
+            'settings': {'en': "The group's page in the bot", 'ru': "Страница группы в боте"},
+        },
+    },
     'tariffs': {
         # HTML, under the list of tariffs
         'features': {

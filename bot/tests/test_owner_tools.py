@@ -441,6 +441,36 @@ async def test_stats_for_bot_admins_only(bench: Bench):
     assert 'Всего: 1' in stats and 'Модерируются: 1' in stats, stats
 
 
+async def test_command_menus(bench: Bench):
+    """the menus: private commands for everyone, group commands for group admins, /usersCount in none of them"""
+    import re
+    from pkg.service.bot_commands import set_bot_commands
+
+    await bench.owner(OWNER)
+    await bench.sql('UPDATE users SET is_admin = TRUE')
+    bench.telegram.calls.clear()
+    await set_bot_commands(bench.bot)
+
+    menus = {(call.scope.type, getattr(call.scope, 'chat_id', None), call.language_code):
+             {c.command: c.description for c in call.commands} for call in bench.telegram.calls_of('setMyCommands')}
+    assert set(menus[('all_private_chats', None, 'ru')]) == {
+        'menu', 'my_chats', 'add_chat', 'subscription', 'settings', 'help'}
+    assert menus[('all_private_chats', None, None)]['my_chats'] == 'My groups'
+    assert set(menus[('all_chat_administrators', None, 'ru')]) == {'allow', 'deny', 'settings'}
+    assert not any(scope == 'chat' or 'userscount' in menu for (scope, _, _), menu in menus.items())
+    for menu in menus.values():
+        for command, description in menu.items():
+            assert re.fullmatch(r'[a-z0-9_]{1,32}', command) and 0 < len(description) <= 256, (command, description)
+    assert {call.scope.type for call in bench.telegram.calls_of('deleteMyCommands')} == {'default'}
+
+    # Every command in the private menu leads somewhere
+    for command in menus[('all_private_chats', None, 'ru')]:
+        bench.telegram.calls.clear()
+        await bench.private_message(OWNER, f'/{command}')
+        assert bench.telegram.calls_of('sendMessage') or bench.telegram.calls_of('sendPhoto') or \
+            bench.telegram.calls_of('editMessageText'), command
+
+
 async def test_allow_result_names_the_group(bench: Bench):
     """the result of "Allow" names the group even when its title was never saved"""
     await _scene(bench)
