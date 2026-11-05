@@ -11,7 +11,8 @@ from pkg.service import access
 from pkg.service.chat import Chat
 from pkg.service.allowed_user import full_name
 from pkg.service.member_alerts import MemberAlerts
-from pkg.service.post_limit import PostLimit, next_window
+from pkg.service import post_limit
+from pkg.service.post_limit import PostLimit
 from pkg.service.tariff import Tariff
 from pkg.system.logger import logger
 
@@ -75,8 +76,8 @@ async def incoming_chat_message(message: telegram_types.Message):
 async def _apply_post_limit(message: telegram_types.Message, chat_data: dict, is_admin: bool | None):
     """A member over the group's posting limit loses the post and is told when the next one is possible.
     The limit is a paid setting: it is not applied while the owner is on the free tariff."""
-    limit, period = chat_data.get('post_limit'), chat_data.get('post_limit_period')
-    if not limit or period not in ('day', 'week'):
+    limit = post_limit.of_chat(chat_data)
+    if limit is None:
         return
     if is_admin is None and chat_data.get('allow_administrators', True):
         is_admin = await Chat.is_administrator(message.chat.id, message.from_user.id)
@@ -85,12 +86,13 @@ async def _apply_post_limit(message: telegram_types.Message, chat_data: dict, is
     if not Tariff.is_paid(await Chat.owner_tariff_id(chat_data['id'])):
         return
 
-    if PostLimit.take(message.chat.id, message.from_user.id, limit, period):
+    next_at = PostLimit.take(message.chat.id, message.from_user.id, *limit)
+    if next_at is None:
         return
     if not await _remove(message):
         return
     await chat_repository.count_removed(chat_data['id'])
-    await notify_over_limit(message, limit, period)
+    await notify_over_limit(message, limit, next_at)
 
 
 async def _remove(message: telegram_types.Message) -> bool:
@@ -148,13 +150,12 @@ async def notify_removed(message: telegram_types.Message, chat_id: int):
     await _ephemeral(message, text)
 
 
-async def notify_over_limit(message: telegram_types.Message, limit: int, period: str):
+async def notify_over_limit(message: telegram_types.Message, limit: tuple[int, int], next_at: datetime.datetime):
     if not _notice_due(message, 'limit'):
         return
 
     language_code = message.from_user.language_code
-    next_at = next_window(period)
     text = localization.get_message(
-        ['work', 'limit_notice', period], language_code, limit=limit,
+        ['work', 'limit_notice'], language_code, limit=post_limit.limit_text(*limit, language_code),
         next_at=next_at.strftime('%d.%m %H:%M') + ' UTC')
     await _ephemeral(message, text)

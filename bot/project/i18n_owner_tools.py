@@ -16,9 +16,9 @@ owner_tools_messages = {
                 "Made for groups of ads and announcements, where the right to post is worth something:\n"
                 "● a whitelist by nickname, id or a forwarded message\n"
                 "● access for 7 or 30 days, ending on its own\n"
-                "● a posting limit: 1 ad a day, 3 a week and so on\n"
+                "● a posting limit: 1 ad a day, 3 an hour, 10 in 2 days\n"
                 "● a message when a stranger writes, with \"Allow\" in one tap\n"
-                "● a way in through the bot: newcomers ask or pay you, you confirm in one tap\n\n"
+                "● joining via the bot: newcomers ask or pay you, you confirm in one tap\n\n"
                 "One group is free.",
             'ru':
                 "Привет! Я слежу за порядком в группе: писать в ней могут только те, кого вы разрешили, "
@@ -26,7 +26,7 @@ owner_tools_messages = {
                 "Сделан для групп объявлений и рекламы, где право писать чего-то стоит:\n"
                 "● белый список по нику, id или пересланному сообщению\n"
                 "● доступ на 7 или 30 дней, который сам заканчивается\n"
-                "● лимит постов: 1 объявление в день, 3 в неделю и так далее\n"
+                "● лимит постов: 1 объявление в день, 3 в час, 10 за 2 дня\n"
                 "● сообщение, когда пишет посторонний, и \"Разрешить\" в одно нажатие\n"
                 "● вход через бота: новые просят доступ или платят вам, вы подтверждаете в одно нажатие\n\n"
                 "Одна группа бесплатно."
@@ -37,10 +37,10 @@ owner_tools_messages = {
             'en':
                 f"@{_bot} lets only the people you allow write in your group.\n\n"
                 "<b>Connect a group</b>: /add_chat, then \"Add to a group\" and pick it. The bot needs to be "
-                "an admin that can delete messages (and restrict members, for the pause after a deleted message).\n\n"
+                "an admin that can delete messages (and restrict members, to mute offenders for a while).\n\n"
                 "<b>Manage it</b>: /my_chats. On the group's page: the whitelist, who may write (the whitelist or "
-                "everyone), the posting limit, alerts, pause.\n\n"
-                "<b>The way in through the bot</b>: on the group's page, \"Way in through the bot\". Whoever is "
+                "everyone), the posting limit, alerts about off-list members, how long offenders stay muted.\n\n"
+                "<b>Joining via the bot</b>: on the group's page, \"Joining via the bot\". Whoever is "
                 "not on the list gets a link to the group's page in the bot: they ask for access (free) or pick a "
                 "term and pay by your link (paid tariffs), and you confirm in one tap.\n\n"
                 "<b>Right in the group</b> (admins only, nobody else sees the answers):\n"
@@ -53,9 +53,9 @@ owner_tools_messages = {
             'ru':
                 f"@{_bot} разрешает писать в группе только тем, кого вы допустили.\n\n"
                 "<b>Подключить группу</b>: /add_chat, затем \"Добавить в группу\" и выберите её. Бот должен быть "
-                "администратором с правом удалять сообщения (и ограничивать участников – для паузы после удаления).\n\n"
+                "администратором с правом удалять сообщения (и ограничивать участников – для мута нарушителей).\n\n"
                 "<b>Управлять</b>: /my_chats. На странице группы: белый список, кто пишет (белый список или все), "
-                "лимит постов, оповещения, пауза.\n\n"
+                "лимит постов, оповещения о чужих, мут нарушителей.\n\n"
                 "<b>Вход через бота</b>: на странице группы, \"Вход через бота\". Тем, кто не в списке, бот даёт "
                 "ссылку на страницу группы: там просят доступ (бесплатно) или выбирают срок и платят по вашей "
                 "ссылке (платные тарифы), а вы подтверждаете в одно нажатие.\n\n"
@@ -151,13 +151,27 @@ owner_tools_messages = {
                     'en': "no limit",
                     'ru': "без лимита"
                 },
-                'day': {
-                    'en': "{limit} a day",
-                    'ru': "{limit} в день"
+                'per': {
+                    'hour': {'en': "{limit} an hour", 'ru': "{limit} в час"},
+                    'day': {'en': "{limit} a day", 'ru': "{limit} в день"},
+                    'week': {'en': "{limit} a week", 'ru': "{limit} в неделю"},
                 },
-                'week': {
-                    'en': "{limit} a week",
-                    'ru': "{limit} в неделю"
+                'within': {
+                    'hour': {
+                        'one': {'en': "{limit} in {window} hour", 'ru': "{limit} за {window} час"},
+                        'few': {'en': "{limit} in {window} hours", 'ru': "{limit} за {window} часа"},
+                        'many': {'en': "{limit} in {window} hours", 'ru': "{limit} за {window} часов"},
+                    },
+                    'day': {
+                        'one': {'en': "{limit} in {window} day", 'ru': "{limit} за {window} день"},
+                        'few': {'en': "{limit} in {window} days", 'ru': "{limit} за {window} дня"},
+                        'many': {'en': "{limit} in {window} days", 'ru': "{limit} за {window} дней"},
+                    },
+                    'week': {
+                        'one': {'en': "{limit} in {window} week", 'ru': "{limit} за {window} неделю"},
+                        'few': {'en': "{limit} in {window} weeks", 'ru': "{limit} за {window} недели"},
+                        'many': {'en': "{limit} in {window} weeks", 'ru': "{limit} за {window} недель"},
+                    },
                 },
                 'paused_free': {
                     'en': "(works on a paid tariff)",
@@ -211,26 +225,26 @@ owner_tools_messages = {
                 'ru': "🔒 "
             },
             'limit_button': {
-                'en': "Limit: {limit}",
-                'ru': "Лимит: {limit}"
+                'en': "⏱ Limit: {limit}",
+                'ru': "⏱ Лимит: {limit}"
             },
             'access_button': {
-                'off': {'en': "🔑 Way in through the bot: off", 'ru': "🔑 Вход через бота: выкл"},
-                'request': {'en': "🔑 Way in through the bot: by request", 'ru': "🔑 Вход через бота: по заявке"},
-                'paid': {'en': "🔑 Way in through the bot: paid", 'ru': "🔑 Вход через бота: за плату"},
+                'off': {'en': "🔑 Joining via the bot: off", 'ru': "🔑 Вход через бота: выкл"},
+                'request': {'en': "🔑 Joining via the bot: by request", 'ru': "🔑 Вход через бота: по заявке"},
+                'paid': {'en': "🔑 Joining via the bot: paid", 'ru': "🔑 Вход через бота: за плату"},
             },
             'restriction_duration_button': {
-                'en': "Pause: {duration} min",
-                'ru': "Пауза: {duration} мин"
+                'en': "🔇 Mute offenders: {duration} min",
+                'ru': "🔇 Мут нарушителю: {duration} мин"
             },
             'alerts_button': {
                 'on': {
-                    'en': "🔔 Alerts",
-                    'ru': "🔔 Оповещения"
+                    'en': "🔔 Off-list alerts",
+                    'ru': "🔔 Сообщать о чужих"
                 },
                 'off': {
-                    'en': "🔕 Alerts",
-                    'ru': "🔕 Оповещения"
+                    'en': "🔕 Off-list alerts",
+                    'ru': "🔕 Сообщать о чужих"
                 },
             },
             'active_button': {
@@ -262,6 +276,43 @@ owner_tools_messages = {
                     'en': "Alerts are off for this group",
                     'ru': "Оповещения по этой группе выключены"
                 },
+            },
+        },
+        # The posting limit page, HTML
+        'post_limit': {
+            'text': {
+                'en':
+                    "⏱ <b>Posting limit: {chat_name}</b>\n\n"
+                    "Now: <b>{limit}</b>\n\n"
+                    "Each member, the whitelist included, may post no more than that; the bot deletes the extra "
+                    "posts and tells the author when the next one is possible. Admins have no limit.\n\n"
+                    "Pick one or type your own: <code>3 an hour</code>, <code>10 in 2 days</code>, "
+                    "<code>1 a week</code>. To remove it: <code>off</code>.",
+                'ru':
+                    "⏱ <b>Лимит постов: {chat_name}</b>\n\n"
+                    "Сейчас: <b>{limit}</b>\n\n"
+                    "Каждый участник, в том числе из белого списка, пишет не больше этого: лишнее бот удаляет и "
+                    "подсказывает автору, когда можно следующее. У админов лимита нет.\n\n"
+                    "Выберите или напишите свой: <code>3 в час</code>, <code>10 за 2 дня</code>, "
+                    "<code>1 в неделю</code>. Убрать: <code>выкл</code>."
+            },
+            'free': {
+                'en': "🔒 It works on a paid tariff (/subscription): you can set it now, it starts with the tariff.",
+                'ru': "🔒 Работает на платном тарифе (/subscription): задать можно сейчас, заработает с тарифом."
+            },
+            'saved': {
+                'en': "✅ Saved: {limit}",
+                'ru': "✅ Сохранено: {limit}"
+            },
+            'invalid': {
+                'en': "❌ Not a limit: {text}. Like this: <code>3 an hour</code>, <code>10 in 2 days</code>, "
+                      "<code>off</code>. Up to {max_count} posts, a window up to 30 days.",
+                'ru': "❌ Не похоже на лимит: {text}. Так: <code>3 в час</code>, <code>10 за 2 дня</code>, "
+                      "<code>выкл</code>. До {max_count} постов, окно до 30 дней."
+            },
+            'off_button': {
+                'en': "No limit",
+                'ru': "Без лимита"
             },
         },
         'add_to_whitelist': {
@@ -364,15 +415,8 @@ owner_tools_messages = {
     'work': {
         # Plain text, ephemeral: only the member sees it
         'limit_notice': {
-            'day': {
-                'en': "Your message was removed: members post up to {limit} a day here. Next one after {next_at}.",
-                'ru': "Сообщение удалено: здесь можно писать не больше {limit} в день. Следующее – после {next_at}."
-            },
-            'week': {
-                'en': "Your message was removed: members post up to {limit} a week here. Next one after {next_at}.",
-                'ru': "Сообщение удалено: здесь можно писать не больше {limit} в неделю. "
-                      "Следующее – после {next_at}."
-            },
+            'en': "Your message was removed: members post up to {limit} here. Next one after {next_at}.",
+            'ru': "Сообщение удалено: здесь можно писать не больше {limit}. Следующее – после {next_at}."
         },
     },
     # To the group's managers in private, HTML
@@ -553,7 +597,7 @@ owner_tools_messages = {
         },
         # The owner's page of the way in
         'owner': {
-            'title': {'en': "🔑 <b>The way in through the bot: {chat_name}</b>",
+            'title': {'en': "🔑 <b>Joining via the bot: {chat_name}</b>",
                       'ru': "🔑 <b>Вход через бота: {chat_name}</b>"},
             'intro_off': {
                 'en': "Whoever is not on the whitelist gets a page of the group in the bot, where they can ask for "
@@ -1012,12 +1056,12 @@ owner_tools_messages = {
             'en':
                 "<b>Every tariff</b>: a whitelist, alerts with \"Allow\" in one tap, commands in the group, "
                 "requests for access through the bot.\n"
-                "<b>Paid tariffs</b> add access for 7 or 30 days, posting limits (1 a day, 3 a week…) and paid "
+                "<b>Paid tariffs</b> add access for 7 or 30 days, posting limits (1 a day, 3 an hour, 10 in 2 days…) and paid "
                 "entry: newcomers pay you for a term.",
             'ru':
                 "<b>На любом тарифе</b>: белый список, оповещения с \"Разрешить\" в одно нажатие, команды в группе, "
                 "заявки на доступ через бота.\n"
-                "<b>Платные тарифы</b> добавляют доступ на 7 или 30 дней, лимит постов (1 в день, 3 в неделю…) и "
+                "<b>Платные тарифы</b> добавляют доступ на 7 или 30 дней, лимит постов (1 в день, 3 в час, 10 за 2 дня…) и "
                 "платный вход: новые платят вам за срок."
         },
     },

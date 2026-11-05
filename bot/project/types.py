@@ -31,7 +31,7 @@ class ModeratedChatInterface(TypedDict, total=False):
     restriction_duration_minutes: int
     everyone_can_write: bool
     post_limit: int | None
-    post_limit_period: str | None
+    post_limit_hours: int | None
     owner_alerts: bool
     access_mode: str
     access_terms: str | None

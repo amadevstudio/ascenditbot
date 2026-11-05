@@ -127,7 +127,7 @@ async def test_telegram_forwards_stay(bench: Bench):
 
 async def test_post_limit_on_paid_tariff(bench: Bench):
     """with 1 post a day, the second post of a member goes and they are told when they can post again"""
-    await _scene(bench, paid=True, everyone_can_write=True, post_limit=1, post_limit_period='day')
+    await _scene(bench, paid=True, everyone_can_write=True, post_limit=1, post_limit_hours=24)
     await bench.group_message(GROUP, STRANGER, 'first ad')
     assert not _deleted(bench)
     second = await bench.group_message(GROUP, STRANGER, 'second ad')
@@ -139,15 +139,46 @@ async def test_post_limit_on_paid_tariff(bench: Bench):
 
 async def test_post_limit_spares_admins(bench: Bench):
     """the owner posts as much as they like"""
-    await _scene(bench, paid=True, post_limit=1, post_limit_period='day')
+    await _scene(bench, paid=True, post_limit=1, post_limit_hours=24)
     for _ in range(3):
         await bench.group_message(GROUP, OWNER)
     assert not _deleted(bench)
 
 
+async def test_post_limit_window_slides(bench: Bench):
+    """2 posts in 6 hours: the third waits for the first to be 6 hours old, not for a new calendar day"""
+    from pkg.service.post_limit import PostLimit
+
+    start = 1_800_000_000.0
+    assert PostLimit.take(1, 2, 2, 6, now=start) is None
+    assert PostLimit.take(1, 2, 2, 6, now=start + 3600) is None
+    blocked = PostLimit.take(1, 2, 2, 6, now=start + 7200)
+    assert blocked is not None and blocked.timestamp() == start + 6 * 3600
+    assert PostLimit.take(1, 2, 2, 6, now=start + 6 * 3600 + 1) is None
+    assert PostLimit.take(1, 3, 2, 6, now=start + 7200) is None, 'another member counts apart'
+
+
+async def test_post_limit_words(bench: Bench):
+    """the owner's own limit in words, Russian or English; nonsense is not a limit"""
+    from pkg.service.post_limit import OFF, limit_text, parse_limit
+
+    assert parse_limit('3 в час') == (3, 1)
+    assert parse_limit('10 за 2 дня') == (10, 48)
+    assert parse_limit('1 в неделю') == (1, 168)
+    assert parse_limit('5 постов за 6 часов') == (5, 6)
+    assert parse_limit('5/6h') == (5, 6)
+    assert parse_limit('2 a day') == (2, 24)
+    assert parse_limit('выкл') == OFF and parse_limit('off') == OFF and parse_limit('0') == OFF
+    assert parse_limit('hello') is None and parse_limit('3') is None and parse_limit('1000 в день') is None
+    assert parse_limit('1 за 2 месяца') is None
+    assert limit_text(10, 48, 'ru') == '10 за 2 дня' and limit_text(5, 6, 'ru') == '5 за 6 часов'
+    assert limit_text(3, 1, 'ru') == '3 в час' and limit_text(1, 168, 'en') == '1 a week'
+    assert limit_text(2, 21, 'ru') == '2 за 21 час' and limit_text(None, None, 'ru') == 'без лимита'
+
+
 async def test_post_limit_off_on_free_tariff(bench: Bench):
     """on the free tariff the limit is not applied"""
-    await _scene(bench, everyone_can_write=True, post_limit=1, post_limit_period='day')
+    await _scene(bench, everyone_can_write=True, post_limit=1, post_limit_hours=24)
     for _ in range(3):
         await bench.group_message(GROUP, STRANGER)
     assert not _deleted(bench)
@@ -367,28 +398,54 @@ async def test_page_by_deep_link(bench: Bench):
     page = await _open_page(bench, chat)
     assert 'Модерация включена' in page.text and 'Удалено за 7 дней: 0' in page.text, page.text
     kinds = {b['data']['tp'] for b in _buttons(page)}
-    assert {'add_to_chat_whitelist', 'chat_whitelist', 'switch_mode', 'cycle_limit', 'switch_alerts'} <= kinds
+    assert {'add_to_chat_whitelist', 'chat_whitelist', 'switch_mode', 'chat_post_limit', 'switch_alerts'} <= kinds
+
+
+def _shown(bench: Bench):
+    """The last page shown to the owner, sent or edited in place."""
+    return [call for call in bench.telegram.calls_of('sendMessage', 'editMessageText')
+            if int(call.chat_id or 0) == OWNER['id']][-1]
+
+
+async def _limit_row(bench: Bench) -> dict:
+    [row] = await bench.sql('SELECT post_limit, post_limit_hours FROM moderated_chats')
+    return dict(row)
 
 
 async def test_page_switch_mode_and_limit(bench: Bench):
-    """on a paid tariff: "who writes" switches to everyone, the limit button sets 1 a day"""
+    """on a paid tariff: "who writes" switches to everyone; the limit page takes a button, words, "выкл",
+    and says what is wrong with nonsense"""
     _, chat = await _scene(bench, paid=True)
     await _open_page(bench, chat)
     await bench.tap(OWNER, json.dumps({'tp': 'switch_mode'}))
-    await bench.tap(OWNER, json.dumps({'tp': 'cycle_limit'}))
-    [row] = await bench.sql('SELECT everyone_can_write, post_limit, post_limit_period FROM moderated_chats')
-    assert row == {'everyone_can_write': True, 'post_limit': 1, 'post_limit_period': 'day'}, row
+    await bench.tap(OWNER, json.dumps({'tp': 'chat_post_limit'}))
+    page = _shown(bench)
+    assert 'Лимит постов' in page.text and 'без лимита' in page.text and 'платном' not in page.text, page.text
+    assert '3 в день' in [b['text'] for b in _buttons(page)]
+    await bench.tap(OWNER, json.dumps({'tp': 'lim_set', 'n': 3, 'h': 24}))
+    [row] = await bench.sql('SELECT everyone_can_write FROM moderated_chats')
+    assert row['everyone_can_write'] is True
+    assert await _limit_row(bench) == {'post_limit': 3, 'post_limit_hours': 24}
+    assert '• 3 в день' in [b['text'] for b in _buttons(_shown(bench))]
+
+    await bench.private_message(OWNER, '10 за 2 дня')
+    assert await _limit_row(bench) == {'post_limit': 10, 'post_limit_hours': 48}
+    assert 'Сохранено: 10 за 2 дня' in _shown(bench).text
+    await bench.private_message(OWNER, 'много')
+    assert 'Не похоже на лимит' in _shown(bench).text
+    assert await _limit_row(bench) == {'post_limit': 10, 'post_limit_hours': 48}
+    await bench.private_message(OWNER, 'выкл')
+    assert await _limit_row(bench) == {'post_limit': None, 'post_limit_hours': None}
 
 
 async def test_page_limit_is_paid(bench: Bench):
-    """on the free tariff the limit button explains it is paid and changes nothing"""
+    """on the free tariff the limit page says it works on a paid one; set now, it waits for the tariff"""
     _, chat = await _scene(bench)
     await _open_page(bench, chat)
-    await bench.tap(OWNER, json.dumps({'tp': 'cycle_limit'}))
-    [row] = await bench.sql('SELECT post_limit FROM moderated_chats')
-    assert row['post_limit'] is None
-    assert localization.get_message(['chat', 'show', 'limit', 'paid_only'], 'ru') in [
-        call.text for call in bench.telegram.calls_of('answerCallbackQuery')]
+    await bench.tap(OWNER, json.dumps({'tp': 'chat_post_limit'}))
+    assert 'Работает на платном тарифе' in _shown(bench).text
+    await bench.tap(OWNER, json.dumps({'tp': 'lim_set', 'n': 1, 'h': 24}))
+    assert await _limit_row(bench) == {'post_limit': 1, 'post_limit_hours': 24}
 
 
 async def test_page_arrows_between_groups(bench: Bench):
