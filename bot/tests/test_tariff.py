@@ -242,3 +242,31 @@ async def test_tariff_ladder(bench: Bench):
     rows = await bench.sql('SELECT id, channels_count FROM tariffs ORDER BY id')
     counts = [row['channels_count'] for row in rows]
     assert counts[:4] == [1, 3, 10, 25], counts
+
+
+async def test_stars_refund_takes_the_balance_back(bench: Bench):
+    """a Stars payment refunded by Telegram takes its Stars off the balance once, and the user is told"""
+    from pkg.service.telegram_stars import TelegramStarsPayment
+
+    user = await bench.owner(OWNER)
+    payload = TelegramStarsPayment.build_payload(user['id'], 350)
+    chat = {'id': OWNER['id'], 'type': 'private', 'first_name': 'Test'}
+    payment = {'currency': 'XTR', 'total_amount': 350, 'invoice_payload': payload,
+               'telegram_payment_charge_id': 'charge-1', 'provider_payment_charge_id': ''}
+    await bench.feed({'message': bench._message(chat, OWNER, None, successful_payment=payment)})
+    assert await _balance(bench, user['id'], 'xtr') == 350
+
+    refund = {'currency': 'XTR', 'total_amount': 350, 'invoice_payload': payload,
+              'telegram_payment_charge_id': 'charge-1'}
+    bench.telegram.calls.clear()
+    for _ in range(2):
+        await bench.feed({'message': bench._message(chat, OWNER, None, refunded_payment=refund)})
+    assert await _balance(bench, user['id'], 'xtr') == 0
+    assert any('вернул ваш платёж на 350 Stars' in text for text in bench.telegram.texts_to(OWNER['id']))
+
+    # Someone else's payload: nothing is taken
+    stranger = person(777, 'other', 'en')
+    await bench.owner(stranger)
+    other = {**refund, 'telegram_payment_charge_id': 'charge-2'}
+    await bench.feed({'message': bench._message({**chat, 'id': 777}, stranger, None, refunded_payment=other)})
+    assert await _balance(bench, user['id'], 'xtr') == 0

@@ -645,6 +645,12 @@ routed_messages = {
                 'checkout_error': {
                     'en': "The payment cannot be processed. Please try again or contact the bot administrator.",
                     'ru': "Платёж не может быть обработан. Попробуйте ещё раз или свяжитесь с администратором бота."
+                },
+                'refunded': {
+                    'en': "Telegram returned your payment of {amount} Stars, so they are taken off the bot balance. "
+                          "Balance now: {balance} Stars.",
+                    'ru': "Telegram вернул ваш платёж на {amount} Stars, поэтому они списаны с баланса бота. "
+                          "Баланс теперь: {balance} Stars."
                 }
             },
             'success_payment': {

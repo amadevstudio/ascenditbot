@@ -5,9 +5,11 @@ from aiogram.types import LabeledPrice
 
 from framework.system import telegram_types
 from framework.system.bot_setup import bot
+from framework.controller.message_tools import chat_id_sender
 from lib.language import localization
 from pkg.service.payment import BalanceHandler
 from pkg.service.tariff import Tariff
+from pkg.service.message_sender import MessageSender
 from pkg.service.user import User
 from pkg.system.logger import logger
 
@@ -141,3 +143,44 @@ class TelegramStarsPayment:
             'id': payment.telegram_payment_charge_id,
             'invoice_payload': payment.invoice_payload
         })
+
+    # A payment refunded by Telegram (or by the bot through refundStarPayment): the Stars went back to the user, so
+    # the balance they bought goes too. Written to the history as a negative payment under its own service, with
+    # the same charge id, so a repeated update takes nothing twice. The balance may go below zero: the tariff then
+    # is not renewed until it is paid back. A referrer's reward days stay.
+    REFUND_SERVICE = 'telegram_stars_refund'
+
+    @classmethod
+    async def refunded_payment(cls, message: telegram_types.Message):
+        refund = message.refunded_payment
+        parsed_payload = cls.parse_payload(refund.invoice_payload)
+        user = await User.get_by_id(parsed_payload['user_id']) if parsed_payload else None
+        if refund.currency != cls.TELEGRAM_CURRENCY_CODE or user is None \
+                or str(user['service_id']) != str(message.from_user.id):
+            logger.warning('Telegram Stars refund not matched to a user', refund, message.from_user.id)
+            await MessageSender.notify_admins(
+                f"Stars refund not matched: {refund.total_amount} {refund.currency} from tg {message.from_user.id}, "
+                f"charge {refund.telegram_payment_charge_id}")
+            return
+
+        result = await Tariff.add_amount_with_payment_history(user['id'], -refund.total_amount, cls.CURRENCY_CODE, {
+            'user_id': user['id'],
+            'payment_service': cls.REFUND_SERVICE,
+            'amount': -refund.total_amount,
+            'currency_code': cls.CURRENCY_CODE,
+            'external_payment_id': refund.telegram_payment_charge_id,
+            'invoice_payload': refund.invoice_payload,
+        })
+        if result is None:
+            logger.warning('Telegram Stars refund already processed', refund)
+            return
+
+        logger.warning('Telegram Stars refund', user['id'], refund.total_amount, result['balance'])
+        await chat_id_sender(int(user['service_id']), message_structures=[{
+            'type': 'text',
+            'text': localization.get_message(
+                ['subscription', 'fund', 'telegram_stars', 'refunded'], user['language_code'],
+                amount=refund.total_amount, balance=result['balance']),
+        }])
+        await MessageSender.notify_admins(
+            f"Stars refund: user {user['id']}, {refund.total_amount} XTR, new balance {result['balance']} XTR")

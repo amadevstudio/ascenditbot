@@ -41,7 +41,8 @@ async def collect() -> dict:
         FROM moderated_chats AS mc
     """)
     month = await databaseExecutor.run(db.fetchall, """
-        SELECT ph.currency_code, COUNT(*) AS count, SUM(ph.amount) AS amount, c.minor_units
+        -- Refunds are negative rows: not counted as payments, taken off the sum
+        SELECT ph.currency_code, COUNT(*) FILTER (WHERE ph.amount > 0) AS count, SUM(ph.amount) AS amount, c.minor_units
         FROM payments_history AS ph
         INNER JOIN users AS u ON u.id = ph.user_id AND u.is_admin IS FALSE
         LEFT JOIN currencies AS c ON c.code = ph.currency_code
