@@ -275,6 +275,7 @@ async def show(params: ControllerParams):
          button(['whitelist_button'], {'tp': 'chat_whitelist'}, count=whitelist_count)],
         [button(['who_button', 'everyone' if chat_data.get('everyone_can_write') else 'whitelist'],
                 {'tp': 'switch_mode'})],
+        [button(['access_button', chat_data.get('access_mode') or 'off'], {'tp': 'chat_access'})],
         [{'text': ('' if paid else localization.get_message(['chat', 'show', 'locked'], language_code))
             + localization.get_message(['chat', 'show', 'limit_button'], language_code,
                                        limit=_limit_text(chat_data, language_code)),

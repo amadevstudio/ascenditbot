@@ -7,6 +7,7 @@ from framework.system import telegram_types, telegram_exceptions
 from framework.system.bot_setup import bot
 from lib.language import localization
 from pkg.repository import allowed_user_repository, chat_repository
+from pkg.service import access
 from pkg.service.chat import Chat
 from pkg.service.allowed_user import full_name
 from pkg.service.member_alerts import MemberAlerts
@@ -136,6 +137,11 @@ async def notify_removed(message: telegram_types.Message, chat_id: int):
         return
 
     language_code = message.from_user.language_code
+    chat = await Chat.find(chat_id)
+    if chat is not None and access.effective_mode(chat, await Chat.owner_tariff_id(chat_id)) != 'off':
+        await _ephemeral(message, localization.get_message(['access', 'notice'], language_code,
+                                                           link=access.join_link(chat_id)))
+        return
     text = localization.get_message(['work', 'removed_notice', 'text'], language_code)
     if await Chat.owner_tariff_id(chat_id) == Tariff.FREE_TARIFF_ID:
         text += "\n\n" + localization.get_message(['work', 'removed_notice', 'promo'], language_code)

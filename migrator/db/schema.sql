@@ -14,6 +14,51 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: access_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.access_requests (
+    id bigint NOT NULL,
+    moderated_chat_id bigint NOT NULL,
+    user_service_id character varying(255) NOT NULL,
+    nickname character varying(255),
+    display_name character varying(255),
+    language_code character varying(7),
+    kind character varying(16) NOT NULL,
+    days integer,
+    amount numeric(12,2),
+    currency character varying(8),
+    status character varying(16) DEFAULT 'pending'::character varying NOT NULL,
+    provider character varying(16),
+    external_id character varying(255),
+    decided_by character varying(255),
+    decided_at timestamp without time zone,
+    reminded_at timestamp without time zone,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: access_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.access_requests_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: access_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.access_requests_id_seq OWNED BY public.access_requests.id;
+
+
+--
 -- Name: allowed_users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -135,7 +180,12 @@ CREATE TABLE public.moderated_chats (
     everyone_can_write boolean DEFAULT false NOT NULL,
     post_limit smallint,
     post_limit_period character varying(8),
-    owner_alerts boolean DEFAULT true NOT NULL
+    owner_alerts boolean DEFAULT true NOT NULL,
+    access_mode character varying(16) DEFAULT 'off'::character varying NOT NULL,
+    access_terms text,
+    access_plans jsonb,
+    access_provider character varying(16) DEFAULT 'link'::character varying NOT NULL,
+    access_payment text
 );
 
 
@@ -350,6 +400,13 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
+-- Name: access_requests id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests ALTER COLUMN id SET DEFAULT nextval('public.access_requests_id_seq'::regclass);
+
+
+--
 -- Name: allowed_users id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -396,6 +453,14 @@ ALTER TABLE ONLY public.user_moderated_chat_connections ALTER COLUMN id SET DEFA
 --
 
 ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- Name: access_requests access_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests
+    ADD CONSTRAINT access_requests_pkey PRIMARY KEY (id);
 
 
 --
@@ -535,6 +600,20 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: access_requests_pending_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_requests_pending_key ON public.access_requests USING btree (moderated_chat_id, user_service_id) WHERE ((status)::text = 'pending'::text);
+
+
+--
+-- Name: access_requests_provider_external_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_requests_provider_external_id_key ON public.access_requests USING btree (provider, external_id) WHERE (external_id IS NOT NULL);
+
+
+--
 -- Name: allowed_users_moderated_chat_id_user_service_id_key; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -560,6 +639,14 @@ CREATE INDEX service_id_index_on_moderated_chats ON public.moderated_chats USING
 --
 
 CREATE INDEX service_id_index_on_users ON public.users USING btree (service_id);
+
+
+--
+-- Name: access_requests access_requests_moderated_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests
+    ADD CONSTRAINT access_requests_moderated_chat_id_fkey FOREIGN KEY (moderated_chat_id) REFERENCES public.moderated_chats(id) ON DELETE CASCADE;
 
 
 --
@@ -687,4 +774,6 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260621190000'),
     ('20260628120000'),
     ('20261105120000'),
-    ('20261106120000');
+    ('20261106120000'),
+    ('20261107120000'),
+    ('20261108120000');

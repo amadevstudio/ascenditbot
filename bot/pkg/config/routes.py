@@ -2,7 +2,7 @@ from typing import Any, TypedDict, Callable, Dict, Literal
 
 from pkg.config.routes_dict import AvailableCommands, AvailableRoutes
 from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller, \
-    subscription_controller, settings_controller
+    subscription_controller, settings_controller, access_controller
 from pkg.controller.user_controllers.validators.chat_access_validator import chat_access_validator
 from pkg.controller.user_controllers.validators.user_validator import email_presence_validator
 
@@ -32,6 +32,7 @@ class RoutesInterface(TypedDict):
     add_to_chat_whitelist: RouteInterface
     chat_whitelist: RouteInterface
     chat_restriction_duration: RouteInterface
+    chat_access: RouteInterface
     allowed_user: RouteInterface
     subscription: RouteInterface
     tariffs: RouteInterface
@@ -92,7 +93,8 @@ class RouteMap:
             'routes': [
                 'add_to_chat_whitelist',
                 'chat_whitelist',
-                'chat_restriction_duration'
+                'chat_restriction_duration',
+                'chat_access'
             ],
             'actions': {
                 'switch_active': {
@@ -134,6 +136,19 @@ class RouteMap:
             'method': chats_controller.restriction_duration,
             'available_from': ['message', 'call'],
             'wait_for_input': True,
+            'validator': chat_access_validator
+        },
+        'chat_access': {
+            'method': access_controller.page,
+            'available_from': ['message', 'call'],
+            'wait_for_input': True,
+            'actions': {
+                'acc_mode': {'method': access_controller.set_mode},
+                'acc_edit': {'method': access_controller.edit},
+                'acc_cancel': {'method': access_controller.cancel},
+                'acc_post': {'method': access_controller.post},
+                'acc_requests': {'method': access_controller.requests},
+            },
             'validator': chat_access_validator
         },
         'allowed_user': {

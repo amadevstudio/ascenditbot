@@ -1,4 +1,5 @@
 from pkg.controller.routers.stats_router import stats_router
+from pkg.controller.routers.access_router import access_router
 from pkg.controller.routers.direct_messages_router import direct_messages_router
 from pkg.controller.routers.group_router import group_router
 from pkg.controller.routers.payment_router import payment_router
@@ -18,6 +19,7 @@ def init_routes(dispatcher):
 
     # Buttons under alerts work from any message, outside the menu's navigation
     dispatcher.include_router(quick_actions_router())
+    dispatcher.include_router(access_router())
 
     dispatcher.include_router(stats_router())
 
