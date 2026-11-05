@@ -116,6 +116,32 @@ async def tell_member_decision(chat: dict, request: dict, entry: dict | None, ap
                 open_group_markup(chat, chat_nickname, language_code) if approved else None)
 
 
+async def tell_paid(chat: dict, request: dict, entry: dict | None, chat_nickname: str | None) -> None:
+    """A provider confirmed the payment and access opened: the member, then every manager."""
+    plan = {'days': request['days'] or 0, 'amount': request['amount'], 'currency': request['currency']}
+    chat_name = html.escape(chat.get('name') or '')
+    until = entry.get('expires_at') if entry is not None else None
+
+    user = await User.find_by_service_id(int(request['user_service_id']))
+    language_code = _member_language(request, user)
+    key = 'paid_until' if until is not None else 'paid_forever'
+    await _send(request['user_service_id'], localization.get_message(
+        ['access', 'member', key], language_code, chat_name=chat_name, date=format_date(until) if until else ''),
+        open_group_markup(chat, chat_nickname, language_code))
+
+    for manager in await chat_repository.managers(chat['id']):
+        language_code = manager['language_code']
+        text = localization.get_message(
+            ['access', 'alert', 'paid_auto'], language_code, member=request_member(request), chat_name=chat_name,
+            plan=access.plan_text(plan, language_code),
+            provider=localization.get_message(['access', 'providers', request['provider']], language_code))
+        text += "\n" + (localization.get_message(['access', 'alert', 'paid_auto_until'], language_code,
+                                                 date=format_date(until)) if until
+                        else localization.get_message(['access', 'alert', 'paid_auto_forever'], language_code))
+        await _send(manager['service_id'], text, InlineKeyboardMarkup(inline_keyboard=[[_button(
+            localization.get_message(['alerts', 'buttons', 'group'], language_code), {'tp': 'chat', 'id': chat['id']})]]))
+
+
 async def remind_member(entry: dict, stage_key: str) -> None:
     """A day before a timed access ends, and when it has: the member hears it too, with a way to extend, when the
     group lets people in through the bot and the member has started the bot."""

@@ -35,7 +35,8 @@ CREATE TABLE public.access_requests (
     decided_at timestamp without time zone,
     reminded_at timestamp without time zone,
     created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
+    updated_at timestamp without time zone NOT NULL,
+    pay_url text
 );
 
 
@@ -185,7 +186,9 @@ CREATE TABLE public.moderated_chats (
     access_terms text,
     access_plans jsonb,
     access_provider character varying(16) DEFAULT 'link'::character varying NOT NULL,
-    access_payment text
+    access_payment text,
+    access_secret text,
+    access_provider_label character varying(255)
 );
 
 
@@ -776,4 +779,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20261105120000'),
     ('20261106120000'),
     ('20261107120000'),
-    ('20261108120000');
+    ('20261108120000'),
+    ('20261109120000');

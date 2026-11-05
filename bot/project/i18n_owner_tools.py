@@ -570,6 +570,14 @@ owner_tools_messages = {
             'payment': {'en': "Payment: {payment}\nYou check the payment and confirm the request.",
                         'ru': "Оплата: {payment}\nВы проверяете оплату и подтверждаете заявку."},
             'payment_none': {'en': "Payment: no way to pay set", 'ru': "Оплата: способ не задан"},
+            'payment_provider': {
+                'cryptobot': {
+                    'en': "Payment: 💎 CryptoBot, the app \"{label}\"\nAccess opens by itself once paid; the money "
+                          "goes to your app.",
+                    'ru': "Оплата: 💎 CryptoBot, приложение \"{label}\"\nДоступ открывается сам после оплаты, деньги "
+                          "приходят в ваше приложение."
+                },
+            },
             'terms': {'en': "Terms:\n<blockquote>{terms}</blockquote>", 'ru': "Условия:\n<blockquote>{terms}</blockquote>"},
             'terms_none': {
                 'en': "Terms: not set. Say what a member gets, the rules and how to reach you.",
@@ -614,6 +622,9 @@ owner_tools_messages = {
                 'to_request': {'en': "📨 Switch to entry by request", 'ru': "📨 Перейти на вход по заявке"},
                 'off': {'en': "⏹ Turn the way in off", 'ru': "⏹ Выключить вход"},
                 'cancel': {'en': "✖️ Cancel", 'ru': "✖️ Отмена"},
+                'use_cryptobot': {'en': "💎 CryptoBot: access opens by itself",
+                                  'ru': "💎 CryptoBot: доступ открывается сам"},
+                'other_ways': {'en': "⬅️ Other ways", 'ru': "⬅️ Другие способы"},
             },
             'prompt': {
                 'prices': {
@@ -626,12 +637,26 @@ owner_tools_messages = {
                           "месяцами: <code>месяц 1000 ₽</code>. Валюта: ₽, $, €, USDT или TON, без неё – {currency}."
                 },
                 'payment': {
-                    'en': "💳 Send the link to pay you: PayPal, Boosty, Tribute, a bank transfer link. Or the "
-                          "details as text.\n\nA member pays there and taps \"I paid\"; you get a request and "
-                          "confirm it in one tap.",
-                    'ru': "💳 Пришлите ссылку для оплаты: ЮMoney, Boosty, Tribute, ссылку банка на перевод. Или "
-                          "реквизиты текстом.\n\nУчастник оплатит и нажмёт \"Я оплатил(а)\", а вы получите "
-                          "заявку и подтвердите её в одно нажатие."
+                    'en': "💳 How do you take payment?\n\n🔗 <b>Your link or details</b>: send them in a message "
+                          "(PayPal, Boosty, Tribute, a bank transfer link). A member pays and taps \"I paid\", you "
+                          "confirm in one tap.\n\n💎 <b>CryptoBot</b>: payment in crypto; the bot sees it and opens "
+                          "access by itself. Tap the button below.",
+                    'ru': "💳 Как принимать оплату?\n\n🔗 <b>Своя ссылка или реквизиты</b>: пришлите их сообщением "
+                          "(ЮMoney, Boosty, Tribute, ссылка банка на перевод). Участник оплатит и нажмёт \"Я "
+                          "оплатил(а)\", а вы подтвердите в одно нажатие.\n\n💎 <b>CryptoBot</b>: оплата "
+                          "криптовалютой, бот сам видит оплату и открывает доступ. Нажмите кнопку ниже."
+                },
+                'cryptobot': {
+                    'en': "💎 <b>Connecting CryptoBot</b>\n\n1. Open @CryptoBot → Crypto Pay → Create App.\n"
+                          "2. In the app, open API Token and send the token here.\n\nThe money goes to your app in "
+                          "@CryptoBot; the bot only makes invoices and checks them. The token is kept encrypted and "
+                          "the bot deletes the message with it at once. Prices in ₽, $ and € are paid in any coin, "
+                          "prices in USDT and TON in that coin.",
+                    'ru': "💎 <b>Подключение CryptoBot</b>\n\n1. Откройте @CryptoBot → Crypto Pay → Create App.\n"
+                          "2. В приложении откройте API Token и пришлите токен сюда.\n\nДеньги приходят в ваше "
+                          "приложение в @CryptoBot, бот только выставляет счета и проверяет оплату. Токен хранится "
+                          "зашифрованным, а сообщение с ним бот сразу удалит. Цены в ₽, $ и € участник оплатит "
+                          "любой монетой, цены в USDT и TON – этой монетой."
                 },
                 'terms': {
                     'en': "✏️ Send the terms in one message, up to 1000 characters: what a member gets, the rules, "
@@ -651,6 +676,10 @@ owner_tools_messages = {
                               'ru': "Платный вход есть на платных тарифах. Подробнее: /subscription"},
                 'not_editing': {'en': "Pick what to change with the buttons below.",
                                 'ru': "Выберите кнопкой ниже, что изменить."},
+                'cryptobot_token': {
+                    'en': "❌ CryptoBot did not take the token. Check that you copied all of it and send it again.",
+                    'ru': "❌ CryptoBot не принял токен. Проверьте, что скопировали его целиком, и пришлите ещё раз."
+                },
             },
             'toasts': {
                 'saved': {'en': "Saved", 'ru': "Сохранено"},
@@ -664,6 +693,10 @@ owner_tools_messages = {
                                 'ru': "Не получилось отправить в группу: у бота нет права писать сообщения."},
                 'no_requests': {'en': "No requests waiting", 'ru': "Новых заявок нет"},
                 'requests_sent': {'en': "The requests are below", 'ru': "Заявки ниже"},
+                'cryptobot_connected': {
+                    'en': "✅ CryptoBot is connected: the app \"{label}\". The message with the token is deleted.",
+                    'ru': "✅ CryptoBot подключён: приложение \"{label}\". Сообщение с токеном удалено."
+                },
             },
         },
         # Plain text: the message posted in the group, and the line added to the notice about a deleted message
@@ -671,6 +704,9 @@ owner_tools_messages = {
             'text': {'en': "✍️ Only members on the list write in this group. To get access, tap the button.",
                      'ru': "✍️ Писать в группе могут участники из списка. Чтобы получить доступ, нажмите кнопку."},
             'button': {'en': "🔑 Get access", 'ru': "🔑 Получить доступ"},
+        },
+        'providers': {
+            'cryptobot': {'en': "CryptoBot", 'ru': "CryptoBot"},
         },
         'notice': {
             'en': "Your message is deleted: only members on the list write in this group.\n\nGet access: {link}",
@@ -718,6 +754,22 @@ owner_tools_messages = {
                 'ru': "💳 <b>{chat_name}</b>: {plan}\n\n1. Оплатите владельцу группы:\n<blockquote>{payment}</blockquote>\n"
                       "2. Вернитесь и нажмите \"Я оплатил(а)\": владелец проверит оплату и откроет доступ."
             },
+            'plan_auto': {
+                'en': "💳 <b>{chat_name}</b>: {plan}\n\nPay through @CryptoBot with the button below. Access opens "
+                      "by itself, usually within a minute of paying.",
+                'ru': "💳 <b>{chat_name}</b>: {plan}\n\nОплатите через @CryptoBot по кнопке ниже. Доступ откроется "
+                      "сам, обычно в течение минуты после оплаты."
+            },
+            'plan_auto_note': {
+                'en': "<i>The money goes to the group's owner; the bot only checks the payment.</i>",
+                'ru': "<i>Деньги идут владельцу группы, бот только проверяет оплату.</i>"
+            },
+            'pending_auto': {'en': "⏳ An invoice to pay: {plan}. Access opens by itself once you pay.",
+                             'ru': "⏳ Счёт на оплату: {plan}. После оплаты доступ откроется сам."},
+            'paid_until': {'en': "✅ Payment received. You may write in <b>{chat_name}</b> until {date}.",
+                           'ru': "✅ Оплата получена. Доступ к группе <b>{chat_name}</b> открыт до {date}. Можно писать."},
+            'paid_forever': {'en': "✅ Payment received. You may write in <b>{chat_name}</b> for good.",
+                             'ru': "✅ Оплата получена. Доступ к группе <b>{chat_name}</b> открыт навсегда. Можно писать."},
             'plan_note': {
                 'en': "<i>The bot does not take or check payments: the money goes to the group's owner.</i>",
                 'ru': "<i>Бот не принимает и не проверяет платежи: деньги идут владельцу группы.</i>"
@@ -731,6 +783,8 @@ owner_tools_messages = {
                 'renew': {'en': "🔄 Extend", 'ru': "🔄 Продлить"},
                 'ask_again': {'en': "📨 Ask again", 'ru': "📨 Попросить снова"},
                 'open_group': {'en': "💬 Open the group", 'ru': "💬 Открыть группу"},
+                'check': {'en': "🔄 Check the payment", 'ru': "🔄 Проверить оплату"},
+                'other_term': {'en': "⬅️ Another term", 'ru': "⬅️ Другой срок"},
             },
             'toasts': {
                 'sent': {'en': "Request sent", 'ru': "Заявка отправлена"},
@@ -738,6 +792,10 @@ owner_tools_messages = {
                 'reminded': {'en': "The owner is reminded", 'ru': "Напомнили владельцу"},
                 'too_soon': {'en': "You can remind in a few hours", 'ru': "Напомнить можно через несколько часов"},
                 'unavailable': {'en': "This option is no longer offered", 'ru': "Этот вариант больше не предлагается"},
+                'not_paid_yet': {'en': "No payment yet. If you have paid, give it a minute.",
+                                 'ru': "Оплата пока не пришла. Если вы уже оплатили, подождите минуту."},
+                'provider_error': {'en': "The payment service did not answer. Try again in a minute.",
+                                   'ru': "Платёжная система не ответила. Попробуйте через минуту."},
             },
             # Sent to the member when the owner decides, and about the end of a term
             'approved_forever': {'en': "✅ The owner let you into <b>{chat_name}</b>. You can write.",
@@ -783,6 +841,10 @@ owner_tools_messages = {
             'rejected': {'en': "❌ The request of {member} to <b>{chat_name}</b> is declined.",
                          'ru': "❌ Заявка {member} в <b>{chat_name}</b> отклонена."},
             'decided': {'en': "This request has been answered already.", 'ru': "На эту заявку уже ответили."},
+            'paid_auto': {'en': "💰 <b>Paid through {provider}</b>: {member}, {plan}, the group <b>{chat_name}</b>.",
+                          'ru': "💰 <b>Оплата через {provider}</b>: {member}, {plan}, группа <b>{chat_name}</b>."},
+            'paid_auto_until': {'en': "Access is open until {date}.", 'ru': "Доступ открыт до {date}."},
+            'paid_auto_forever': {'en': "Access is open for good.", 'ru': "Доступ открыт навсегда."},
             'approved_toast': {'en': "Access given", 'ru': "Доступ открыт"},
             'rejected_toast': {'en': "Declined", 'ru': "Отклонено"},
         },
