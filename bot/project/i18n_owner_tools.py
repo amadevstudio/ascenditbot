@@ -60,8 +60,8 @@ owner_tools_messages = {
                 "Бот удаляет сообщение, а дальше молчит, сообщает вам (с кнопкой \"Разрешить\"), даёт попросить "
                 "доступ или продаёт его на срок (платные тарифы). Вы подтверждаете в одно нажатие.\n\n"
                 "<b>Прямо в группе</b> (только админам, ответы видите только вы):\n"
-                "/allow в ответ на сообщение или /allow @ник 7d – разрешить писать (на 7 дней)\n"
-                "/deny @ник – убрать из списка\n"
+                "/allow в ответ на сообщение или /allow @nick 7d – разрешить писать (на 7 дней)\n"
+                "/deny @nick – убрать из списка\n"
                 "/settings – открыть страницу группы здесь\n\n"
                 "<b>Бесплатно</b>: одна группа с белым списком и оповещениями. <b>Платно</b> (/subscription): "
                 "больше групп, доступ на срок и лимиты постов.\n\n"
@@ -308,8 +308,8 @@ owner_tools_messages = {
                     "Сейчас: <b>{limit}</b>\n\n"
                     "Каждый участник, в том числе из белого списка, пишет не больше этого: лишнее бот удаляет и "
                     "подсказывает автору, когда можно следующее. У админов лимита нет.\n\n"
-                    "Выберите или напишите свой: <code>3 в час</code>, <code>10 за 2 дня</code>, "
-                    "<code>1 в неделю</code>. Убрать: <code>выкл</code>."
+                    "Выберите или напишите свой: <code>3 an hour</code>, <code>10 in 2 days</code>, "
+                    "<code>1 a week</code>. Убрать: <code>off</code>."
             },
             'free': {
                 'en': "🔒 It works on a paid tariff (/subscription): you can set it now, it starts with the tariff.",
@@ -322,8 +322,8 @@ owner_tools_messages = {
             'invalid': {
                 'en': "❌ Not a limit: {text}. Like this: <code>3 an hour</code>, <code>10 in 2 days</code>, "
                       "<code>off</code>. Up to {max_count} posts, a window up to 30 days.",
-                'ru': "❌ Не похоже на лимит: {text}. Так: <code>3 в час</code>, <code>10 за 2 дня</code>, "
-                      "<code>выкл</code>. До {max_count} постов, окно до 30 дней."
+                'ru': "❌ Не похоже на лимит: {text}. Так: <code>3 an hour</code>, <code>10 in 2 days</code>, "
+                      "<code>off</code>. До {max_count} постов, окно до 30 дней."
             },
             'off_button': {
                 'en': "No limit",
@@ -550,12 +550,12 @@ owner_tools_messages = {
                     "Reply <code>/allow</code> to a member's message, or send <code>/allow @nick</code>. "
                     "For a term: <code>/allow @nick 7d</code>",
                 'ru':
-                    "Ответьте <code>/allow</code> на сообщение участника или отправьте <code>/allow @ник</code>. "
-                    "На срок: <code>/allow @ник 7d</code>"
+                    "Ответьте <code>/allow</code> на сообщение участника или отправьте <code>/allow @nick</code>. "
+                    "На срок: <code>/allow @nick 7d</code>"
             },
             'deny': {
                 'en': "Reply <code>/deny</code> to a member's message, or send <code>/deny @nick</code>",
-                'ru': "Ответьте <code>/deny</code> на сообщение участника или отправьте <code>/deny @ник</code>"
+                'ru': "Ответьте <code>/deny</code> на сообщение участника или отправьте <code>/deny @nick</code>"
             },
         },
         'allowed': {
@@ -741,13 +741,13 @@ owner_tools_messages = {
             'prompt': {
                 'prices': {
                     'en': "💰 Send the prices in one message, a line per term: the days, then the price.\n\n"
-                          "For example:\n<code>7 3$\n30 10$\nforever 30$</code>\nThat is 7 days for $3, 30 days "
+                          "For example:\n<pre>7 3$\n30 10$\nforever 30$</pre>That is 7 days for $3, 30 days "
                           "for $10 and access for good for $30.\n\nThe term in words works too: <code>week 3$</code>, "
                           "<code>month 10$</code>. Currency: ₽, $, €, USDT or TON, {currency} if none is named.",
                     'ru': "💰 Пришлите цены одним сообщением, по строке на срок: сначала дни, потом цена.\n\n"
-                          "Например:\n<code>7 300 ₽\n30 1000 ₽\nнавсегда 3000 ₽</code>\nЭто 7 дней за 300 ₽, 30 дней "
-                          "за 1000 ₽ и доступ навсегда за 3000 ₽.\n\nСрок можно писать и словами: <code>неделя 300 ₽"
-                          "</code>, <code>месяц 1000 ₽</code>. Валюта: ₽, $, €, USDT или TON, без неё – {currency}."
+                          "Например:\n<pre>7 300 ₽\n30 1000 ₽\nforever 3000 ₽</pre>Это 7 дней за 300 ₽, 30 дней "
+                          "за 1000 ₽ и доступ навсегда за 3000 ₽.\n\nСрок можно писать и словами: <code>week 300 ₽"
+                          "</code>, <code>month 1000 ₽</code>. Валюта: ₽, $, €, USDT или TON, без неё – {currency}."
                 },
                 'payment': {
                     'en': "💳 How will members pay? Pick one:\n\n🔗 <b>Your link or details</b>: just send them as "
@@ -1160,7 +1160,7 @@ owner_tools_messages = {
         },
         'group': {
             'allow': {'en': "Allow a member (in reply or @nick, 7d for a week)",
-                      'ru': "Разрешить участнику (ответом или @ник, 7d на неделю)"},
+                      'ru': "Разрешить участнику (ответом или @nick, 7d на неделю)"},
             'deny': {'en': "Remove a member from the whitelist", 'ru': "Убрать участника из белого списка"},
             'settings': {'en': "The group's page in the bot", 'ru': "Страница группы в боте"},
         },
