@@ -235,3 +235,10 @@ async def test_hourly_round_survives_failure(bench: Bench):
             await subscription_handler.subscription_handler_round()
     finally:
         os.environ['ENVIRONMENT'] = 'development'
+
+
+async def test_tariff_ladder(bench: Bench):
+    """each tariff covers more groups than the one below it (corporate, added in production only: no limit)"""
+    rows = await bench.sql('SELECT id, channels_count FROM tariffs ORDER BY id')
+    counts = [row['channels_count'] for row in rows]
+    assert counts[:4] == [1, 3, 10, 25], counts
