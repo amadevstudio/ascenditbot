@@ -47,6 +47,19 @@ async def get_privileges(
     """, (chat_service_id, *_match_params(user_service_id, nickname), user_service_id))
 
 
+async def get_privileges_by_chat_id(
+        chat_id: int, user_service_id: str | None, nickname: str | None) -> AllowedUserInterface | None:
+    """The same as get_privileges, by the group's id in the bot."""
+    return await databaseExecutor.run(db.fetchone, f"""
+        SELECT au.id, au.active, au.nickname, au.user_service_id, au.expires_at, au.moderated_chat_id
+        FROM allowed_users AS au
+        WHERE au.moderated_chat_id = %s AND {_MATCH}
+            AND (au.expires_at IS NULL OR au.expires_at > LOCALTIMESTAMP)
+        ORDER BY (au.user_service_id IS NOT NULL AND au.user_service_id = %s) DESC, au.active DESC
+        LIMIT 1
+    """, (chat_id, *_match_params(user_service_id, nickname), user_service_id))
+
+
 async def remember_member(allowed_user_id: int, user_service_id: str, nickname: str | None, display_name: str):
     """Ties an entry found by nickname to the member's id (so a new username keeps access) and refreshes the
     names shown in the whitelist, unless another entry of the group already has them."""
@@ -118,7 +131,7 @@ async def expiring(expiry_notice: int, until: datetime.datetime) -> list[dict]:
     with what the message to the owners needs."""
     return await databaseExecutor.run(db.fetchall, """
         SELECT au.id, au.nickname, au.display_name, au.user_service_id, au.expires_at,
-            mc.id AS chat_id, mc.name AS chat_name
+            mc.id AS chat_id, mc.name AS chat_name, mc.access_mode
         FROM allowed_users AS au
         INNER JOIN moderated_chats AS mc ON mc.id = au.moderated_chat_id
         WHERE au.expires_at IS NOT NULL AND au.expires_at <= %s AND au.expiry_notice < %s AND au.active IS TRUE

@@ -33,6 +33,11 @@ class ModeratedChatInterface(TypedDict, total=False):
     post_limit: int | None
     post_limit_period: str | None
     owner_alerts: bool
+    access_mode: str
+    access_terms: str | None
+    access_plans: list | None
+    access_provider: str
+    access_payment: str | None
 
 
 class UserModeratedChatConnectionInterface(TypedDict, total=False):

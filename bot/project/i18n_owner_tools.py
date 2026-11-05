@@ -17,7 +17,8 @@ owner_tools_messages = {
                 "● a whitelist by nickname, id or a forwarded message\n"
                 "● access for 7 or 30 days, ending on its own\n"
                 "● a posting limit: 1 ad a day, 3 a week and so on\n"
-                "● a message when a stranger writes, with \"Allow\" in one tap\n\n"
+                "● a message when a stranger writes, with \"Allow\" in one tap\n"
+                "● a way in through the bot: newcomers ask or pay you, you confirm in one tap\n\n"
                 "One group is free.",
             'ru':
                 "Привет! Я слежу за порядком в группе: писать в ней могут только те, кого вы разрешили, "
@@ -26,7 +27,8 @@ owner_tools_messages = {
                 "● белый список по нику, id или пересланному сообщению\n"
                 "● доступ на 7 или 30 дней, который сам заканчивается\n"
                 "● лимит постов: 1 объявление в день, 3 в неделю и так далее\n"
-                "● сообщение, когда пишет посторонний, и \"Разрешить\" в одно нажатие\n\n"
+                "● сообщение, когда пишет посторонний, и \"Разрешить\" в одно нажатие\n"
+                "● вход через бота: новые просят доступ или платят вам, вы подтверждаете в одно нажатие\n\n"
                 "Одна группа бесплатно."
         },
     },
@@ -38,6 +40,9 @@ owner_tools_messages = {
                 "an admin that can delete messages (and restrict members, for the pause after a deleted message).\n\n"
                 "<b>Manage it</b>: /my_chats. On the group's page: the whitelist, who may write (the whitelist or "
                 "everyone), the posting limit, alerts, pause.\n\n"
+                "<b>The way in through the bot</b>: on the group's page, \"Way in through the bot\". Whoever is "
+                "not on the list gets a link to the group's page in the bot: they ask for access (free) or pick a "
+                "term and pay by your link (paid tariffs), and you confirm in one tap.\n\n"
                 "<b>Right in the group</b> (admins only, nobody else sees the answers):\n"
                 "/allow in reply to a message, or /allow @nick 7d – let a member write (for 7 days)\n"
                 "/deny @nick – take them off the list\n"
@@ -51,6 +56,9 @@ owner_tools_messages = {
                 "администратором с правом удалять сообщения (и ограничивать участников – для паузы после удаления).\n\n"
                 "<b>Управлять</b>: /my_chats. На странице группы: белый список, кто пишет (белый список или все), "
                 "лимит постов, оповещения, пауза.\n\n"
+                "<b>Вход через бота</b>: на странице группы, \"Вход через бота\". Тем, кто не в списке, бот даёт "
+                "ссылку на страницу группы: там просят доступ (бесплатно) или выбирают срок и платят по вашей "
+                "ссылке (платные тарифы), а вы подтверждаете в одно нажатие.\n\n"
                 "<b>Прямо в группе</b> (только админам, ответы видите только вы):\n"
                 "/allow в ответ на сообщение или /allow @ник 7d – разрешить писать (на 7 дней)\n"
                 "/deny @ник – убрать из списка\n"
@@ -205,6 +213,11 @@ owner_tools_messages = {
             'limit_button': {
                 'en': "Limit: {limit}",
                 'ru': "Лимит: {limit}"
+            },
+            'access_button': {
+                'off': {'en': "🔑 Way in through the bot: off", 'ru': "🔑 Вход через бота: выкл"},
+                'request': {'en': "🔑 Way in through the bot: by request", 'ru': "🔑 Вход через бота: по заявке"},
+                'paid': {'en': "🔑 Way in through the bot: paid", 'ru': "🔑 Вход через бота: за плату"},
             },
             'restriction_duration_button': {
                 'en': "Pause: {duration} min",
@@ -530,6 +543,250 @@ owner_tools_messages = {
                 "с правом удалять сообщения (и ограничивать участников), и он сам подключит группу."
         },
     },
+    # The way in through the bot (pkg/service/access.py). HTML unless noted
+    'access': {
+        'term': {
+            'one': {'en': "{days} day", 'ru': "{days} день"},
+            'few': {'en': "{days} days", 'ru': "{days} дня"},
+            'many': {'en': "{days} days", 'ru': "{days} дней"},
+            'forever': {'en': "for good", 'ru': "навсегда"},
+        },
+        # The owner's page of the way in
+        'owner': {
+            'title': {'en': "🔑 <b>The way in through the bot: {chat_name}</b>",
+                      'ru': "🔑 <b>Вход через бота: {chat_name}</b>"},
+            'intro_off': {
+                'en': "Whoever is not on the whitelist gets a page of the group in the bot, where they can ask for "
+                      "access or pay for it. You approve in one tap.\n\nHow do newcomers get in?",
+                'ru': "Тем, кто не в белом списке, бот покажет страницу группы: там можно попросить доступ или "
+                      "оплатить его. Вы одобряете в одно нажатие.\n\nКак пускать новых?"
+            },
+            'mode': {
+                'request': {'en': "Mode: 📨 by request, free", 'ru': "Режим: 📨 по заявке, бесплатно"},
+                'paid': {'en': "Mode: 💳 paid", 'ru': "Режим: 💳 за плату"},
+            },
+            'prices': {'en': "Prices: {plans}", 'ru': "Цены: {plans}"},
+            'prices_none': {'en': "Prices: not set", 'ru': "Цены: не заданы"},
+            'payment': {'en': "Payment: {payment}\nYou check the payment and confirm the request.",
+                        'ru': "Оплата: {payment}\nВы проверяете оплату и подтверждаете заявку."},
+            'payment_none': {'en': "Payment: no way to pay set", 'ru': "Оплата: способ не задан"},
+            'terms': {'en': "Terms:\n<blockquote>{terms}</blockquote>", 'ru': "Условия:\n<blockquote>{terms}</blockquote>"},
+            'terms_none': {
+                'en': "Terms: not set. Say what a member gets, the rules and how to reach you.",
+                'ru': "Условия: не заданы. Напишите, что получает участник, правила и как с вами связаться."
+            },
+            'link': {
+                'en': "The link for members:\n<code>{link}</code>\nThe bot adds it to its notice when it deletes "
+                      "a message. While the way in is on, you get their requests, not an alert about every "
+                      "stranger.",
+                'ru': "Ссылка для участников:\n<code>{link}</code>\nБот сам добавляет её к сообщению тем, чьё "
+                      "сообщение удалил. Пока вход включён, вам приходят их заявки, а не оповещение о каждом "
+                      "постороннем."
+            },
+            'pending': {'en': "⏳ Waiting for your answer: {count}", 'ru': "⏳ Ждут ответа: {count}"},
+            'paid_fallback': {
+                'en': "⚠️ Paid entry works on a paid tariff; until then members see entry by request. "
+                      "More: /subscription",
+                'ru': "⚠️ Платный вход работает на платном тарифе, пока участники видят вход по заявке. "
+                      "Подробнее: /subscription"
+            },
+            'paid_incomplete': {
+                'en': "⚠️ Set prices and a way to pay to turn payment on. Until then members see entry by request.",
+                'ru': "⚠️ Чтобы включить оплату, задайте цены и способ оплаты. Пока участники видят вход по заявке."
+            },
+            'everyone_note': {
+                'en': "ℹ️ Everyone writes in the group now, so nobody needs a way in. It works again once you "
+                      "turn the whitelist back on.",
+                'ru': "ℹ️ Сейчас в группе пишут все, вход через бота не нужен. Он заработает, когда вы вернёте "
+                      "белый список."
+            },
+            'step': {'en': "<b>Step {step} of 2</b>", 'ru': "<b>Шаг {step} из 2</b>"},
+            'buttons': {
+                'mode_request': {'en': "📨 By request, free", 'ru': "📨 По заявке, бесплатно"},
+                'mode_paid': {'en': "💳 Paid", 'ru': "💳 За плату"},
+                'locked': {'en': "🔒 ", 'ru': "🔒 "},
+                'prices': {'en': "💰 Prices", 'ru': "💰 Цены"},
+                'payment': {'en': "💳 Way to pay", 'ru': "💳 Способ оплаты"},
+                'terms': {'en': "✏️ Terms", 'ru': "✏️ Условия"},
+                'post': {'en': "📌 Button in the group", 'ru': "📌 Кнопка в группе"},
+                'requests': {'en': "📨 Requests ({count})", 'ru': "📨 Заявки ({count})"},
+                'to_paid': {'en': "💳 Switch to paid entry", 'ru': "💳 Перейти на платный вход"},
+                'to_request': {'en': "📨 Switch to entry by request", 'ru': "📨 Перейти на вход по заявке"},
+                'off': {'en': "⏹ Turn the way in off", 'ru': "⏹ Выключить вход"},
+                'cancel': {'en': "✖️ Cancel", 'ru': "✖️ Отмена"},
+            },
+            'prompt': {
+                'prices': {
+                    'en': "💰 Send the prices in one message, a line per option: the term and the price.\n\n"
+                          "For example:\n<code>7 3\n30 10\nforever 30</code>\n\nThe term can be days, weeks "
+                          "or months: <code>month 10$</code>. Currency: ₽, $, €, USDT or TON, {currency} if "
+                          "none is named.",
+                    'ru': "💰 Пришлите цены одним сообщением, по строке на вариант: срок и цена.\n\nНапример:\n"
+                          "<code>7 300\n30 1000\nнавсегда 3000</code>\n\nСрок можно писать днями, неделями, "
+                          "месяцами: <code>месяц 1000 ₽</code>. Валюта: ₽, $, €, USDT или TON, без неё – {currency}."
+                },
+                'payment': {
+                    'en': "💳 Send the link to pay you: PayPal, Boosty, Tribute, a bank transfer link. Or the "
+                          "details as text.\n\nA member pays there and taps \"I paid\"; you get a request and "
+                          "confirm it in one tap.",
+                    'ru': "💳 Пришлите ссылку для оплаты: ЮMoney, Boosty, Tribute, ссылку банка на перевод. Или "
+                          "реквизиты текстом.\n\nУчастник оплатит и нажмёт \"Я оплатил(а)\", а вы получите "
+                          "заявку и подтвердите её в одно нажатие."
+                },
+                'terms': {
+                    'en': "✏️ Send the terms in one message, up to 1000 characters: what a member gets, the rules, "
+                          "how to reach you.\n\nTo remove them, send <code>-</code>.",
+                    'ru': "✏️ Пришлите условия одним сообщением, до 1000 знаков: что получает участник, правила, "
+                          "как с вами связаться.\n\nЧтобы убрать условия, пришлите <code>-</code>."
+                },
+            },
+            'errors': {
+                'prices_bad': {
+                    'en': "Could not read:\n{lines}\n\nWrite the term and the price, e.g. <code>30 10</code>.",
+                    'ru': "Не понял строки:\n{lines}\n\nПишите срок и цену, например <code>30 1000</code>."
+                },
+                'too_long': {'en': "Too long: {length} characters, up to {max} fit.",
+                             'ru': "Слишком длинно: {length} знаков, можно до {max}."},
+                'paid_only': {'en': "Paid entry is on paid tariffs. More: /subscription",
+                              'ru': "Платный вход есть на платных тарифах. Подробнее: /subscription"},
+                'not_editing': {'en': "Pick what to change with the buttons below.",
+                                'ru': "Выберите кнопкой ниже, что изменить."},
+            },
+            'toasts': {
+                'saved': {'en': "Saved", 'ru': "Сохранено"},
+                'request_on': {'en': "Entry by request is on", 'ru': "Вход по заявке включён"},
+                'paid_on': {'en': "Paid entry is on", 'ru': "Платный вход включён"},
+                'off': {'en': "The way in is off", 'ru': "Вход через бота выключен"},
+                'posted': {'en': "Posted in the group and pinned", 'ru': "Отправлено в группу и закреплено"},
+                'posted_unpinned': {'en': "Posted in the group. Pin it so that everyone sees it.",
+                                    'ru': "Отправлено в группу. Закрепите сообщение, чтобы его видели все."},
+                'post_failed': {'en': "Could not post in the group: the bot may not send messages there.",
+                                'ru': "Не получилось отправить в группу: у бота нет права писать сообщения."},
+                'no_requests': {'en': "No requests waiting", 'ru': "Новых заявок нет"},
+                'requests_sent': {'en': "The requests are below", 'ru': "Заявки ниже"},
+            },
+        },
+        # Plain text: the message posted in the group, and the line added to the notice about a deleted message
+        'group_post': {
+            'text': {'en': "✍️ Only members on the list write in this group. To get access, tap the button.",
+                     'ru': "✍️ Писать в группе могут участники из списка. Чтобы получить доступ, нажмите кнопку."},
+            'button': {'en': "🔑 Get access", 'ru': "🔑 Получить доступ"},
+        },
+        'notice': {
+            'en': "Your message is deleted: only members on the list write in this group.\n\nGet access: {link}",
+            'ru': "Ваше сообщение удалено: писать в этой группе могут только участники из списка.\n\n"
+                  "Получить доступ: {link}"
+        },
+        # The member's page of the group
+        'member': {
+            'title': {'en': "✍️ <b>{chat_name}</b>", 'ru': "✍️ <b>{chat_name}</b>"},
+            'intro': {'en': "Only members on the list write in this group.",
+                      'ru': "Писать в этой группе могут только участники из списка."},
+            'request_hint': {'en': "Tap the button and the group's owner gets your request.",
+                             'ru': "Нажмите кнопку, и владелец группы получит заявку."},
+            'paid_hint': {'en': "Pick a term:", 'ru': "Выберите срок:"},
+            'have_forever': {'en': "✅ You have access to this group, you can write.",
+                             'ru': "✅ У вас есть доступ к этой группе, можно писать."},
+            'have_until': {'en': "✅ You have access until {date}.", 'ru': "✅ У вас есть доступ до {date}."},
+            'extend_hint': {'en': "To extend it now, pick a term: the days are added to the current ones.",
+                            'ru': "Продлить заранее: выберите срок, дни добавятся к текущим."},
+            'pending': {'en': "⏳ Request sent on {date}. Waiting for the group's owner.",
+                        'ru': "⏳ Заявка отправлена {date}. Ждём ответа владельца группы."},
+            'pending_paid': {'en': "⏳ Payment reported on {date}: {plan}. The owner checks it and lets you in.",
+                             'ru': "⏳ Об оплате сообщили {date}: {plan}. Владелец проверит её и откроет доступ."},
+            'rejected_recently': {
+                'en': "The owner declined your request on {date}. You can ask again in a few hours.",
+                'ru': "Владелец отклонил заявку {date}. Попробовать снова можно через несколько часов."
+            },
+            'off': {'en': "The owner of this group does not take requests through the bot yet.",
+                    'ru': "Владелец этой группы пока не принимает заявки через бота."},
+            'not_found': {'en': "The group is not found. The link may be old.",
+                          'ru': "Группа не найдена. Возможно, ссылка устарела."},
+            'footer': {
+                'en': "<i>This is @{bot}: it lets into a group only those its owner allows. Your own group: /start</i>",
+                'ru': "<i>Это @{bot}: он пускает в группу только тех, кого разрешил владелец. Своя группа: /start</i>"
+            },
+            'plan': {
+                'en': "💳 <b>{chat_name}</b>: {plan}\n\n1. Pay the group's owner by the link below.\n"
+                      "2. Come back and tap \"I paid\": the owner checks the payment and lets you in.",
+                'ru': "💳 <b>{chat_name}</b>: {plan}\n\n1. Оплатите владельцу группы по ссылке ниже.\n"
+                      "2. Вернитесь и нажмите \"Я оплатил(а)\": владелец проверит оплату и откроет доступ."
+            },
+            'plan_details': {
+                'en': "💳 <b>{chat_name}</b>: {plan}\n\n1. Pay the group's owner:\n<blockquote>{payment}</blockquote>\n"
+                      "2. Come back and tap \"I paid\": the owner checks the payment and lets you in.",
+                'ru': "💳 <b>{chat_name}</b>: {plan}\n\n1. Оплатите владельцу группы:\n<blockquote>{payment}</blockquote>\n"
+                      "2. Вернитесь и нажмите \"Я оплатил(а)\": владелец проверит оплату и откроет доступ."
+            },
+            'plan_note': {
+                'en': "<i>The bot does not take or check payments: the money goes to the group's owner.</i>",
+                'ru': "<i>Бот не принимает и не проверяет платежи: деньги идут владельцу группы.</i>"
+            },
+            'buttons': {
+                'request': {'en': "📨 Ask for access", 'ru': "📨 Попросить доступ"},
+                'remind': {'en': "🔔 Remind the owner", 'ru': "🔔 Напомнить владельцу"},
+                'pay': {'en': "💳 Pay {amount}", 'ru': "💳 Оплатить {amount}"},
+                'paid': {'en': "✅ I paid", 'ru': "✅ Я оплатил(а)"},
+                'back': {'en': "⬅️ Back", 'ru': "⬅️ Назад"},
+                'renew': {'en': "🔄 Extend", 'ru': "🔄 Продлить"},
+                'ask_again': {'en': "📨 Ask again", 'ru': "📨 Попросить снова"},
+                'open_group': {'en': "💬 Open the group", 'ru': "💬 Открыть группу"},
+            },
+            'toasts': {
+                'sent': {'en': "Request sent", 'ru': "Заявка отправлена"},
+                'already': {'en': "Your request is already with the owner", 'ru': "Заявка уже у владельца"},
+                'reminded': {'en': "The owner is reminded", 'ru': "Напомнили владельцу"},
+                'too_soon': {'en': "You can remind in a few hours", 'ru': "Напомнить можно через несколько часов"},
+                'unavailable': {'en': "This option is no longer offered", 'ru': "Этот вариант больше не предлагается"},
+            },
+            # Sent to the member when the owner decides, and about the end of a term
+            'approved_forever': {'en': "✅ The owner let you into <b>{chat_name}</b>. You can write.",
+                                 'ru': "✅ Владелец открыл вам доступ к группе <b>{chat_name}</b>. Можно писать."},
+            'approved_until': {
+                'en': "✅ The owner let you into <b>{chat_name}</b> until {date}. You can write.",
+                'ru': "✅ Владелец открыл вам доступ к группе <b>{chat_name}</b> до {date}. Можно писать."
+            },
+            'rejected': {'en': "The owner of <b>{chat_name}</b> declined your request.",
+                         'ru': "Владелец группы <b>{chat_name}</b> отклонил заявку."},
+            'rejected_paid': {
+                'en': "The owner of <b>{chat_name}</b> did not confirm your payment. If you paid, contact them: "
+                      "groups usually give contacts in their terms.",
+                'ru': "Владелец группы <b>{chat_name}</b> не подтвердил оплату. Если вы оплатили, свяжитесь с ним: "
+                      "контакты обычно есть в условиях группы."
+            },
+            'expiry_soon': {'en': "⏳ Your access to <b>{chat_name}</b> ends on {date}.",
+                            'ru': "⏳ Доступ к группе <b>{chat_name}</b> заканчивается {date}."},
+            'expiry_ended': {'en': "Your access to <b>{chat_name}</b> has ended.",
+                             'ru': "Доступ к группе <b>{chat_name}</b> закончился."},
+        },
+        # The managers' side of a request
+        'alert': {
+            'request': {'en': "📨 <b>Access request</b> to <b>{chat_name}</b>\n{member}",
+                        'ru': "📨 <b>Заявка на доступ</b> к группе <b>{chat_name}</b>\n{member}"},
+            'paid': {
+                'en': "💳 <b>Payment for access</b> to <b>{chat_name}</b>\n{member} says they paid: {plan}.\n"
+                      "Check that the money came and confirm.",
+                'ru': "💳 <b>Оплата доступа</b> к группе <b>{chat_name}</b>\n{member} сообщает об оплате: {plan}.\n"
+                      "Проверьте поступление и подтвердите."
+            },
+            'reminder': {'en': "🔔 The member reminds you of the request.", 'ru': "🔔 Участник напоминает о заявке."},
+            'buttons': {
+                'confirm': {'en': "✅ Confirm: {term}", 'ru': "✅ Подтвердить: {term}"},
+                'forever': {'en': "✅ For good", 'ru': "✅ Навсегда"},
+                'days': {'en': "✅ {days} days", 'ru': "✅ {days} дней"},
+                'reject': {'en': "❌ Decline", 'ru': "❌ Отклонить"},
+            },
+            'approved_forever': {'en': "✅ {member} may write in <b>{chat_name}</b> for good.",
+                                 'ru': "✅ {member}: доступ к <b>{chat_name}</b> открыт навсегда."},
+            'approved_until': {'en': "✅ {member} may write in <b>{chat_name}</b> until {date}.",
+                               'ru': "✅ {member}: доступ к <b>{chat_name}</b> открыт до {date}."},
+            'rejected': {'en': "❌ The request of {member} to <b>{chat_name}</b> is declined.",
+                         'ru': "❌ Заявка {member} в <b>{chat_name}</b> отклонена."},
+            'decided': {'en': "This request has been answered already.", 'ru': "На эту заявку уже ответили."},
+            'approved_toast': {'en': "Access given", 'ru': "Доступ открыт"},
+            'rejected_toast': {'en': "Declined", 'ru': "Отклонено"},
+        },
+    },
     # /usersCount (also /stats) for a group owner, HTML
     'stats': {
         'no_groups': {
@@ -587,11 +844,15 @@ owner_tools_messages = {
         # HTML, under the list of tariffs
         'features': {
             'en':
-                "<b>Every tariff</b>: a whitelist, alerts with \"Allow\" in one tap, commands in the group.\n"
-                "<b>Paid tariffs</b> add access for 7 or 30 days and posting limits (1 a day, 3 a week…).",
+                "<b>Every tariff</b>: a whitelist, alerts with \"Allow\" in one tap, commands in the group, "
+                "requests for access through the bot.\n"
+                "<b>Paid tariffs</b> add access for 7 or 30 days, posting limits (1 a day, 3 a week…) and paid "
+                "entry: newcomers pay you for a term.",
             'ru':
-                "<b>На любом тарифе</b>: белый список, оповещения с \"Разрешить\" в одно нажатие, команды в группе.\n"
-                "<b>Платные тарифы</b> добавляют доступ на 7 или 30 дней и лимит постов (1 в день, 3 в неделю…)."
+                "<b>На любом тарифе</b>: белый список, оповещения с \"Разрешить\" в одно нажатие, команды в группе, "
+                "заявки на доступ через бота.\n"
+                "<b>Платные тарифы</b> добавляют доступ на 7 или 30 дней, лимит постов (1 в день, 3 в неделю…) и "
+                "платный вход: новые платят вам за срок."
         },
     },
 }

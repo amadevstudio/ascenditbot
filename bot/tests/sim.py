@@ -7,7 +7,7 @@ makes the bot do. The same bench as the tests (real dispatcher, test Postgres an
 Actions, one per -c or per line of a file (# starts a comment):
 
     user ID [LANG] [NICK]   act as this user from now on (default: 501 ru owner)
-    send TEXT               a message in private to the bot
+    send TEXT               a message in private to the bot (\\n for a new line)
     tap TEXT | tap R,C      a button of the latest message with buttons in private (by text or position)
     data JSON               a button with this callback data
     group ID                a group in Telegram: the current user its creator, the bot an admin
@@ -104,11 +104,11 @@ class Sim:
 
     # Actions
 
-    def _latest_buttons(self) -> list[list]:
+    def _latest_buttons(self) -> tuple[int, list[list]]:
         for message_id in sorted(self.screens.get(self.user['id'], {}), reverse=True):
             buttons = self.screens[self.user['id']][message_id]['buttons']
             if buttons:
-                return buttons
+                return message_id, buttons
         raise ValueError('no message with buttons in this chat')
 
     def _group_chat(self, chat_id: int) -> dict:
@@ -129,9 +129,9 @@ class Sim:
             self.user = person(int(parts[0]), parts[2] if len(parts) > 2 else None,
                                parts[1] if len(parts) > 1 else 'en')
         elif action == 'send':
-            await bench.private_message(self.user, rest)
+            await bench.private_message(self.user, rest.replace('\\n', '\n'))
         elif action == 'tap':
-            buttons = self._latest_buttons()
+            message_id, buttons = self._latest_buttons()
             if ',' in rest and rest.replace(',', '').strip().isdigit():
                 r, c = (int(x) for x in rest.split(','))
                 button = buttons[r][c]
@@ -144,7 +144,7 @@ class Sim:
             if button.url:
                 print(f'  (a link: {button.url})')
             else:
-                await bench.tap(self.user, button.callback_data)
+                await bench.tap(self.user, button.callback_data, message_id=message_id)
         elif action == 'data':
             await bench.tap(self.user, rest)
         elif action in ('group', 'connect'):

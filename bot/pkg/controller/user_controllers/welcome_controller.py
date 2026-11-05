@@ -22,6 +22,13 @@ async def start(params: ControllerParams):
         if chat_id.isdigit() and await chats_controller.open_chat_page(message, int(chat_id), params['language_code']):
             return False
 
+        # The way in through the bot (j_<group id>): the group's page for someone who wants to write there
+        join_id = str(initial_data.get('j') or '')
+        if join_id.isdigit():
+            from pkg.controller.routers.access_router import open_join_page
+            await open_join_page(message, int(join_id), params['language_code'])
+            return False
+
         await message.reply('👋')
 
     markup = [[{

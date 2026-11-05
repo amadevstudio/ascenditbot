@@ -195,7 +195,7 @@ class Bench:
 
         await self.sql("""
             TRUNCATE users, moderated_chats, allowed_users, user_moderated_chat_connections, user_tariff_connections,
-                user_balances, payments_history, moderated_chat_statistics
+                user_balances, payments_history, moderated_chat_statistics, access_requests
             RESTART IDENTITY CASCADE
         """)
         Storage().connection.flushdb()

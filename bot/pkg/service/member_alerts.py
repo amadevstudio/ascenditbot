@@ -109,6 +109,9 @@ class MemberAlerts:
         that letting them in is one tap."""
         if not chat_data.get('owner_alerts', True):
             return
+        # The group lets people in through the bot: they ask themselves, the managers get their requests
+        if (chat_data.get('access_mode') or 'off') != 'off':
+            return
         sender = message.from_user
         if not MemberAlerts._rate_allows(chat_data['id'], sender.id):
             return
@@ -150,4 +153,7 @@ class MemberAlerts:
                         ['alerts', 'expiry', key], language_code, member=member,
                         chat_name=html.escape(entry['chat_name'] or ''), date=format_date(entry['expires_at']))
                     await _send(user, text, access_buttons(token, entry['chat_id'], language_code, renew=True))
+                # The member too, with a way to extend, when the group lets people in through the bot
+                from pkg.service.access_messages import remind_member
+                await remind_member(dict(entry), key)
                 await allowed_user_repository.mark_expiry_notice(entry['id'], stage)
