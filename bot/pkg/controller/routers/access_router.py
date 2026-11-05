@@ -63,6 +63,12 @@ async def member_page(chat_id: int, user, language_code: str | None) -> tuple[st
     mode = access.effective_mode(chat, await Chat.owner_tariff_id(chat['id']))
     if mode == 'off':
         return _text(['member', 'off'], language_code), None
+    # The group's own admins write without access, unless the owner checks them too
+    if chat.get('allow_administrators', True) and await Chat.is_administrator(int(chat['service_id']), user.id):
+        return _text(['member', 'admin'], language_code, chat_name=html.escape(await Chat.name_of(chat))), \
+            InlineKeyboardMarkup(inline_keyboard=[[_button(_text(['member', 'buttons', 'settings'], language_code),
+                                                           url=f"https://t.me/{constants.bot_nickname}"
+                                                               f"?start=chat_{chat['id']}")]])
 
     current = await access.current_access(chat['id'], str(user.id), user.username)
     lines = [_text(['member', 'title'], language_code, chat_name=html.escape(await Chat.name_of(chat)))]

@@ -18,6 +18,8 @@ from pkg.service.tariff import Tariff
 from project import constants
 
 MODES = ('off', 'request', 'paid')
+# What the owner picks on the "Outsiders" page: quietly and "tell me" are the mode off, alerts off or on
+OUTSIDER_MODES = ('silent', 'alert', 'request', 'paid')
 MAX_PLANS = 5
 MAX_DAYS = 3650
 MAX_AMOUNT = Decimal('10000000')
@@ -212,6 +214,14 @@ def payment_url(chat: dict) -> str | None:
     """The owner's payment link, when what they gave is one."""
     payment = (chat.get('access_payment') or '').strip()
     return payment if re.fullmatch(r'https?://\S+', payment) else None
+
+
+def outsiders_mode(chat: dict) -> str:
+    """silent, alert, request or paid: what happens to someone off the whitelist who writes."""
+    mode = chat.get('access_mode') or 'off'
+    if mode != 'off':
+        return mode
+    return 'alert' if chat.get('owner_alerts', True) else 'silent'
 
 
 # Granting

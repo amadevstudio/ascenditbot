@@ -12,19 +12,22 @@ import html
 import aiogram
 from aiogram import F, Router
 from aiogram.filters import BaseFilter, Command, CommandObject
-from aiogram.types import ChatMemberUpdated, EphemeralMessageParameters, Message
+from aiogram.types import ChatMemberUpdated, EphemeralMessageParameters, InlineKeyboardButton, \
+    InlineKeyboardMarkup, Message
 
 from framework.system import telegram_exceptions, telegram_types
 from framework.system.bot_setup import bot
 from lib.language import localization
 from pkg.controller.routers.quick_actions_router import lift_restriction
 from pkg.service.allowed_user import AllowedUser, full_name, parse_member_words, parse_term
+from pkg.service import group_connect
 from pkg.service.chat import Chat
 from pkg.service.member_alerts import format_date
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
 from pkg.system.logger import logger
 from project import constants
+from project.i18n_owner_tools import ADD_TO_GROUP_URL
 
 GROUP_TYPES = (aiogram.enums.chat_type.ChatType.GROUP, aiogram.enums.chat_type.ChatType.SUPERGROUP)
 _TELEGRAM_SERVICE_ID = 777000
@@ -89,14 +92,7 @@ async def _open_page(user: telegram_types.User, chat_id: int) -> bool:
 
 async def _connect(chat_service_id: int, user: telegram_types.User) -> dict:
     """Connects the group for this user; {'error': ...} when they cannot (not its owner, not registered)."""
-    if await User.find_by_service_id(user.id) is None:
-        return {'error': 'not_registered'}
-    result = await Chat.add(chat_service_id, user.id)
-    if 'error' in result and result['error'] != 'connection_exists':
-        return result
-    connection = result.get('connection', result)
-    await Chat.update_names(user.id)
-    return {'moderated_chat_id': connection['moderated_chat_id']}
+    return await group_connect.connect(chat_service_id, user.id)
 
 
 def _targets(message: Message, words: list[str]) -> tuple[list[dict], list[str]]:
@@ -213,18 +209,25 @@ def group_router() -> Router:
                     ['group', 'auto_connect_failed'], language_code, chat_name=html.escape(event.chat.title or ''),
                     reason=localization.get_message(['access', 'chat', 'errors', connected['error']], language_code)))
                 return
+            # "Select a group" also sends chat_shared: whichever comes first shows the group
+            if not group_connect.first_to_announce(connected['moderated_chat_id'], user.id):
+                return
             await _dm(user, localization.get_message(
                 ['group', 'auto_connected'], language_code, chat_name=html.escape(event.chat.title or '')))
             await _open_page(user, connected['moderated_chat_id'])
         elif new.status in ('member', 'administrator'):
+            # Added without the right to delete: one tap opens Telegram's screen with the rights ticked
             await _dm(user, localization.get_message(
-                ['group', 'needs_admin'], language_code, chat_name=html.escape(event.chat.title or '')))
+                ['group', 'needs_admin'], language_code, chat_name=html.escape(event.chat.title or '')),
+                InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
+                    text=localization.get_message(['group', 'give_rights_button'], language_code),
+                    url=ADD_TO_GROUP_URL)]]))
 
     return router
 
 
-async def _dm(user: telegram_types.User, text: str):
+async def _dm(user: telegram_types.User, text: str, markup: InlineKeyboardMarkup | None = None):
     try:
-        await bot.send_message(user.id, text, parse_mode='HTML', disable_web_page_preview=True)
+        await bot.send_message(user.id, text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=markup)
     except (telegram_exceptions.TelegramBadRequest, telegram_exceptions.TelegramForbiddenError) as e:
         logger.warning('Cannot write to the user', user.id, e)
