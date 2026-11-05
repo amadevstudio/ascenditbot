@@ -40,6 +40,7 @@ class ModeratedChatInterface(TypedDict, total=False):
     access_payment: str | None
     access_secret: str | None
     access_provider_label: str | None
+    access_hook_key: str | None
 
 
 class UserModeratedChatConnectionInterface(TypedDict, total=False):

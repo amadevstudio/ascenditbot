@@ -158,14 +158,26 @@ def access_router() -> Router:
 
         chat_name = html.escape(await Chat.name_of(chat))
         plan_text = access.plan_text(chosen, language_code)
-        if access_payments.provider_of(chat) is not None:
+        provider = access_payments.provider_of(chat)
+        if provider is not None and provider.NAME == 'tribute':
+            # Tribute: the owner's product for the term; Tribute tells the bot about the purchase
+            text = _text(['member', 'plan_tribute'], language_code, chat_name=chat_name, plan=plan_text)
+            text += "\n\n" + _text(['member', 'plan_auto_note'], language_code)
+            rows = [[_button(_text(['member', 'buttons', 'pay'], language_code, amount=access.format_amount(
+                chosen['amount'], chosen['currency'])), url=chosen['url'])]] if chosen.get('url') else []
+            rows.append([_button(_text(['member', 'buttons', 'back'], language_code), {'tp': 'jo', 'c': chat['id']})])
+            await _edit(call, text, InlineKeyboardMarkup(inline_keyboard=rows))
+            await call.answer()
+            return
+        if provider is not None:
             started = await access_payments.start({**chat, 'name': await Chat.name_of(chat)}, call.from_user,
                                                   language_code, chosen)
             if 'error' in started:
                 await call.answer(_text(['member', 'toasts', 'provider_error' if started['error'] == 'provider'
                                          else 'unavailable'], language_code), show_alert=True)
                 return
-            text = _text(['member', 'plan_auto'], language_code, chat_name=chat_name, plan=plan_text)
+            text = _text(['member', 'plan_auto'], language_code, chat_name=chat_name, plan=plan_text,
+                         provider=_text(['providers_member', provider.NAME], language_code))
             text += "\n\n" + _text(['member', 'plan_auto_note'], language_code)
             await _edit(call, text, InlineKeyboardMarkup(
                 inline_keyboard=_invoice_rows(chat['id'], started['request'], language_code)))

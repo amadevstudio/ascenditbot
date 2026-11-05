@@ -259,7 +259,7 @@ async def update_settings(chat_id: int, settings: dict) -> ModeratedChatInterfac
     """Changes the group's own settings (who may write, the posting limit, the owner's alerts, the way in)."""
     allowed = {'everyone_can_write', 'post_limit', 'post_limit_period', 'owner_alerts',
                'access_mode', 'access_terms', 'access_plans', 'access_provider', 'access_payment',
-               'access_secret', 'access_provider_label'}
+               'access_secret', 'access_provider_label', 'access_hook_key'}
     assert set(settings) <= allowed, settings
     return await databaseExecutor.run(db.update_model, 'moderated_chats', {'id': chat_id, **settings})
 
@@ -315,3 +315,10 @@ async def neighbours(chat_id: int, user_service_id: str) -> tuple[int | None, in
         return None, None
     index = ids.index(chat_id)
     return ids[index - 1], ids[(index + 1) % len(ids)]
+
+
+async def by_hook_key(provider: str, hook_key: str) -> list[ModeratedChatInterface]:
+    """The groups whose provider calls the bot at this address (pkg/service/access_providers.hook_key)."""
+    return await databaseExecutor.run(db.fetchall, """
+        SELECT * FROM moderated_chats WHERE access_provider = %s AND access_hook_key = %s
+    """, (provider, hook_key)) or []
