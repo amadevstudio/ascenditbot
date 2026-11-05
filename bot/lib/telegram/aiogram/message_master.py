@@ -223,7 +223,9 @@ async def message_master(
             continue
 
         message_structure = message_structures[i]
-        if previous_message_structure['type'] != message_structure['type']:
+        # A keyboard under the input (Select a group, Pick from contacts) cannot be put on a message by editing
+        if previous_message_structure['type'] != message_structure['type'] \
+                or message_structure.get('markup_type') == 'reply':
             messages_to_delete.append(previous_message_structure)
         else:
             messages_to_edit[previous_message_structure['id']] = message_structure

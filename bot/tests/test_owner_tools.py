@@ -639,3 +639,17 @@ async def test_select_a_group_chat_shared_first(bench: Bench):
     texts = bench.telegram.texts_to(OWNER['id'])
     assert len([text for text in texts if 'подключена' in text]) == 1, texts
     assert len([text for text in texts if 'Модерация включена' in text]) == 1, texts
+
+
+async def test_add_group_from_the_menu_button(bench: Bench):
+    """"Add a group" in the menu (a button, so the menu message is edited): the keyboard under the input comes
+    as a new message, it cannot be edited in"""
+    await bench.owner(OWNER)
+    await bench.private_message(OWNER, '/menu')
+    menu = [call for call in bench.telegram.sent_to(OWNER['id']) if _buttons(call)][-1]
+    add = next(b for b in _buttons(menu) if 'Добавить группу' in b['text'])
+    bench.telegram.calls.clear()
+    await bench.tap(OWNER, json.dumps(add['data']))
+    keyboards = [call for call in bench.telegram.sent_to(OWNER['id'])
+                 if getattr(call.reply_markup, 'keyboard', None)]
+    assert len(keyboards) == 1 and keyboards[0].reply_markup.keyboard[0][0].request_chat, bench.telegram.calls
