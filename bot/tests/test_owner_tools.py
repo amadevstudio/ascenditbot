@@ -449,6 +449,8 @@ async def test_users_count_for_a_group_owner(bench: Bench):
     assert 'сегодня 5, за 7 дней 12, за 30 дней 112' in stats, stats
     assert f'Group {GROUP}' in stats or 'Модерация включена' in stats, stats
     assert 'Пользователи' not in stats and 'Деньги' not in stats, stats
+    # The summary in sight, the groups behind a tap
+    assert stats.index('за 30 дней 112') < stats.index('<blockquote expandable><b>'), stats
 
 
 async def test_users_count_extended_for_the_bot_owner(bench: Bench):
@@ -459,7 +461,8 @@ async def test_users_count_extended_for_the_bot_owner(bench: Bench):
     await bench.private_message(OWNER, '/usersCount')
     [stats] = bench.telegram.texts_to(OWNER['id'])
     assert 'Всего: 1' in stats and 'Модерируются: 1' in stats and 'Деньги' in stats, stats
-    assert stats.index('Деньги') < stats.index('Ваши группы: 1'), stats
+    assert stats.index('Деньги') < stats.index('<blockquote expandable>📊 <b>Ваши группы: 1'), stats
+    assert stats.endswith('</blockquote>') and stats.count('<blockquote') == 1, stats
 
 
 async def test_command_menus(bench: Bench):

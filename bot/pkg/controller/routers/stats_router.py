@@ -62,7 +62,14 @@ def _number(value: int | None) -> str:
     return '–' if value is None else f'{value:,}'.replace(',', ' ')
 
 
-async def format_owner_stats(bot, user_id: int | None, language_code: str) -> str:
+def _collapsed(lines: list[str]) -> str:
+    """An expandable quote: one line shown, the rest behind a tap (quotes cannot be nested)."""
+    return "<blockquote expandable>" + "\n".join(lines) + "</blockquote>"
+
+
+async def format_owner_stats(bot, user_id: int | None, language_code: str, collapse_all: bool = False) -> str:
+    """The summary of the user's groups, then each group in a collapsed quote; with `collapse_all` (under the
+    bot's numbers for its owner) the summary goes into the quote too."""
     def text(key: str, **kwargs) -> str:
         return localization.get_message(['stats', key], language_code, **kwargs)
 
@@ -72,17 +79,18 @@ async def format_owner_stats(bot, user_id: int | None, language_code: str) -> st
 
     counts = await asyncio.gather(*(_member_count(bot, group['service_id']) for group in groups))
     on = sum(1 for group in groups if group['active'] and not group['disabled'])
-    lines = [
+    summary = [
         text('title', count=len(groups), on=on, off=len(groups) - on),
         text('members', count=_number(sum(known) if (known := [c for c in counts if c is not None]) else None)),
         text('whitelist', count=sum(g['whitelisted'] for g in groups), timed=sum(g['timed'] for g in groups)),
         text('removed', day=sum(g['removed_day'] for g in groups), week=sum(g['removed_week'] for g in groups),
              month=sum(g['removed_month'] for g in groups)),
     ]
+    details = []
     for group, count in list(zip(groups, counts))[:GROUPS_SHOWN]:
         state = 'disabled' if group['disabled'] else 'paused' if not group['active'] else 'on'
-        lines += [
-            "",
+        details += [
+            *([""] if details else []),
             f"<b>{html.escape(await Chat.name_of(group) or str(group['service_id']))}</b>",
             localization.get_message(['chat', 'show', 'state', state], language_code),
             text('group_members', count=_number(count)) + " · " + text(
@@ -90,8 +98,10 @@ async def format_owner_stats(bot, user_id: int | None, language_code: str) -> st
             text('removed', day=group['removed_day'], week=group['removed_week'], month=group['removed_month']),
         ]
     if len(groups) > GROUPS_SHOWN:
-        lines += ["", text('more', count=len(groups) - GROUPS_SHOWN)]
-    return "\n".join(lines)
+        details += ["", text('more', count=len(groups) - GROUPS_SHOWN)]
+    if collapse_all:
+        return _collapsed(summary + [""] + details)
+    return "\n".join(summary) + "\n" + _collapsed(details)
 
 
 def stats_router() -> Router:
@@ -103,9 +113,11 @@ def stats_router() -> Router:
         user = await User.find_by_service_id(message.from_user.id) if message.from_user else None
         language_code = (user or {}).get('language_code') or (
             message.from_user.language_code if message.from_user else None) or 'en'
-        owner_text = await format_owner_stats(message.bot, user['id'] if user else None, language_code)
-        if user is not None and user['is_admin']:
-            # The extended mode: the whole bot first, then the owner's own groups
+        is_owner = user is not None and user['is_admin']
+        owner_text = await format_owner_stats(
+            message.bot, user['id'] if user else None, language_code, collapse_all=is_owner)
+        if is_owner:
+            # The extended mode: the whole bot first, then the owner's own groups, collapsed
             text = format_stats(await stats_repository.collect()) + "\n\n" + owner_text
         else:
             text = owner_text
