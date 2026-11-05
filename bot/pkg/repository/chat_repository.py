@@ -170,16 +170,6 @@ async def user_chats_by_service_id(
         request_params)
 
 
-async def is_active_by_service_id(chat_service_id: str) -> bool:
-    result = await databaseExecutor.run(db.fetchone, """
-        SELECT active FROM moderated_chats WHERE service_id = %s
-    """, (chat_service_id,))
-    if result is None:
-        return False
-
-    return result['active']
-
-
 async def switch_active(chat_id: int) -> bool:
     return (await databaseExecutor.run(db.execute_single_model, """
         UPDATE moderated_chats SET active = NOT active WHERE id = %s
@@ -208,18 +198,14 @@ async def delete(chat_id: int) -> int | None:
     return None if deleted_chat is None else deleted_chat['id']
 
 
-async def add_to_whitelist(chat_id: int, user_nickname: str) -> ModeratedChatInterface | None:
-    allowed_user = {'moderated_chat_id': chat_id, 'nickname': user_nickname}
-    return await databaseExecutor.run(db.insert_model,
-        'allowed_users', allowed_user, conflict_unique_fields=['moderated_chat_id', 'nickname'])
-
-
 async def chat_whitelist_count(chat_id: int, search_query: str | None = None) -> int | None:
     request_params = (chat_id,)
 
     if search_query is not None and search_query != "":
-        search_query_sql = " AND LOWER(nickname) LIKE LOWER('%%' || %s || '%%')"
-        request_params += (search_query,)
+        search_query_sql = (
+            " AND (LOWER(nickname) LIKE LOWER('%%' || %s || '%%')"
+            " OR LOWER(display_name) LIKE LOWER('%%' || %s || '%%'))")
+        request_params += (search_query, search_query)
     else:
         search_query_sql = ""
 
@@ -241,13 +227,15 @@ async def chat_whitelist(
         case 'created_at':
             order_by = "created_at"
         case 'nickname':
-            order_by = "nickname, created_at"
+            order_by = "LOWER(COALESCE(nickname, display_name)), created_at"
         case _:
-            order_by = "nickname, created_at"
+            order_by = "LOWER(COALESCE(nickname, display_name)), created_at"
 
     if search_query is not None and search_query != "":
-        search_query_sql = " AND LOWER(nickname) LIKE LOWER('%%' || %s || '%%')"
-        request_params += (search_query,)
+        search_query_sql = (
+            " AND (LOWER(nickname) LIKE LOWER('%%' || %s || '%%')"
+            " OR LOWER(display_name) LIKE LOWER('%%' || %s || '%%'))")
+        request_params += (search_query, search_query)
     else:
         search_query_sql = ""
 
@@ -265,3 +253,63 @@ async def chat_whitelist(
         ORDER BY {order_field} {limit_sql} OFFSET %s
     """.format(search_query_sql=search_query_sql, order_field=order_by, limit_sql=limit_sql),
         request_params)
+
+
+async def update_settings(chat_id: int, settings: dict) -> ModeratedChatInterface | None:
+    """Changes the group's own settings (who may write, the posting limit, the owner's alerts)."""
+    allowed = {'everyone_can_write', 'post_limit', 'post_limit_period', 'owner_alerts'}
+    assert set(settings) <= allowed, settings
+    return await databaseExecutor.run(db.update_model, 'moderated_chats', {'id': chat_id, **settings})
+
+
+async def count_removed(chat_id: int):
+    await databaseExecutor.run(db.execute_single_model, """
+        INSERT INTO moderated_chat_statistics (moderated_chat_id, day, deleted_messages_count, created_at, updated_at)
+        VALUES (%s, CURRENT_DATE, 1, LOCALTIMESTAMP, LOCALTIMESTAMP)
+        ON CONFLICT (moderated_chat_id, day) DO UPDATE
+        SET deleted_messages_count = moderated_chat_statistics.deleted_messages_count + 1,
+            updated_at = LOCALTIMESTAMP
+    """, (chat_id,))
+
+
+async def removed_count(chat_id: int, days: int) -> int:
+    row = await databaseExecutor.run(db.fetchone, """
+        SELECT COALESCE(SUM(deleted_messages_count), 0) AS removed FROM moderated_chat_statistics
+        WHERE moderated_chat_id = %s AND day > CURRENT_DATE - %s::int
+    """, (chat_id, days))
+    return int(row['removed']) if row is not None else 0
+
+
+async def managers(chat_id: int) -> list[UserInterface]:
+    """The bot's users connected to the group (its owner first): who gets the group's alerts."""
+    return await databaseExecutor.run(db.fetchall, """
+        SELECT u.* FROM users AS u
+        INNER JOIN user_moderated_chat_connections AS umcc ON umcc.user_id = u.id
+        WHERE umcc.moderated_chat_id = %s
+        ORDER BY umcc.owner DESC, umcc.id
+    """, (chat_id,)) or []
+
+
+async def is_manager(chat_id: int, user_service_id: str) -> bool:
+    row = await databaseExecutor.run(db.fetchone, """
+        SELECT 1 AS yes FROM user_moderated_chat_connections AS umcc
+        INNER JOIN users AS u ON u.id = umcc.user_id
+        WHERE umcc.moderated_chat_id = %s AND u.service_id = %s
+    """, (chat_id, user_service_id))
+    return row is not None
+
+
+async def neighbours(chat_id: int, user_service_id: str) -> tuple[int | None, int | None]:
+    """The user's groups before and after this one, in the order of their list (by name), wrapping around."""
+    rows = await databaseExecutor.run(db.fetchall, """
+        SELECT mc.id FROM moderated_chats AS mc
+        INNER JOIN user_moderated_chat_connections AS umcc ON umcc.moderated_chat_id = mc.id
+        INNER JOIN users AS u ON u.id = umcc.user_id
+        WHERE u.service_id = %s
+        ORDER BY mc.name, mc.created_at
+    """, (user_service_id,)) or []
+    ids = [row['id'] for row in rows]
+    if chat_id not in ids or len(ids) < 2:
+        return None, None
+    index = ids.index(chat_id)
+    return ids[index - 1], ids[(index + 1) % len(ids)]

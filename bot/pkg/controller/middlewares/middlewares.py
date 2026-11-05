@@ -50,9 +50,11 @@ class ReplyMarkupCleaner(BaseMiddleware):
         curr = UserStorage.curr_state(message.chat.id)
         may_have_under_keyboard = curr is None or RouteMap.get_route_prop(curr, 'have_under_keyboard') is True
 
+        # Leaving a page with a keyboard under the input (Select group, Pick from contacts), Back included
+        leaving_keyboard_page = curr is not None and RouteMap.get_route_prop(curr, 'have_under_keyboard') is True
         if may_have_under_keyboard and (
                 is_command or UserStorage.should_resend(message.chat.id)
-                or (is_call and not go_back_action)):
+                or (is_call and (not go_back_action or leaving_keyboard_page))):
             remover = await message.answer(
                 text=localization.get_emoji('hourglass'), reply_markup=types.ReplyKeyboardRemove())
             await remover.delete()

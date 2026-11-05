@@ -1,4 +1,5 @@
 from project import constants
+from project.i18n_owner_tools import merge, owner_tools_messages
 
 emoji_codes = {
     'new': '🆕',  # \U0001F195
@@ -118,18 +119,6 @@ routed_messages = {
     },
 
     'welcome': {
-        'introduction': {
-            'en':
-                "Welcome! This bot allows you to create whitelists for chats, and will learn many more useful things "
-                "in the future.\n\n"
-                "Save time with @{bot_name}!"
-                .format(bot_name=constants.bot_nickname),
-            'ru':
-                "Добро пожаловать! Этот бот позволяет создавать белые списки для групп, а в будущем научится ещё "
-                "множеству полезных вещей.\n\n"
-                "Экономьте время с помощью @{bot_name}!"
-                .format(bot_name=constants.bot_nickname)
-        },
         'lets_begin': {
             'en': "Let's start!",
             'ru': "Начнём!"
@@ -144,26 +133,6 @@ routed_messages = {
         }
     },
     'help': {
-        'text': {
-            'en':
-                f"@{constants.bot_nickname}\n\n"
-                "This bot allows you to create whitelists for chats,"
-                " and will learn many more useful things in the future\n\n"
-                "In order to start, you must be the owner of the chat."
-                "To add her, open /add_chat and follow the instructions."
-                " Added chats are available in /my_chats where you can manage it and users\n\n"
-                "In order to use all the features, you must have a subscription."
-                " All subscription information is on /subscription",
-            'ru':
-                f"@{constants.bot_nickname}\n\n"
-                "Этот бот позволяет создавать белые списки для групп,"
-                " а в будущем научится ещё множеству полезных вещей\n\n"
-                "Для того, чтобы начать, вы должны быть владельцем группы."
-                " Чтобы добавить её, откройте /add_chat и следуйте инструкциям."
-                " Добавленные группы доступны в /my_chats, где вы можете управлять ей и пользователями\n\n"
-                "Для того, чтобы использовать все возможности, у вас должна быть подписка."
-                " Вся информация по подписке находится на /subscription"
-        },
         'privacy': {
             "ru": "Мы храним некоторые ваши данные для предоставления сервиса: telegram id, ваше имя, никнейм, "
                   "язык, а также все указанные в боте данные, например, список ваших чатов и белый список, "
@@ -259,47 +228,10 @@ routed_messages = {
         }
     },
     'add_chat': {
-        'instruction': {
-            'en':
-                "To add a chat to a bot, follow these simple steps:\n\n"
-                "1. Make the bot an administrator of your chat"
-                "with the ability to edit messages and view other administrators\n\n"
-                "2. While this message is active (the last one in the chat),"
-                " click on the button below and select a chat.\n"
-                "Another way: send the chat ID or just send a message to the bot from it,"
-                f" written on behalf of the chat (anonymous administrator)\n\n"
-                f"<a href=\"{links['instructions']['add_chat']['en']}\">Open detailed instructions</a>",
-            'ru':
-                "Чтобы добавить группу в бота, следуйте простым шагам:\n\n"
-                "1. Сделайте бота администратором вашей группы"
-                " с возможностью редактирования сообщений и просмотром других администраторов\n\n"
-                "2. Пока это сообщение активно (последнее в чате) нажмите на кнопку снизу и выберите группу.\n"
-                "Другой способ: пришлите идентификатор группы или просто перешлите боту сообщение из неё,"
-                f" написанное от лица группы (анонимный администратор)\n\n"
-                f"<a href=\"{links['instructions']['add_chat']['ru']}\">Открыть подробную инструкцию</a>"
-        },
-        'add_chat_reply_button_text': {
-            'en': emoji_codes.get('down_arrow', '') * 3 + " Or click on the button below:",
-            'ru': emoji_codes.get('down_arrow', '') * 3 + " Или нажмите на кнопку ниже:"
-        },
-        'add_chat_reply_button': {
-            'en': f"{emoji_codes.get('heavy_check_mark', '')} Select chat {emoji_codes.get('magic_wand', '')}",
-            'ru': f"{emoji_codes.get('heavy_check_mark', '')} Выбрать группу {emoji_codes.get('magic_wand', '')}"
-        },
-        'success': {
-            'en': "Chat {chat_name} has been added successfully!\n\nPlease add another one or go to settings.",
-            'ru': "Группа {chat_name} была успешно добавлена!\n\nДобавьте ещё одну или перейдите к настройкам."
-        },
         'subscription_limit_violation': {
             'en': "Your subscription level does not allow you to add more chats, read more /subscription",
             'ru': "Ваш уровень подписки не позволяет добавить больше чатов, подробнее /subscription"
         },
-        'errors': {
-            'connection_exists': {
-                'en': "chat already added. Add another one or go to settings.",
-                'ru': "Группа уже добавлена. Добавьте другую или перейдите к настройкам."
-            },
-        }
     },
     'my_chats': {
         'list': {
@@ -342,36 +274,6 @@ routed_messages = {
             'text': {
                 'en': emoji_codes.get('chat', '') + " {chat_name}",
                 'ru': emoji_codes.get('chat', '') + " {chat_name}"
-            },
-            'disabled': {
-                'en':
-                    emoji_codes.get('warning_sign', '')
-                    + "chat disabled, please improve your conditions. More details on the page /subscription",
-                'ru':
-                    emoji_codes.get('warning_sign', '')
-                    + " Группа отключена, улучшите ваши условия. Подробнее на странице /subscription"
-            },
-            'whitelist_button': {
-                'en': "List of allowed users",
-                'ru': "Белый список пользователей"
-            },
-            'add_to_whitelist_button': {
-                'en': "Add to allowed users",
-                'ru': "Добавить в белый список"
-            },
-            'restriction_duration_button': {
-                'en': "Restriction: {duration} min",
-                'ru': "Ограничение: {duration} мин"
-            },
-            'active_button': {
-                'active': {
-                    'en': emoji_codes.get('heavy_check_mark', '') + " Chat is connected",
-                    'ru': emoji_codes.get('heavy_check_mark', '') + " Чат подключён"
-                },
-                'inactive': {
-                    'en': emoji_codes.get('cross_mark', '') + " Chat disabled",
-                    'ru': emoji_codes.get('cross_mark', '') + " Чат отключён"
-                }
             },
             'delete_button': {
                 'initial': {
@@ -474,26 +376,6 @@ routed_messages = {
                 }
             }
         },
-        'add_to_whitelist': {
-            'text': {
-                'en':
-                    emoji_codes.get('chat', '') +
-                    " To add users, send their nicknames separated by a space, for example\n"
-                    "<code>mike christie</code>",
-                'ru':
-                    emoji_codes.get('chat', '') +
-                    " Чтобы добавить пользователей, пришлите их никнеймы через пробел, например\n"
-                    "<code>mike christie</code>"
-            },
-            'success': {
-                'en': "Nickname {nickname} saved! Add another one or go back",
-                'ru': "Никнейм {nickname} сохранён! Добавьте ещё или вернитесь назад"
-            },
-            'success_plural': {
-                'en': "Nicknames are saved! Add another one or go back",
-                'ru': "Никнеймы сохранены! Добавьте ещё или вернитесь назад"
-            }
-        },
         'errors': {
             'not_found': {
                 'en': "Chat not found, try adding it to the bot again!",
@@ -539,10 +421,6 @@ routed_messages = {
     },
     'allowed_user': {
         'show': {
-            'text': {
-                'en': emoji_codes.get('chat', '') + " {chat_name}\nUser: t.me/{nickname}",
-                'ru': emoji_codes.get('chat', '') + " {chat_name}\nПользователь: t.me/{nickname}"
-            },
             'active_button': {
                 'active': {
                     'en': emoji_codes.get('heavy_check_mark', '') + " Can write",
@@ -559,7 +437,7 @@ routed_messages = {
                     'ru': emoji_codes.get('wastebasket') + " Удалить из белого списка"
                 },
                 'deleting': {
-                    'en': emoji_codes.get('warning sign', '') + " Confirm deletion?",
+                    'en': emoji_codes.get('warning_sign', '') + " Confirm deletion?",
                     'ru': emoji_codes.get('warning_sign', '') + " Подтвердить удаление?"
                 }
             }
@@ -963,3 +841,6 @@ routed_messages = {
         }
     }
 }
+
+# The texts of the owner tools replace and extend the ones above
+merge(routed_messages, owner_tools_messages)

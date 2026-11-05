@@ -134,7 +134,7 @@ class FakeTelegram(BaseSession):
                 return TelegramBadRequest(method, 'Bad Request: chat not found')
             return {'accent_color_id': 0, 'max_reaction_count': 11, 'accepted_gift_types': {
                 'unlimited_gifts': False, 'limited_gifts': False, 'unique_gifts': False,
-                'premium_subscription': False}, **self.chats[chat_id]}
+                'premium_subscription': False, 'gifts_from_channels': False}, **self.chats[chat_id]}
 
         if method.__returning__ is bool:
             return True
@@ -239,10 +239,10 @@ class Bench:
         return (await self.sql('SELECT * FROM moderated_chats WHERE id = $1', connection['moderated_chat_id']))[0]
 
     async def whitelist(self, chat: dict, *nicknames: str):
-        from pkg.service.chat import Chat
+        from pkg.service.allowed_user import AllowedUser
 
         for nickname in nicknames:
-            await Chat.add_to_whitelist(chat['id'], nickname)
+            await AllowedUser.allow(chat['id'], nickname=nickname)
 
     # Updates in: what the dispatcher does with them
 

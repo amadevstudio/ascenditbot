@@ -16,6 +16,15 @@ from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 
 
+def user_language(call: telegram_types.CallbackQuery | None, message: telegram_types.Message) -> str | None:
+    """The language of the person acting: on a button the message is the bot's own, so its sender is the bot."""
+    if call is not None and call.from_user is not None:
+        return call.from_user.language_code
+    if message.chat.type == 'private' and message.from_user is not None and message.from_user.is_bot:
+        return None
+    return message.from_user.language_code if message.from_user is not None else None
+
+
 def go_back_inline_markup(language_code: str, button_text: Literal['back', 'cancel'] = 'back') \
         -> list[list[InlineButtonData]]:
     return[[go_back_inline_button(language_code, button_text)]]
@@ -108,7 +117,7 @@ async def notify(
     message_structures = [{
         'type': 'text',
         'text': text,
-        'reply_markup': go_back_inline_markup(message.from_user.language_code, button_text=button_text)
+        'reply_markup': go_back_inline_markup(user_language(call, message), button_text=button_text)
     }]
     await message_sender(message.chat.id, resending=resending, message_structures=message_structures)
 

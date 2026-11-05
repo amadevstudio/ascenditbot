@@ -4,7 +4,6 @@ from typing import TypedDict, List, Literal
 
 from framework.system import telegram_types, telegram_exceptions
 
-import pkg.repository.allowed_user_repository
 import pkg.repository.chat_repository
 from framework.system.bot_setup import bot
 from pkg.repository import chat_repository
@@ -42,6 +41,22 @@ class Chat(Service):
     @staticmethod
     async def find_by(chat: ModeratedChatInterface) -> ModeratedChatInterface | None:
         return await chat_repository.find_by(chat)
+
+    @staticmethod
+    async def update_settings(chat_id: int, settings: dict) -> ModeratedChatInterface | None:
+        return await chat_repository.update_settings(chat_id, settings)
+
+    @staticmethod
+    async def removed_count(chat_id: int, days: int) -> int:
+        return await chat_repository.removed_count(chat_id, days)
+
+    @staticmethod
+    async def neighbours(chat_id: int, user_service_id: int) -> tuple[int | None, int | None]:
+        return await chat_repository.neighbours(chat_id, str(user_service_id))
+
+    @staticmethod
+    async def is_manager(chat_id: int, user_service_id: int) -> bool:
+        return await chat_repository.is_manager(chat_id, str(user_service_id))
 
     @classmethod
     async def _get_chat_member(cls, chat_service_id: int, user_id: int) \
@@ -314,21 +329,6 @@ class Chat(Service):
             return {'error': 'unexpected'}
 
     @staticmethod
-    async def add_to_whitelist(chat_id: int, user_nickname: str) \
-            -> ModeratedChatInterface | None | TypedDict('AddToWhitelistError', {'error': Literal['unexpected']}):
-        # chat_member = await Chat._get_chat_member(bot, chat_service_id, user_)
-        # if "error" in chat_member:
-        #     return {"error": chat_member["error"]}
-
-        try:
-            result_whitelisted = await chat_repository.add_to_whitelist(chat_id, user_nickname)
-        except Exception as e:
-            logger.error(e)
-            return {"error": "unexpected"}
-
-        return result_whitelisted
-
-    @staticmethod
     async def whitelist_data_count_provider(chat_id: int, search_query: str | None = None) -> int:
         return await chat_repository.chat_whitelist_count(chat_id, search_query)
 
@@ -338,6 +338,17 @@ class Chat(Service):
             order_by: Literal['created_at', 'nickname'] = 'nickname', limit: int | None = None, offset: int = 0) \
             -> list[AllowedUserInterface] | None:
         return await pkg.repository.chat_repository.chat_whitelist(chat_id, search_query, order_by, limit, offset)
+
+    @classmethod
+    async def name_of(cls, chat: ModeratedChatInterface) -> str:
+        """The group's title: the saved one, else asked from Telegram and saved."""
+        if chat.get('name'):
+            return chat['name']
+        chat_info = await cls.load_info(chat_service_id=str(chat['service_id']))
+        if 'error' in chat_info:
+            return ''
+        await chat_repository.update({'id': chat['id'], 'name': chat_info['title']})
+        return chat_info['title']
 
     @classmethod
     async def update_names(cls, user_service_id: int):

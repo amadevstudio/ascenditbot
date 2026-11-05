@@ -96,10 +96,15 @@ def build_markup(message_structure: MessageStructuresInterface):
             for button_data in row:
                 # button_data = cast(InlineButtonData, button_data)
                 # if validate_typed_dict_interface(button_data, InlineButtonData):
+                if 'url' in button_data:
+                    row_buttons.append(keyboard.InlineKeyboardButton(
+                        text=button_data.get('text', ''), url=button_data['url']))
+                    continue
+
                 if isinstance(button_data['callback_data'], str):
                     callback_data = button_data['callback_data']
                 elif isinstance(button_data['callback_data'], dict):
-                    callback_data = json.dumps(button_data['callback_data'])
+                    callback_data = json.dumps(button_data['callback_data'], separators=(',', ':'))
                 else:
                     callback_data = None
 
@@ -116,6 +121,17 @@ def build_markup(message_structure: MessageStructuresInterface):
             row_buttons = []
             for button_data in row:
                 button_data = cast(InlineButtonData, button_data)
+                # Pick people from the contacts: their ids, names and usernames come back in users_shared
+                if 'request_users' in button_data:
+                    request = button_data['request_users']
+                    row_buttons.append(keyboard.KeyboardButton(
+                        text=button_data.get('text', ''),
+                        request_users=telegram_types.KeyboardButtonRequestUsers(
+                            request_id=request['request_id'], user_is_bot=False,
+                            max_quantity=request.get('max_quantity', 1),
+                            request_name=True, request_username=True)))
+                    continue
+
                 if validate_typed_dict_interface(button_data, ButtonRequestChatData):
                     button_data = cast(ButtonRequestChatData, button_data)
 

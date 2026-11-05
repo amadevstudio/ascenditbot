@@ -2,6 +2,7 @@ import asyncio
 import datetime
 
 from framework.controller.message_tools import message_sender
+from pkg.service.member_alerts import MemberAlerts
 from pkg.service.tariff import Tariff
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
@@ -32,6 +33,9 @@ async def subscription_handler_round():
 
         # Notify about days left
         await subscription_handler_notifier()
+
+        # Timed whitelist access: remind the managers a day before it ends, tell them when it has
+        await MemberAlerts.expiry_round()
     except Exception as e:
         logger.error(e, "Subscription Handler: the round failed, the next one is in an hour")
 

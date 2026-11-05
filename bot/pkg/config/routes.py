@@ -100,6 +100,18 @@ class RouteMap:
                 },
                 'delete': {
                     'method': chats_controller.delete
+                },
+                'switch': {
+                    'method': chats_controller.switch
+                },
+                'switch_mode': {
+                    'method': chats_controller.switch_mode
+                },
+                'cycle_limit': {
+                    'method': chats_controller.cycle_limit
+                },
+                'switch_alerts': {
+                    'method': chats_controller.switch_alerts
                 }
             },
             'validator': chat_access_validator
@@ -108,7 +120,8 @@ class RouteMap:
             'method': allowed_users_controller.add_to_chat_whitelist,
             'available_from': ['message', 'call'],
             'wait_for_input': True,
-            'validator': chat_access_validator
+            'validator': chat_access_validator,
+            'have_under_keyboard': True
         },
         'chat_whitelist': {
             'method': allowed_users_controller.chat_whitelist,
@@ -132,6 +145,9 @@ class RouteMap:
                 },
                 'delete': {
                     'method': allowed_users_controller.delete
+                },
+                'set_term': {
+                    'method': allowed_users_controller.set_term
                 }
             },
             'validator': chat_access_validator

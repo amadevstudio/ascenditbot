@@ -1,17 +1,22 @@
+import html
 import typing
 
 from framework.controller.types import ControllerParams
+from framework.system import telegram_types
 
 from framework.controller import state_data
 from lib.language import localization
 from framework.controller.message_tools import message_sender, go_back_inline_markup, is_call_or_command, \
-    image_link_or_object, notify, go_back_inline_button, determine_search_query
+    notify, go_back_inline_button, determine_search_query
 from lib.python.dict_interface import validate_typed_dict_interface
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
 from pkg.controller.user_controllers.common_controller import chat_access_denied, raise_error
 from pkg.service.user_storage import UserStorage
 from pkg.service.chat import Chat
+from pkg.service.post_limit import CHOICES as POST_LIMIT_CHOICES, PERIODS
+from pkg.service.tariff import Tariff
+from project.i18n_owner_tools import ADD_TO_GROUP_URL
 from project.types import ModeratedChatInterface
 
 _PER_PAGE = 5
@@ -34,12 +39,15 @@ async def add_chat(params: ControllerParams):
     }
 
     if is_call_or_command(call, message):
+        # The add-to-group link asks Telegram to make the bot an admin with the rights it needs; once it is,
+        # the group router connects the group and sends its page (my_chat_member)
         message_structures = [{
-            'type': 'image',
-            'image': image_link_or_object(
-                localization.get_link(['add_chat', 'anon_admin_example'], params['language_code'])),
+            'type': 'text',
             'text': localization.get_message(['add_chat', 'instruction'], params['language_code']),
-            'reply_markup': go_back_inline_markup(params['language_code']),
+            'reply_markup': [
+                [{'text': localization.get_message(['add_chat', 'add_to_group_button'], params['language_code']),
+                  'url': ADD_TO_GROUP_URL}],
+                *go_back_inline_markup(params['language_code'])],
             'parse_mode': 'HTML'
         }, reply_add_chat_structure]
         await message_sender(message.chat.id, message_structures=message_structures)
@@ -170,8 +178,41 @@ async def my_chats(params: ControllerParams):
     await Chat.update_names(message.chat.id)
 
 
+async def open_chat_page(message: telegram_types.Message, chat_id: int, language_code: str | None) -> bool:
+    """Opens a group's page in the private chat from outside the menu (a deep link, a command in the group):
+    the menu, the list and the group, so Back leads to the list."""
+    user_chat_id = message.chat.id
+    chat_data = await Chat.find(chat_id)
+    if chat_data is None:
+        return False
+    access = await Chat.validate_access(int(chat_data['service_id']), user_chat_id)
+    if 'error' in access:
+        await chat_access_denied(None, message, access)
+        return False
+
+    UserStorage.new_navigation_journey(user_chat_id, 'menu')
+    UserStorage.change_page(user_chat_id, 'my_chats')
+    UserStorage.add_user_state_data(user_chat_id, 'chat', {'id': chat_id})
+    UserStorage.set_resend(user_chat_id)
+    params: ControllerParams = {
+        'call': None, 'message': message, 'route_name': 'chat', 'state_data': {'id': chat_id},
+        'is_step_back': False, 'go_back_action': None, 'language_code': language_code}
+    if await show(params) is False:
+        return False
+    UserStorage.change_page(user_chat_id, 'chat')
+    return True
+
+
+def _limit_text(chat_data: dict, language_code: str) -> str:
+    if not chat_data.get('post_limit') or chat_data.get('post_limit_period') not in PERIODS:
+        return localization.get_message(['chat', 'show', 'limit', 'off'], language_code)
+    return localization.get_message(
+        ['chat', 'show', 'limit', chat_data['post_limit_period']], language_code, limit=chat_data['post_limit'])
+
+
 async def show(params: ControllerParams):
     call, message = params['call'], params['message']
+    language_code = params['language_code']
 
     if not len(params['state_data']):
         await raise_error(None, message, 'state_data_none')
@@ -184,73 +225,148 @@ async def show(params: ControllerParams):
         chat_data = await Chat.find(params['state_data']['id'])
 
     if chat_data is None:
-        await notify(
-            call, message, localization.get_message(['chat', 'errors', 'not_found'], params['language_code']))
+        await notify(call, message, localization.get_message(['chat', 'errors', 'not_found'], language_code))
         return False
 
     chat_info = await Chat.load_info(str(chat_data['service_id']))
 
     if 'error' in chat_info:
-        await notify(call, message, localization.get_message(
-            ['chat', 'errors', 'not_found_tg'], params['language_code']))
+        await notify(call, message, localization.get_message(['chat', 'errors', 'not_found_tg'], language_code))
         return False
 
-    message_text = localization.get_message(
-        ['chat', 'show', 'text'], params['language_code'], chat_name=chat_info['title'])
+    paid = Tariff.is_paid(await Chat.owner_tariff_id(chat_data['id']))
+    whitelist_count = await Chat.whitelist_data_count_provider(chat_data['id'])
+    removed_week = await Chat.removed_count(chat_data['id'], 7)
+
+    # Text: the group, its state, what the bot did, the rules in force
+    message_text = localization.get_message(['chat', 'show', 'text'], language_code, chat_name=html.escape(
+        chat_info['title']))
     if chat_info['nickname'] is not None:
         message_text += f" @{chat_info['nickname']}"
 
     if chat_data['disabled']:
-        message_text += "\n\n" + localization.get_message(['chat', 'show', 'disabled'], params['language_code'])
+        state_key = 'disabled'
+    elif not chat_data['active']:
+        state_key = 'paused'
+    else:
+        state_key = 'on'
+    message_text += "\n\n" + localization.get_message(['chat', 'show', 'state', state_key], language_code)
+    message_text += "\n" + localization.get_message(
+        ['chat', 'show', 'who', 'everyone' if chat_data.get('everyone_can_write') else 'whitelist'],
+        language_code, count=whitelist_count)
+    if chat_data.get('post_limit'):
+        message_text += "\n" + localization.get_message(
+            ['chat', 'show', 'limit_line'], language_code, limit=_limit_text(chat_data, language_code))
+        if not paid:
+            message_text += " " + localization.get_message(['chat', 'show', 'limit', 'paused_free'], language_code)
+    message_text += "\n" + localization.get_message(
+        ['chat', 'show', 'removed_week'], language_code, count=removed_week)
+    if chat_data['disabled']:
+        message_text += "\n\n" + localization.get_message(['chat', 'show', 'disabled'], language_code)
+    elif whitelist_count == 0 and not chat_data.get('everyone_can_write'):
+        message_text += "\n\n" + localization.get_message(['chat', 'show', 'empty_whitelist_hint'], language_code)
 
-    reply_markup = []
-    add_to_whitelist_button = {
-        'text': localization.get_message(['chat', 'show', 'add_to_whitelist_button'], params['language_code']),
-        'callback_data': {'tp': 'add_to_chat_whitelist'}}
-    reply_markup.append([add_to_whitelist_button])
+    def button(path: list, callback_data: dict, **kwargs) -> dict:
+        return {'text': localization.get_message(['chat', 'show', *path], language_code, **kwargs),
+                'callback_data': callback_data}
 
-    whitelist_button = {
-        'text': localization.get_message(['chat', 'show', 'whitelist_button'], params['language_code']),
-        'callback_data': {'tp': 'chat_whitelist'}}
-    reply_markup.append([whitelist_button])
+    reply_markup = [
+        [button(['add_to_whitelist_button'], {'tp': 'add_to_chat_whitelist'}),
+         button(['whitelist_button'], {'tp': 'chat_whitelist'}, count=whitelist_count)],
+        [button(['who_button', 'everyone' if chat_data.get('everyone_can_write') else 'whitelist'],
+                {'tp': 'switch_mode'})],
+        [{'text': ('' if paid else localization.get_message(['chat', 'show', 'locked'], language_code))
+            + localization.get_message(['chat', 'show', 'limit_button'], language_code,
+                                       limit=_limit_text(chat_data, language_code)),
+          'callback_data': {'tp': 'cycle_limit'}}],
+        [button(['restriction_duration_button'], {'tp': 'chat_restriction_duration'},
+                duration=chat_data.get('restriction_duration_minutes', 5)),
+         button(['alerts_button', 'on' if chat_data.get('owner_alerts', True) else 'off'], {'tp': 'switch_alerts'})],
+        [button(['active_button', 'active' if chat_data['active'] else 'inactive'], {'tp': 'switch_active'})],
+        [button(['delete_button', 'deleting' if params['state_data'].get('deleting') else 'initial'],
+                {'tp': 'delete'})],
+    ]
 
-    restriction_duration_button = {
-        'text': localization.get_message(
-            ['chat', 'show', 'restriction_duration_button'],
-            params['language_code'],
-            duration=chat_data.get('restriction_duration_minutes', 5)),
-        'callback_data': {'tp': 'chat_restriction_duration'}}
-    reply_markup.append([restriction_duration_button])
-
-    state_button = {
-        'text': localization.get_message(
-            [
-                'chat', 'show', 'active_button',
-                'active' if chat_data['active'] else 'inactive'],
-            params['language_code'],
-        ), 'callback_data': {'tp': 'switch_active'}}
-    reply_markup.append([state_button])
-
-    delete_button = {
-        'text': localization.get_message(
-            [
-                'chat', 'show', 'delete_button',
-                'deleting' if params['state_data'].get('deleting') else 'initial'
-            ],
-            params['language_code']),
-        'callback_data': {'tp': 'delete'}}
-    reply_markup.append([delete_button])
-
-    reply_markup.append([go_back_inline_button(params['language_code'])])
+    previous_id, next_id = await Chat.neighbours(chat_data['id'], message.chat.id)
+    back_row = [go_back_inline_button(language_code)]
+    if previous_id is not None:
+        back_row = [{'text': '◀️', 'callback_data': {'tp': 'switch', 'id': previous_id}}, *back_row,
+                    {'text': '▶️', 'callback_data': {'tp': 'switch', 'id': next_id}}]
+    reply_markup.append(back_row)
 
     message_structures = [{
         'type': 'text',
         'text': message_text,
-        'reply_markup': reply_markup
+        'reply_markup': reply_markup,
+        'parse_mode': 'HTML'
     }]
     await message_sender(message.chat.id, message_structures=message_structures)
 
     UserStorage.add_user_state_data(message.chat.id, 'chat', {**params['state_data'], **chat_data})
+
+
+async def _refresh(params: ControllerParams, chat_data: dict | None):
+    if chat_data is None:
+        await raise_error(params['call'], params['message'], 'unexpected')
+        return
+    state = {key: value for key, value in params['state_data'].items() if key != 'deleting'}
+    params['state_data'] = {**state, **dict(chat_data)}
+    UserStorage.add_user_state_data(params['message'].chat.id, 'chat', params['state_data'])
+    await show(params)
+
+
+async def switch(params: ControllerParams):
+    """◀️ ▶️: the user's previous or next group, without going back to the list."""
+    call, message = params['call'], params['message']
+    chat_id = params['state_data'].get('id')
+    chat_data = await Chat.find(chat_id) if chat_id is not None else None
+    if chat_data is None:
+        await notify(call, message, localization.get_message(
+            ['chat', 'errors', 'not_found'], params['language_code']), alert=True)
+        return
+    access = await Chat.validate_access(int(chat_data['service_id']), message.chat.id)
+    if 'error' in access:
+        await chat_access_denied(call, message, access)
+        return
+    params['state_data'] = {'id': chat_id}
+    UserStorage.del_user_state_data(message.chat.id, 'chat')
+    await _refresh(params, chat_data)
+
+
+async def switch_mode(params: ControllerParams):
+    """Who may write: the whitelist only, or everyone (then only the posting limit and the admins apply)."""
+    current = params['state_data']
+    everyone = not current.get('everyone_can_write', False)
+    chat_data = await Chat.update_settings(current['id'], {'everyone_can_write': everyone})
+    await notify(params['call'], params['message'], localization.get_message(
+        ['chat', 'show', 'who_toast', 'everyone' if everyone else 'whitelist'], params['language_code']))
+    await _refresh(params, chat_data)
+
+
+async def cycle_limit(params: ControllerParams):
+    """The posting limit per member: off, 1, 2, 3, 5 a day, 1, 3 a week. A paid setting."""
+    current = params['state_data']
+    language_code = params['language_code']
+    if not Tariff.is_paid(await Chat.owner_tariff_id(current['id'])):
+        await notify(params['call'], params['message'], localization.get_message(
+            ['chat', 'show', 'limit', 'paid_only'], language_code), alert=True)
+        return
+
+    now = (current.get('post_limit'), current.get('post_limit_period')) if current.get('post_limit') else None
+    index = POST_LIMIT_CHOICES.index(now) if now in POST_LIMIT_CHOICES else 0
+    chosen = POST_LIMIT_CHOICES[(index + 1) % len(POST_LIMIT_CHOICES)]
+    chat_data = await Chat.update_settings(current['id'], {
+        'post_limit': chosen[0] if chosen else None, 'post_limit_period': chosen[1] if chosen else None})
+    await _refresh(params, chat_data)
+
+
+async def switch_alerts(params: ControllerParams):
+    current = params['state_data']
+    enabled = not current.get('owner_alerts', True)
+    chat_data = await Chat.update_settings(current['id'], {'owner_alerts': enabled})
+    await notify(params['call'], params['message'], localization.get_message(
+        ['chat', 'show', 'alerts_toast', 'on' if enabled else 'off'], params['language_code']))
+    await _refresh(params, chat_data)
 
 
 async def restriction_duration(params: ControllerParams):

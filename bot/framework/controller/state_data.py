@@ -57,4 +57,9 @@ def get_state_data(
     except json.decoder.JSONDecodeError:
         state_data = {}
 
+    # Another entity of the same route (a different group, opened from an alert or the group switcher): its own
+    # data, not the previous one's with the new id
+    if 'id' in call_data and state_data.get('id') not in (None, call_data['id']):
+        state_data = {}
+
     return state_data | call_data

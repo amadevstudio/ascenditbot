@@ -1,5 +1,6 @@
 from framework.controller.message_tools import message_sender, go_back_inline_markup, chat_id_sender
 from framework.controller.types import ControllerParams
+from pkg.controller.user_controllers import chats_controller
 from lib.language import localization
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
@@ -13,9 +14,15 @@ async def start(params: ControllerParams):
     registration_result = None
 
     if call is None:
-        await message.reply('👋')
         initial_data = User.analyze_initial_data(message.text)
         registration_result = await User.register(message.chat.id, params['language_code'], initial_data)
+
+        # A link from a group (/settings there, an alert): straight to that group's page
+        chat_id = str(initial_data.get('chat') or '')
+        if chat_id.isdigit() and await chats_controller.open_chat_page(message, int(chat_id), params['language_code']):
+            return False
+
+        await message.reply('👋')
 
     markup = [[{
         'text': localization.get_message(['welcome', 'lets_begin'], params['language_code']),
@@ -80,7 +87,9 @@ async def help_page(params: ControllerParams):
     await message_sender(message.chat.id, message_structures=[{
         'type': 'text',
         'text': localization.get_message(['help', 'text'], params['language_code']),
-        'reply_markup': go_back_inline_markup(params['language_code'])
+        'reply_markup': go_back_inline_markup(params['language_code']),
+        'parse_mode': 'HTML',
+        'disable_web_page_preview': True
     }])
 
 async def privacy(params: ControllerParams):

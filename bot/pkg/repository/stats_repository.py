@@ -1,0 +1,71 @@
+"""The numbers of the bot for its admins (/usersCount): users, groups, removed messages, money."""
+from framework.repository.database_executor import databaseExecutor
+from pkg.repository.database_connection import Database
+
+db = Database()
+
+
+async def collect() -> dict:
+    users = await databaseExecutor.run(db.fetchone, """
+        SELECT
+            COUNT(*) AS total,
+            COUNT(*) FILTER (WHERE u.language_code LIKE 'ru%%') AS ru,
+            COUNT(*) FILTER (WHERE u.language_code LIKE 'en%%') AS en,
+            COUNT(*) FILTER (WHERE u.created_at > LOCALTIMESTAMP - interval '1 day') AS day,
+            COUNT(*) FILTER (WHERE u.created_at > LOCALTIMESTAMP - interval '7 days') AS week,
+            COUNT(*) FILTER (WHERE u.created_at > LOCALTIMESTAMP - interval '30 days') AS month,
+            COUNT(*) FILTER (WHERE EXISTS (
+                SELECT 1 FROM user_moderated_chat_connections AS umcc WHERE umcc.user_id = u.id)) AS with_groups,
+            COUNT(*) FILTER (WHERE COALESCE(utc.tariff_id, 0) = 0) AS free,
+            COUNT(*) FILTER (WHERE utc.tariff_id > 0) AS paid,
+            COUNT(*) FILTER (WHERE utc.tariff_id > 0 AND NOT EXISTS (
+                SELECT 1 FROM payments_history AS ph WHERE ph.user_id = u.id)) AS trial
+        FROM users AS u
+        LEFT JOIN user_tariff_connections AS utc ON utc.user_id = u.id
+    """)
+    groups = await databaseExecutor.run(db.fetchone, """
+        SELECT
+            COUNT(*) AS total,
+            COUNT(*) FILTER (WHERE mc.active AND NOT mc.disabled) AS on,
+            COUNT(*) FILTER (WHERE NOT mc.active AND NOT mc.disabled) AS paused,
+            COUNT(*) FILTER (WHERE mc.disabled) AS disabled,
+            COUNT(*) FILTER (WHERE mc.everyone_can_write) AS everyone,
+            COUNT(*) FILTER (WHERE mc.post_limit IS NOT NULL) AS limited,
+            (SELECT COUNT(*) FROM allowed_users) AS whitelisted,
+            (SELECT COUNT(*) FROM allowed_users WHERE expires_at IS NOT NULL) AS timed,
+            (SELECT COALESCE(SUM(deleted_messages_count), 0) FROM moderated_chat_statistics
+                WHERE day = CURRENT_DATE) AS removed_day,
+            (SELECT COALESCE(SUM(deleted_messages_count), 0) FROM moderated_chat_statistics
+                WHERE day > CURRENT_DATE - 7) AS removed_week
+        FROM moderated_chats AS mc
+    """)
+    month = await databaseExecutor.run(db.fetchall, """
+        SELECT ph.currency_code, COUNT(*) AS count, SUM(ph.amount) AS amount, c.minor_units
+        FROM payments_history AS ph
+        INNER JOIN users AS u ON u.id = ph.user_id AND u.is_admin IS FALSE
+        LEFT JOIN currencies AS c ON c.code = ph.currency_code
+        WHERE ph.created_at > LOCALTIMESTAMP - interval '30 days'
+        GROUP BY ph.currency_code, c.minor_units
+        ORDER BY ph.currency_code
+    """)
+    balances = await databaseExecutor.run(db.fetchall, """
+        SELECT ub.currency_code, SUM(ub.balance) AS balance, c.minor_units
+        FROM user_balances AS ub
+        INNER JOIN users AS u ON u.id = ub.user_id AND u.is_admin IS FALSE
+        LEFT JOIN currencies AS c ON c.code = ub.currency_code
+        GROUP BY ub.currency_code, c.minor_units
+        HAVING SUM(ub.balance) != 0
+        ORDER BY ub.currency_code
+    """)
+    users = dict(users)
+    users['other'] = users['total'] - users['ru'] - users['en']
+    return {
+        'users': users,
+        'groups': dict(groups),
+        'money': {
+            'month': [{**dict(row), 'minor_units': row['minor_units'] if row['minor_units'] is not None else 2}
+                      for row in month],
+            'balances': [{**dict(row), 'minor_units': row['minor_units'] if row['minor_units'] is not None else 2}
+                         for row in balances],
+        },
+    }
