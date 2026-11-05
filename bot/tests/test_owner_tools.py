@@ -536,7 +536,7 @@ async def test_command_menus(bench: Bench):
     menus = {(call.scope.type, getattr(call.scope, 'chat_id', None), call.language_code):
              {c.command: c.description for c in call.commands} for call in bench.telegram.calls_of('setMyCommands')}
     assert set(menus[('all_private_chats', None, 'ru')]) == {
-        'menu', 'my_chats', 'stats', 'add_chat', 'subscription', 'settings', 'help'}
+        'menu', 'my_chats', 'stats', 'add_chat', 'subscription', 'settings', 'access', 'help'}
     assert menus[('all_private_chats', None, None)]['my_chats'] == 'My groups'
     assert set(menus[('all_chat_administrators', None, 'ru')]) == {'allow', 'deny', 'settings'}
     assert not any(scope == 'chat' or 'userscount' in menu for (scope, _, _), menu in menus.items())

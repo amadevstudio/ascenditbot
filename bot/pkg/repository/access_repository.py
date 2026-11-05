@@ -77,3 +77,27 @@ async def find_by_external(provider: str, external_id: str) -> dict | None:
     return await databaseExecutor.run(db.fetchone, """
         SELECT * FROM access_requests WHERE provider = %s AND external_id = %s
     """, (provider, external_id))
+
+
+async def pending_of_member(user_service_id: str, limit: int = 10) -> list[dict]:
+    """The member's requests still waiting, with their groups (/access)."""
+    return [dict(row) for row in await databaseExecutor.run(db.fetchall, """
+        SELECT ar.moderated_chat_id AS chat_id, ar.kind, ar.days, ar.created_at, mc.service_id, mc.name
+        FROM access_requests AS ar
+        INNER JOIN moderated_chats AS mc ON mc.id = ar.moderated_chat_id
+        WHERE ar.user_service_id = %s AND ar.status = 'pending'
+        ORDER BY ar.id DESC LIMIT %s
+    """, (user_service_id, limit)) or []]
+
+
+async def payments_of_owner(user_id: int, days: int = 30) -> list[dict]:
+    """Paid entries into the owner's groups approved in the last `days` days: per group and currency, how many
+    and how much (/stats)."""
+    return [dict(row) for row in await databaseExecutor.run(db.fetchall, """
+        SELECT ar.moderated_chat_id AS chat_id, ar.currency, COUNT(*) AS count, SUM(ar.amount) AS amount
+        FROM access_requests AS ar
+        INNER JOIN user_moderated_chat_connections AS umcc ON umcc.moderated_chat_id = ar.moderated_chat_id
+        WHERE umcc.user_id = %s AND ar.status = 'approved' AND ar.kind IN ('paid_manual', 'paid_auto')
+            AND ar.amount > 0 AND ar.decided_at > LOCALTIMESTAMP - make_interval(days => %s)
+        GROUP BY ar.moderated_chat_id, ar.currency
+    """, (user_id, days)) or []]

@@ -4,18 +4,21 @@
 - the managers' answers under a request: approve (for the term paid for, for good, for a week or a month) or
   decline.
 
+/access: the groups a member may write in (until when) and their requests still waiting.
+
 Callback data: jo (the page), jp (a term), js (send the request), jr (remind the owner), jk (check a provider's
 invoice now), jx (drop the invoice, pick another term); ar (approve), aj (decline)."""
 import datetime
 import html
 
-from aiogram import Router
+from aiogram import F, Router
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
 from framework.system import telegram_exceptions, telegram_types
 from lib.language import localization
 from pkg.controller.routers.quick_actions_router import QuickAction, _managed_chat, lift_restriction
-from pkg.repository import access_repository
+from pkg.repository import access_repository, allowed_user_repository
 from pkg.service import access, access_payments
 from pkg.service.access import Requests
 from pkg.service.access_messages import callback, request_member, send_request, tell_member_decision
@@ -116,6 +119,40 @@ async def member_page(chat_id: int, user, language_code: str | None) -> tuple[st
     return "\n\n".join(lines), InlineKeyboardMarkup(inline_keyboard=rows) if rows else None
 
 
+async def my_access(user, language_code: str | None) -> tuple[str, InlineKeyboardMarkup | None]:
+    """/access: where the member may write and until when, the requests still waiting; a button for each group
+    with a way in, to extend or to see the request."""
+    entries = sorted(await allowed_user_repository.of_member(str(user.id), user.username),
+                     key=lambda entry: (entry['expires_at'] is None, entry['expires_at'] or datetime.datetime.max))
+    waiting = [request for request in await access_repository.pending_of_member(str(user.id))
+               if request['chat_id'] not in {entry['chat_id'] for entry in entries}]
+    if not entries and not waiting:
+        return _text(['mine', 'empty'], language_code), None
+
+    async def name(row: dict) -> str:
+        return html.escape(await Chat.name_of({'id': row['chat_id'], 'service_id': row['service_id'],
+                                               'name': row['name']}) or str(row['service_id']))
+
+    lines, rows = [_text(['mine', 'title'], language_code)], []
+    for entry in entries:
+        chat_name = await name(entry)
+        if entry['expires_at'] is None:
+            lines.append(_text(['mine', 'forever'], language_code, chat_name=chat_name))
+            continue
+        lines.append(_text(['mine', 'until'], language_code, chat_name=chat_name,
+                           date=format_date(entry['expires_at'])))
+        if (entry['access_mode'] or 'off') != 'off':
+            rows.append([_button(_text(['mine', 'buttons', 'extend'], language_code, chat_name=chat_name),
+                                 {'tp': 'jo', 'c': entry['chat_id']})])
+    for request in waiting:
+        chat_name = await name(request)
+        lines.append(_text(['mine', 'waiting'], language_code, chat_name=chat_name,
+                           date=format_date(request['created_at'])))
+        rows.append([_button(_text(['mine', 'buttons', 'open'], language_code, chat_name=chat_name),
+                             {'tp': 'jo', 'c': request['chat_id']})])
+    return "\n".join(lines), InlineKeyboardMarkup(inline_keyboard=rows) if rows else None
+
+
 async def open_join_page(message: telegram_types.Message, chat_id: int, language_code: str | None) -> None:
     """The link j_<group id>: the group's page for a member, as a new message."""
     text, markup = await member_page(chat_id, message.from_user, language_code)
@@ -139,6 +176,12 @@ def access_router() -> Router:
     router = Router()
 
     # The member's side
+
+    @router.message(Command('access', ignore_case=True), F.chat.type == 'private')
+    async def mine(message: telegram_types.Message):
+        language_code = message.from_user.language_code
+        text, markup = await my_access(message.from_user, language_code)
+        await message.answer(text, parse_mode='HTML', reply_markup=markup, disable_web_page_preview=True)
 
     @router.callback_query(QuickAction('jo'))
     async def page(call: CallbackQuery, data: dict):

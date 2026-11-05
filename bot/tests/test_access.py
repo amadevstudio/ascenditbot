@@ -162,6 +162,27 @@ async def test_member_pays_by_the_owners_link_and_the_owner_confirms(bench: Benc
     await bench.tap(OWNER, _press(alert, 'Подтвердить: 30 дней'))
     assert 'уже ответили' in _last_to(bench, OWNER).text
 
+    # /access shows the group and its term, with a button to extend; the owner's /stats counts the payment
+    await bench.private_message(BUYER, '/access')
+    mine = _last_to(bench, BUYER)
+    assert 'Где вы можете писать' in mine.text and ': до ' in mine.text, mine.text
+    assert any('Продлить' in b['text'] and b['data'] == {'tp': 'jo', 'c': chat['id']} for b in _buttons(mine))
+    await bench.private_message(OWNER, '/stats')
+    assert 'Оплат за вход за 30 дней: 1, на 1 000 ₽' in _last_to(bench, OWNER).text
+
+
+async def test_access_list_empty_and_waiting(bench: Bench):
+    """/access with nothing says where the link comes from; a request waiting is listed with its group"""
+    chat = await _scene(bench, access_mode='request')
+    await bench.private_message(BUYER, '/access')
+    assert 'Доступов через бота пока нет' in _last_to(bench, BUYER).text
+    await bench.private_message(BUYER, f'/start j_{chat["id"]}')
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), 'Попросить'))
+    await bench.private_message(BUYER, '/access')
+    mine = _last_to(bench, BUYER)
+    assert 'ждёт ответа владельца' in mine.text, mine.text
+    assert [b['data'] for b in _buttons(mine)] == [{'tp': 'jo', 'c': chat['id']}]
+
 
 async def test_extending_adds_days_and_has_no_undo(bench: Bench):
     """paying again while the term runs adds the days to its end; the answer has no undo, which would wipe it"""

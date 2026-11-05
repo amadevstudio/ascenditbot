@@ -1,14 +1,16 @@
 """/usersCount (also /stats) in private, in two modes: a group owner sees their groups (members, whitelist, removed
-messages), the bot's owner (users.is_admin) sees the whole bot and then their own groups."""
+messages, paid entries), the bot's owner (users.is_admin) sees the whole bot and then their own groups."""
 import asyncio
 import html
+from decimal import Decimal
 
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
 from lib.language import localization
-from pkg.repository import stats_repository
+from pkg.repository import access_repository, stats_repository
+from pkg.service import access
 from pkg.service.chat import Chat
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
@@ -86,6 +88,18 @@ async def format_owner_stats(bot, user_id: int | None, language_code: str, colla
         text('removed', day=sum(g['removed_day'] for g in groups), week=sum(g['removed_week'] for g in groups),
              month=sum(g['removed_month'] for g in groups)),
     ]
+    payments = await access_repository.payments_of_owner(user_id)
+
+    def paid_line(rows: list[dict]) -> list[str]:
+        if not rows:
+            return []
+        totals: dict[str, Decimal] = {}
+        for row in rows:
+            totals[row['currency']] = totals.get(row['currency'], Decimal(0)) + Decimal(str(row['amount']))
+        return [text('payments', count=sum(row['count'] for row in rows), amount=' + '.join(
+            access.format_amount(amount, currency) for currency, amount in sorted(totals.items())))]
+
+    summary += paid_line(payments)
     details = []
     for group, count in list(zip(groups, counts))[:GROUPS_SHOWN]:
         state = 'disabled' if group['disabled'] else 'paused' if not group['active'] else 'on'
@@ -96,6 +110,7 @@ async def format_owner_stats(bot, user_id: int | None, language_code: str, colla
             text('group_members', count=_number(count)) + " · " + text(
                 'group_whitelist', count=group['whitelisted'], timed=group['timed']),
             text('removed', day=group['removed_day'], week=group['removed_week'], month=group['removed_month']),
+            *paid_line([row for row in payments if row['chat_id'] == group['id']]),
         ]
     if len(groups) > GROUPS_SHOWN:
         details += ["", text('more', count=len(groups) - GROUPS_SHOWN)]
