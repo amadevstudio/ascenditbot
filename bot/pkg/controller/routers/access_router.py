@@ -110,6 +110,9 @@ async def member_page(chat_id: int, user, language_code: str | None) -> tuple[st
         if not _recent(latest['reminded_at'] or latest['created_at']):
             rows.append([_button(_text(['member', 'buttons', 'remind'], language_code),
                                  {'tp': 'jr', 'c': chat['id']})])
+        # Taking the request back: asked by mistake, or another term
+        rows.append([_button(_text(['member', 'buttons', 'cancel_request'], language_code),
+                             {'tp': 'jc', 'c': chat['id']})])
     elif current is not None:
         pass
     elif latest is not None and latest['status'] == 'rejected' and _recent(latest['decided_at']):
@@ -297,6 +300,18 @@ def access_router() -> Router:
         await Requests.update(latest['id'], {'reminded_at': datetime.datetime.now()})
         await send_request({**chat, 'name': await Chat.name_of(chat)}, latest, reminder=True)
         await call.answer(_text(['member', 'toasts', 'reminded'], language_code))
+
+    @router.callback_query(QuickAction('jc'))
+    async def cancel_request(call: CallbackQuery, data: dict):
+        """The member takes back the request waiting for the owner; the owner's buttons then say it is answered."""
+        chat_id = int(data.get('c') or 0)
+        latest = await Requests.latest(chat_id, str(call.from_user.id))
+        if latest is not None and latest['status'] == 'pending' and latest['kind'] != 'paid_auto':
+            await Requests.decide(latest['id'], 'cancelled', str(call.from_user.id))
+            await call.answer(_text(['member', 'toasts', 'cancelled'], call.from_user.language_code))
+        else:
+            await call.answer()
+        await _show_page(call, chat_id)
 
     @router.callback_query(QuickAction('jk'))
     async def check(call: CallbackQuery, data: dict):

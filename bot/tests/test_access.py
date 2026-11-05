@@ -196,7 +196,8 @@ async def test_extending_adds_days_and_has_no_undo(bench: Bench):
     await bench.tap(BUYER, _press(page, '7 дней'))
     await bench.tap(BUYER, _press(_last_to(bench, BUYER), 'Я оплатил'))
     page = _last_to(bench, BUYER)
-    assert 'Об оплате сообщили' in page.text and not _buttons(page), page.text
+    assert 'Об оплате сообщили' in page.text, page.text
+    assert [b['text'] for b in _buttons(page)] == ['✖️ Отменить заявку'], _buttons(page)
 
     await bench.tap(OWNER, _press(_last_to(bench, OWNER), 'Подтвердить'))
     [entry] = await bench.sql('SELECT expires_at FROM allowed_users')
@@ -258,6 +259,23 @@ async def test_decline_can_be_undone(bench: Bench):
     await bench.private_message(OWNER, f'/start chat_{chat["id"]}')
     await bench.tap(OWNER, '{"tp":"chat_access"}')
     assert not [b for b in _buttons(_last_to(bench, OWNER)) if 'Отклонённые' in b['text']]
+
+
+async def test_member_cancels_the_request(bench: Bench):
+    """"I paid" by mistake: the member cancels it and picks again; the owner's buttons say it is answered"""
+    chat = await _paid_scene(bench)
+    await bench.private_message(BUYER, f'/start j_{chat["id"]}')
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), '7 дней'))
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), 'Я оплатил'))
+    alert = _last_to(bench, OWNER)
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), 'Отменить заявку'))
+    page = _last_to(bench, BUYER)
+    assert 'Выберите срок' in page.text and '7 дней – 300 ₽' in [b['text'] for b in _buttons(page)], page.text
+    [request] = await bench.sql('SELECT status FROM access_requests')
+    assert request['status'] == 'cancelled'
+    await bench.tap(OWNER, _press(alert, 'Подтвердить'))
+    assert 'уже ответили' in _last_to(bench, OWNER).text
+    assert not await bench.sql('SELECT 1 FROM allowed_users')
 
 
 async def test_paid_entry_falls_back_to_requests_without_a_paid_tariff(bench: Bench):
