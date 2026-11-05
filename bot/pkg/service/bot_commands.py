@@ -1,6 +1,6 @@
 """The command menus of the bot (setMyCommands), set on every start so that the code is the one place they live:
-in private for everyone, in groups for their admins (/allow, /deny, /settings). /usersCount, for the bot's owner
-only, stays out of every menu, as in yourcast."""
+in private for everyone (/stats among them: a group owner's numbers), in groups for their admins (/allow, /deny,
+/settings). /usersCount, the bot owner's habit from yourcast, does the same as /stats and stays out of the menus."""
 from aiogram import Bot
 from aiogram.types import BotCommand, BotCommandScope, BotCommandScopeAllChatAdministrators, \
     BotCommandScopeAllPrivateChats, BotCommandScopeDefault
@@ -8,7 +8,7 @@ from aiogram.types import BotCommand, BotCommandScope, BotCommandScopeAllChatAdm
 from lib.language import localization
 from pkg.system.logger import logger
 
-PRIVATE = ['menu', 'my_chats', 'add_chat', 'subscription', 'settings', 'help']
+PRIVATE = ['menu', 'my_chats', 'stats', 'add_chat', 'subscription', 'settings', 'help']
 GROUP = ['allow', 'deny', 'settings']
 
 # The menu in English for every language but Russian
