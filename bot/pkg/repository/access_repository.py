@@ -40,7 +40,7 @@ async def decide(request_id: int, status: str, decided_by: str | None) -> dict |
 
 
 async def update(request_id: int, fields: dict) -> dict | None:
-    assert set(fields) <= {'days', 'amount', 'currency', 'kind', 'reminded_at'}, fields
+    assert set(fields) <= {'days', 'amount', 'currency', 'kind', 'reminded_at', 'external_id', 'pay_url'}, fields
     sets = ', '.join(f'{name} = %s' for name in fields)
     return await databaseExecutor.run(db.execute_single_model, f"""
         UPDATE access_requests SET {sets}, updated_at = LOCALTIMESTAMP WHERE id = %s
@@ -58,3 +58,16 @@ async def pending_count(chat_id: int) -> int:
     return await databaseExecutor.run(db.fetchval, """
         SELECT COUNT(*) FROM access_requests WHERE moderated_chat_id = %s AND status = 'pending'
     """, (chat_id,)) or 0
+
+
+async def waiting_payments(providers: tuple[str, ...], request_id: int | None = None) -> list[dict]:
+    """Requests waiting for a provider's payment (all, or one), with their group's provider settings."""
+    return await databaseExecutor.run(db.fetchall, """
+        SELECT ar.*, mc.access_secret, mc.access_provider, mc.service_id AS chat_service_id
+        FROM access_requests AS ar
+        INNER JOIN moderated_chats AS mc ON mc.id = ar.moderated_chat_id
+        WHERE ar.status = 'pending' AND ar.kind = 'paid_auto' AND ar.provider = ANY(%s)
+            AND ar.external_id IS NOT NULL AND (%s::bigint IS NULL OR ar.id = %s)
+        ORDER BY ar.id
+        LIMIT 1000
+    """, (list(providers), request_id, request_id)) or []

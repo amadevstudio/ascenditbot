@@ -4,8 +4,8 @@
 - the managers' answers under a request: approve (for the term paid for, for good, for a week or a month) or
   decline.
 
-Callback data: jo (the page), jp (a term), js (send the request), jr (remind the owner); ar (approve), aj
-(decline)."""
+Callback data: jo (the page), jp (a term), js (send the request), jr (remind the owner), jk (check a provider's
+invoice now), jx (drop the invoice, pick another term); ar (approve), aj (decline)."""
 import datetime
 import html
 
@@ -15,7 +15,8 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from framework.system import telegram_exceptions, telegram_types
 from lib.language import localization
 from pkg.controller.routers.quick_actions_router import QuickAction, _managed_chat, lift_restriction
-from pkg.service import access
+from pkg.repository import access_repository
+from pkg.service import access, access_payments
 from pkg.service.access import Requests
 from pkg.service.access_messages import callback, request_member, send_request, tell_member_decision
 from pkg.service.allowed_user import full_name
@@ -38,6 +39,17 @@ def _button(text: str, data: dict | None = None, url: str | None = None) -> Inli
 
 def _recent(moment: datetime.datetime | None) -> bool:
     return moment is not None and moment > datetime.datetime.now() - access.REPEAT_AFTER
+
+
+def _invoice_rows(chat_id: int, request: dict, language_code: str | None) -> list[list[InlineKeyboardButton]]:
+    """Pay (the provider's page), check the payment now, pick another term."""
+    rows = []
+    if request.get('pay_url'):
+        rows.append([_button(_text(['member', 'buttons', 'pay'], language_code, amount=access.format_amount(
+            request['amount'], request['currency'])), url=request['pay_url'])])
+    rows.append([_button(_text(['member', 'buttons', 'check'], language_code), {'tp': 'jk', 'c': chat_id})])
+    rows.append([_button(_text(['member', 'buttons', 'other_term'], language_code), {'tp': 'jx', 'c': chat_id})])
+    return rows
 
 
 async def member_page(chat_id: int, user, language_code: str | None) -> tuple[str, InlineKeyboardMarkup | None]:
@@ -72,7 +84,11 @@ async def member_page(chat_id: int, user, language_code: str | None) -> tuple[st
             if mode == 'paid' and not pending:
                 lines.append(_text(['member', 'extend_hint'], language_code))
                 rows += plan_rows()
-    if pending and (current is None or current['expires_at'] is not None):
+    if pending and latest['kind'] == 'paid_auto' and (current is None or current['expires_at'] is not None):
+        plan = {'days': latest['days'] or 0, 'amount': latest['amount'], 'currency': latest['currency']}
+        lines.append(_text(['member', 'pending_auto'], language_code, plan=access.plan_text(plan, language_code)))
+        rows += _invoice_rows(chat['id'], latest, language_code)
+    elif pending and (current is None or current['expires_at'] is not None):
         date = format_date(latest['created_at'])
         if latest['kind'] == 'request':
             lines.append(_text(['member', 'pending'], language_code, date=date))
@@ -142,6 +158,19 @@ def access_router() -> Router:
 
         chat_name = html.escape(await Chat.name_of(chat))
         plan_text = access.plan_text(chosen, language_code)
+        if access_payments.provider_of(chat) is not None:
+            started = await access_payments.start({**chat, 'name': await Chat.name_of(chat)}, call.from_user,
+                                                  language_code, chosen)
+            if 'error' in started:
+                await call.answer(_text(['member', 'toasts', 'provider_error' if started['error'] == 'provider'
+                                         else 'unavailable'], language_code), show_alert=True)
+                return
+            text = _text(['member', 'plan_auto'], language_code, chat_name=chat_name, plan=plan_text)
+            text += "\n\n" + _text(['member', 'plan_auto_note'], language_code)
+            await _edit(call, text, InlineKeyboardMarkup(
+                inline_keyboard=_invoice_rows(chat['id'], started['request'], language_code)))
+            await call.answer()
+            return
         url = access.payment_url(chat)
         if url is not None:
             text = _text(['member', 'plan'], language_code, chat_name=chat_name, plan=plan_text)
@@ -206,6 +235,32 @@ def access_router() -> Router:
         await Requests.update(latest['id'], {'reminded_at': datetime.datetime.now()})
         await send_request({**chat, 'name': await Chat.name_of(chat)}, latest, reminder=True)
         await call.answer(_text(['member', 'toasts', 'reminded'], language_code))
+
+    @router.callback_query(QuickAction('jk'))
+    async def check(call: CallbackQuery, data: dict):
+        language_code = call.from_user.language_code
+        chat_id = int(data.get('c') or 0)
+        latest = await Requests.latest(chat_id, str(call.from_user.id))
+        if latest is None or latest['status'] != 'pending' or latest['kind'] != 'paid_auto':
+            await _show_page(call, chat_id)
+            await call.answer()
+            return
+        waiting = await access_repository.waiting_payments(tuple(access_payments.PROVIDERS), latest['id'])
+        settled = await access_payments.check(waiting)
+        if latest['id'] in settled:
+            await call.answer()
+            await _show_page(call, chat_id)
+        else:
+            await call.answer(_text(['member', 'toasts', 'not_paid_yet'], language_code), show_alert=True)
+
+    @router.callback_query(QuickAction('jx'))
+    async def other_term(call: CallbackQuery, data: dict):
+        chat_id = int(data.get('c') or 0)
+        latest = await Requests.latest(chat_id, str(call.from_user.id))
+        if latest is not None and latest['status'] == 'pending' and latest['kind'] == 'paid_auto':
+            await Requests.decide(latest['id'], 'cancelled', None)
+        await _show_page(call, chat_id)
+        await call.answer()
 
     # The managers' side
 

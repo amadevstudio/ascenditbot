@@ -197,7 +197,11 @@ def effective_mode(chat: dict, owner_tariff_id: int | None) -> str:
 
 
 def ready_to_pay(chat: dict) -> bool:
-    return bool(chat.get('access_payment')) if (chat.get('access_provider') or 'link') == 'link' else True
+    """The owner's link or requisites, or a provider connected (its secret readable)."""
+    if (chat.get('access_provider') or 'link') == 'link':
+        return bool(chat.get('access_payment'))
+    from pkg.service.secret_box import unseal
+    return unseal(chat.get('access_secret')) is not None
 
 
 def payment_url(chat: dict) -> str | None:

@@ -18,13 +18,15 @@ from pkg.controller.user_controllers.common_controller import raise_error
 from pkg.service import access
 from pkg.service.access import Requests
 from pkg.service.access_messages import send_request
+from pkg.service.access_providers import cryptobot
+from pkg.service.secret_box import seal
 from pkg.service.chat import Chat
 from pkg.service.tariff import Tariff
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 
 ROUTE = 'chat_access'
-EDITABLE = ('prices', 'payment', 'terms')
+EDITABLE = ('prices', 'payment', 'terms', 'cryptobot')
 
 
 def _text(path: list, language_code: str | None, **kwargs) -> str:
@@ -59,7 +61,7 @@ def _wizard_step(chat: dict, editing: str) -> int | None:
         return None
     if editing == 'prices' and not access.plans_of(chat):
         return 1
-    if editing == 'payment' and not chat.get('access_payment'):
+    if editing in ('payment', 'cryptobot') and not access.ready_to_pay(chat):
         return 2
     return None
 
@@ -92,9 +94,15 @@ async def _render(params: ControllerParams, chat: dict, notice: str | None = Non
             lines.append(_text(['prices'], language_code, plans=' · '.join(
                 access.plan_text(plan, language_code) for plan in plans)) if plans
                 else _text(['prices_none'], language_code))
+            provider = chat.get('access_provider') or 'link'
             payment = chat.get('access_payment')
-            lines.append(_text(['payment'], language_code, payment=html.escape(payment)) if payment
-                         else _text(['payment_none'], language_code))
+            if provider != 'link' and access.ready_to_pay(chat):
+                lines.append(_text(['payment_provider', provider], language_code,
+                                   label=html.escape(chat.get('access_provider_label') or '')))
+            elif provider == 'link' and payment:
+                lines.append(_text(['payment'], language_code, payment=html.escape(payment)))
+            else:
+                lines.append(_text(['payment_none'], language_code))
         terms = chat.get('access_terms')
         lines.append(_text(['terms'], language_code, terms=html.escape(terms)) if terms
                      else _text(['terms_none'], language_code))
@@ -125,7 +133,13 @@ async def _render(params: ControllerParams, chat: dict, notice: str | None = Non
             lines.append(_text(['step'], language_code, step=step))
         lines.append(_text(['prompt', editing], language_code, currency=access.CURRENCIES[
             access.default_currency(language_code)]['symbol']))
-        rows = [[button('cancel', {'tp': 'acc_cancel'})]]
+        rows = []
+        if editing == 'payment':
+            # A link is typed; a provider that confirms payments is picked
+            rows.append([button('use_cryptobot', {'tp': 'acc_edit', 'f': 'cryptobot'})])
+        elif editing == 'cryptobot':
+            rows.append([button('other_ways', {'tp': 'acc_edit', 'f': 'payment'})])
+        rows.append([button('cancel', {'tp': 'acc_cancel'})])
     else:
         rows.append([go_back_inline_button(language_code)])
 
@@ -162,6 +176,10 @@ async def _save(params: ControllerParams, chat: dict, editing: str, text: str):
     def error(notice: str):
         return _render(params, chat, notice=notice)
 
+    if editing == 'cryptobot':
+        await _connect_cryptobot(params, chat, text)
+        return
+
     if editing == 'prices':
         plans, bad = access.parse_plans(text, access.default_currency(language_code))
         if bad or not plans:
@@ -170,17 +188,40 @@ async def _save(params: ControllerParams, chat: dict, editing: str, text: str):
             return
         chat = await Chat.update_settings(chat['id'], {'access_plans': json.dumps(plans)})
         # The walk through paid entry: the way to pay comes next if there is none
-        _set_editing(params, 'payment' if not chat.get('access_payment') else None)
+        _set_editing(params, 'payment' if not access.ready_to_pay(chat) else None)
     else:
         limit = access.PAYMENT_LENGTH if editing == 'payment' else access.TERMS_LENGTH
         if len(text) > limit:
             await error(_text(['errors', 'too_long'], language_code, length=len(text), max=limit))
             return
-        value = None if (editing == 'terms' and text == '-') else text
-        field = 'access_payment' if editing == 'payment' else 'access_terms'
-        chat = await Chat.update_settings(chat['id'], {field: value})
+        if editing == 'payment':
+            # The owner's own link or requisites: they confirm each payment
+            chat = await Chat.update_settings(chat['id'], {'access_provider': 'link', 'access_payment': text})
+        else:
+            chat = await Chat.update_settings(chat['id'], {'access_terms': None if text == '-' else text})
         _set_editing(params, None)
     await _render(params, chat, notice='✅ ' + _text(['toasts', 'saved'], language_code))
+
+
+async def _connect_cryptobot(params: ControllerParams, chat: dict, token: str):
+    """The token of the owner's Crypto Pay app: checked with getMe, kept encrypted, its message deleted."""
+    language_code, message = params['language_code'], params['message']
+    try:
+        await bot.delete_message(message.chat.id, message.message_id)
+    except (telegram_exceptions.TelegramBadRequest, telegram_exceptions.TelegramForbiddenError):
+        pass
+    try:
+        label = await cryptobot.connect(token.strip())
+    except cryptobot.ProviderError as e:
+        cryptobot.log_error('the token did not work', e)
+        await _render(params, chat, notice=_text(['errors', 'cryptobot_token'], language_code))
+        return
+    unsupported = [plan for plan in access.plans_of(chat) if not cryptobot.supports(plan['currency'])]
+    chat = await Chat.update_settings(chat['id'], {
+        'access_provider': cryptobot.NAME, 'access_secret': seal(token.strip()), 'access_provider_label': label})
+    _set_editing(params, 'prices' if unsupported else None)
+    await _render(params, chat, notice=_text(['toasts', 'cryptobot_connected'], language_code,
+                                             label=html.escape(label)))
 
 
 async def set_mode(params: ControllerParams):

@@ -6,6 +6,7 @@ from pkg.config.config import environment
 from pkg.service.bot_commands import set_bot_commands
 from pkg.service.message_sender import MessageSender
 from pkg.background.async_tasks.subscription_handler import subscription_handler
+from pkg.service.access_payments import poll_forever
 from pkg.system.logger import logger
 
 
@@ -13,6 +14,8 @@ async def before_bot_startup() -> None:
     loop = asyncio.get_event_loop()
 
     loop.create_task(subscription_handler())
+    # Invoices of payment providers (CryptoBot) the members of groups are paying
+    loop.create_task(poll_forever())
 
     if environment['ENVIRONMENT'] != 'development':
         await MessageSender.notify_admins('The tasks have been started')

@@ -38,6 +38,8 @@ class ModeratedChatInterface(TypedDict, total=False):
     access_plans: list | None
     access_provider: str
     access_payment: str | None
+    access_secret: str | None
+    access_provider_label: str | None
 
 
 class UserModeratedChatConnectionInterface(TypedDict, total=False):
