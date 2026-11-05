@@ -546,9 +546,6 @@ owner_tools_messages = {
             'deny': {'en': "Remove a member from the whitelist", 'ru': "Убрать участника из белого списка"},
             'settings': {'en': "The group's page in the bot", 'ru': "Страница группы в боте"},
         },
-        'admin': {
-            'userscount': {'en': "The bot's numbers", 'ru': "Цифры бота"},
-        },
     },
     'tariffs': {
         # HTML, under the list of tariffs

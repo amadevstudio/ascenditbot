@@ -55,9 +55,3 @@ async def update_by_service_id(service_id: str, data: UserInterface) -> UserInte
         return None
 
     return await update({**data, 'id': user_id})
-
-
-async def admin_service_ids() -> list[str]:
-    """Telegram ids of the bot's admins (users.is_admin)."""
-    rows = await databaseExecutor.run(db.fetchall, "SELECT service_id FROM users WHERE is_admin", ())
-    return [row['service_id'] for row in rows]

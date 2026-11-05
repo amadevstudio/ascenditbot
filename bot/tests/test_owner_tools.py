@@ -442,7 +442,7 @@ async def test_stats_for_bot_admins_only(bench: Bench):
 
 
 async def test_command_menus(bench: Bench):
-    """the menus: private commands for everyone, group commands for group admins, /userscount for bot admins"""
+    """the menus: private commands for everyone, group commands for group admins, /usersCount in none of them"""
     import re
     from pkg.service.bot_commands import set_bot_commands
 
@@ -457,7 +457,7 @@ async def test_command_menus(bench: Bench):
         'menu', 'my_chats', 'add_chat', 'subscription', 'settings', 'help'}
     assert menus[('all_private_chats', None, None)]['my_chats'] == 'My groups'
     assert set(menus[('all_chat_administrators', None, 'ru')]) == {'allow', 'deny', 'settings'}
-    assert menus[('chat', OWNER['id'], 'ru')]['userscount'] == 'Цифры бота'
+    assert not any(scope == 'chat' or 'userscount' in menu for (scope, _, _), menu in menus.items())
     for menu in menus.values():
         for command, description in menu.items():
             assert re.fullmatch(r'[a-z0-9_]{1,32}', command) and 0 < len(description) <= 256, (command, description)
