@@ -658,3 +658,12 @@ async def test_add_group_from_the_menu_button(bench: Bench):
     keyboards = [call for call in bench.telegram.sent_to(OWNER['id'])
                  if getattr(call.reply_markup, 'keyboard', None)]
     assert len(keyboards) == 1 and keyboards[0].reply_markup.keyboard[0][0].request_chat, bench.telegram.calls
+
+
+async def test_help_has_a_button_to_write_to_us(bench: Bench):
+    """/help: a button to the direct messages of the bot's channel"""
+    await bench.owner(OWNER)
+    await bench.private_message(OWNER, '/help')
+    [page] = [call for call in bench.telegram.sent_to(OWNER['id']) if 'Вопросы и идеи' in (call.text or '')]
+    urls = [button.url for row in page.reply_markup.inline_keyboard for button in row if button.url]
+    assert urls == ['https://t.me/ascendit_group?direct'], urls

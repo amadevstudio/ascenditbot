@@ -88,13 +88,18 @@ async def menu(params: ControllerParams):
     await message_sender(message.chat.id, message_structures=answer_messages)
 
 
+SUPPORT_URL = 'https://t.me/ascendit_group?direct'
+
+
 async def help_page(params: ControllerParams):
     call, message = params['call'], params['message']
 
     await message_sender(message.chat.id, message_structures=[{
         'type': 'text',
         'text': localization.get_message(['help', 'text'], params['language_code']),
-        'reply_markup': go_back_inline_markup(params['language_code']),
+        # Questions go to the direct messages of the bot's channel
+        'reply_markup': [[{'text': localization.get_message(['help', 'contact_button'], params['language_code']),
+                           'url': SUPPORT_URL}], *go_back_inline_markup(params['language_code'])],
         'parse_mode': 'HTML',
         'disable_web_page_preview': True
     }])
