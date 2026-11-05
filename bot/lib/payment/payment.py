@@ -57,9 +57,11 @@ class PaymentProcessor(ABC):
 
 
 class PaymentServer:
-    def __init__(self, port: int, payment_processors: list[PaymentProcessor]):
+    def __init__(self, port: int, payment_processors: list[PaymentProcessor], routes: list | None = None):
         self.port = port
         self.payment_processors = payment_processors
+        # More routes of the same server (the hooks of the payment providers groups use)
+        self.routes = routes or []
 
         loop = asyncio.get_event_loop()
         loop.create_task(self.start_server())
@@ -72,7 +74,7 @@ class PaymentServer:
 
     async def start_server(self):
         app = web.Application()
-        app.add_routes([web.get('/payment/{service}/result', self.handle)])
+        app.add_routes([web.get('/payment/{service}/result', self.handle), *self.routes])
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', self.port)

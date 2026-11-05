@@ -3,16 +3,19 @@ picked, and checking the invoices waited for, every POLL_SECONDS and when the me
 opens access on its own; the member and the managers hear it."""
 import asyncio
 import datetime
+import json
 
 from pkg.service import access
 from pkg.service.access import Requests
-from pkg.service.access_providers import cryptobot
+from pkg.service.access_providers import cryptobot, tribute, yoomoney
 from pkg.service.allowed_user import full_name
 from pkg.service.secret_box import unseal
 from pkg.repository import access_repository
 from pkg.system.logger import logger
 
-PROVIDERS = {cryptobot.NAME: cryptobot}
+# CryptoBot is asked (statuses); YooMoney and Tribute tell the bot (pkg/service/access_hooks.py)
+PROVIDERS = {cryptobot.NAME: cryptobot, yoomoney.NAME: yoomoney, tribute.NAME: tribute}
+ERRORS = (cryptobot.ProviderError, yoomoney.ProviderError, tribute.ProviderError)
 POLL_SECONDS = 20
 # An invoice is waited for this long, then the request expires (the invoice itself lives an hour)
 WAIT = datetime.timedelta(hours=2)
@@ -24,11 +27,26 @@ def provider_of(chat: dict):
     return PROVIDERS.get(chat.get('access_provider') or '')
 
 
+def credentials(chat: dict) -> dict | None:
+    """The owner's credentials of the group's provider: {'token'} (CryptoBot), {'wallet', 'secret'} (YooMoney),
+    {'api_key'} (Tribute)."""
+    raw = unseal(chat.get('access_secret'))
+    if raw is None:
+        return None
+    if chat.get('access_provider') == cryptobot.NAME:
+        return {'token': raw}
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        return None
+    return value if isinstance(value, dict) else None
+
+
 async def start(chat: dict, user, language_code: str | None, plan: dict) -> dict:
     """The member's request with an invoice to pay: {'request'} or {'error': 'unavailable' | 'provider'}."""
     provider = provider_of(chat)
-    token = unseal(chat.get('access_secret'))
-    if provider is None or token is None:
+    found = credentials(chat)
+    if provider not in (cryptobot, yoomoney) or found is None:
         return {'error': 'unavailable'}
 
     latest = await Requests.latest(chat['id'], str(user.id))
@@ -47,10 +65,16 @@ async def start(chat: dict, user, language_code: str | None, plan: dict) -> dict
     if request is None:
         return {'error': 'provider'}
     description = f"{chat.get('name') or ''}: {access.plan_text(plan, language_code)}"
+    label = f"r{request['id']}"
     try:
-        invoice = await provider.create_invoice(token, plan, description, f"r{request['id']}")
-    except cryptobot.ProviderError as e:
-        provider.log_error('cannot create an invoice', e)
+        if provider is cryptobot:
+            invoice = await cryptobot.create_invoice(found['token'], plan, description, label)
+        else:
+            # YooMoney tells about the transfer with this label: the request's id
+            invoice = {'external_id': label, 'url': await yoomoney.payment_url(
+                found['wallet'], plan['amount'], label, description)}
+    except ERRORS as e:
+        logger.warning(f'{provider.NAME}: cannot create an invoice', e)
         await Requests.decide(request['id'], 'cancelled', None)
         return {'error': 'provider'}
     request = await Requests.update(request['id'], {'external_id': invoice['external_id'], 'pay_url': invoice['url']})
@@ -90,16 +114,18 @@ async def check(requests: list[dict]) -> dict[int, dict | None]:
     settled = {}
     by_token: dict[tuple[str, str], list[dict]] = {}
     for request in requests:
-        token = unseal(request.get('access_secret'))
-        if token is None or request['provider'] not in PROVIDERS:
-            await settle(request, 'expired' if request['created_at'] < datetime.datetime.now() - WAIT else 'active')
+        token = (credentials({'access_provider': request['provider'], 'access_secret': request.get('access_secret')})
+                 or {}).get('token')
+        if token is None or not hasattr(PROVIDERS.get(request['provider']), 'statuses'):
+            # Nothing to ask (a provider that tells the bot itself, or no credentials): only the time runs out
+            await settle(request, 'active')
             continue
         by_token.setdefault((request['provider'], token), []).append(request)
     for (name, token), group in by_token.items():
         try:
             found = await PROVIDERS[name].statuses(token, [request['external_id'] for request in group])
-        except cryptobot.ProviderError as e:
-            PROVIDERS[name].log_error('cannot check invoices', e)
+        except ERRORS as e:
+            logger.warning(f'{name}: cannot check invoices', e)
             continue
         for request in group:
             entry = await settle(request, found.get(request['external_id'], 'active'))

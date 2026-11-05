@@ -71,3 +71,9 @@ async def waiting_payments(providers: tuple[str, ...], request_id: int | None = 
         ORDER BY ar.id
         LIMIT 1000
     """, (list(providers), request_id, request_id)) or []
+
+
+async def find_by_external(provider: str, external_id: str) -> dict | None:
+    return await databaseExecutor.run(db.fetchone, """
+        SELECT * FROM access_requests WHERE provider = %s AND external_id = %s
+    """, (provider, external_id))

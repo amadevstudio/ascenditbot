@@ -571,6 +571,16 @@ owner_tools_messages = {
                         'ru': "Оплата: {payment}\nВы проверяете оплату и подтверждаете заявку."},
             'payment_none': {'en': "Payment: no way to pay set", 'ru': "Оплата: способ не задан"},
             'payment_provider': {
+                'yoomoney': {
+                    'en': "Payment: 🟣 YooMoney, the wallet {label}\nMembers pay by card, access opens by itself.",
+                    'ru': "Оплата: 🟣 ЮMoney, кошелёк {label}\nУчастники платят картой, доступ открывается сам."
+                },
+                'tribute': {
+                    'en': "Payment: 🎫 Tribute, a product per term\nThe webhook address for Tribute (Settings, API "
+                          "Keys):\n<code>{url}</code>",
+                    'ru': "Оплата: 🎫 Tribute, товар на каждый срок\nАдрес вебхука для Tribute (Настройки, API "
+                          "Keys):\n<code>{url}</code>"
+                },
                 'cryptobot': {
                     'en': "Payment: 💎 CryptoBot, the app \"{label}\"\nAccess opens by itself once paid; the money "
                           "goes to your app.",
@@ -625,6 +635,8 @@ owner_tools_messages = {
                 'use_cryptobot': {'en': "💎 CryptoBot: access opens by itself",
                                   'ru': "💎 CryptoBot: доступ открывается сам"},
                 'other_ways': {'en': "⬅️ Other ways", 'ru': "⬅️ Другие способы"},
+                'use_yoomoney': {'en': "🟣 YooMoney: access opens by itself", 'ru': "🟣 ЮMoney: доступ открывается сам"},
+                'use_tribute': {'en': "🎫 Tribute: access opens by itself", 'ru': "🎫 Tribute: доступ открывается сам"},
             },
             'prompt': {
                 'prices': {
@@ -645,6 +657,36 @@ owner_tools_messages = {
                           "(ЮMoney, Boosty, Tribute, ссылка банка на перевод). Участник оплатит и нажмёт \"Я "
                           "оплатил(а)\", а вы подтвердите в одно нажатие.\n\n💎 <b>CryptoBot</b>: оплата "
                           "криптовалютой, бот сам видит оплату и открывает доступ. Нажмите кнопку ниже."
+                },
+                'yoomoney_wallet': {
+                    'en': "🟣 <b>Connecting YooMoney</b>\n\nSend the number of your YooMoney wallet: 15 to 20 "
+                          "digits starting with 41, shown in the wallet under the balance.",
+                    'ru': "🟣 <b>Подключение ЮMoney</b>\n\nПришлите номер кошелька ЮMoney: от 15 до 20 цифр, "
+                          "начинается с 41, виден в кошельке под балансом."
+                },
+                'yoomoney_secret': {
+                    'en': "🟣 <b>Connecting YooMoney</b>, the wallet {wallet}\n\n1. Open <a href=\"{settings}\">"
+                          "HTTP notifications</a> in YooMoney.\n2. Paste this address:\n<code>{url}</code>\n"
+                          "3. Turn on \"Send HTTP notifications\", tap \"Show the secret\" and send the secret "
+                          "here. The bot deletes the message with it.\n4. Save, then tap \"Test\": the bot will "
+                          "confirm.\n\nMembers pay by card; YooMoney keeps 3% of what you receive.",
+                    'ru': "🟣 <b>Подключение ЮMoney</b>, кошелёк {wallet}\n\n1. Откройте в ЮMoney <a href=\"{settings}\">"
+                          "HTTP-уведомления</a>.\n2. Вставьте адрес:\n<code>{url}</code>\n3. Включите \"Отправлять "
+                          "HTTP-уведомления\", нажмите \"Показать секрет\" и пришлите секрет сюда. Бот удалит "
+                          "сообщение с ним.\n4. Сохраните и нажмите \"Протестировать\": бот пришлёт подтверждение.\n\n"
+                          "Участники платят картой, ЮMoney удерживает 3% с получателя."
+                },
+                'tribute_key': {
+                    'en': "🎫 <b>Connecting Tribute</b>\n\n1. Make a digital product in Tribute for each term: "
+                          "{plans}.\n2. In Tribute open ⋯ → Settings → API Keys, make a key and send it here. The "
+                          "bot deletes the message with it.",
+                    'ru': "🎫 <b>Подключение Tribute</b>\n\n1. Создайте в Tribute цифровой товар на каждый срок: "
+                          "{plans}.\n2. Откройте в Tribute ⋯ → Настройки → API Keys, создайте ключ и пришлите его "
+                          "сюда. Бот удалит сообщение с ним."
+                },
+                'tribute_map': {
+                    'en': "🎫 Which of your Tribute products gives access for <b>{plan}</b>?",
+                    'ru': "🎫 Какой товар Tribute даёт доступ на <b>{plan}</b>?"
                 },
                 'cryptobot': {
                     'en': "💎 <b>Connecting CryptoBot</b>\n\n1. Open @CryptoBot → Crypto Pay → Create App.\n"
@@ -676,6 +718,17 @@ owner_tools_messages = {
                               'ru': "Платный вход есть на платных тарифах. Подробнее: /subscription"},
                 'not_editing': {'en': "Pick what to change with the buttons below.",
                                 'ru': "Выберите кнопкой ниже, что изменить."},
+                'yoomoney_wallet': {'en': "❌ That is not a YooMoney wallet number: 15 to 20 digits starting with 41.",
+                                    'ru': "❌ Это не номер кошелька ЮMoney: от 15 до 20 цифр, начинается с 41."},
+                'yoomoney_secret': {'en': "❌ That does not look like the secret: copy it whole, without spaces.",
+                                    'ru': "❌ Не похоже на секрет: скопируйте его целиком, без пробелов."},
+                'tribute_key': {'en': "❌ Tribute did not take the key. Check it and send it again.",
+                                'ru': "❌ Tribute не принял ключ. Проверьте его и пришлите ещё раз."},
+                'tribute_no_products': {
+                    'en': "❌ There are no digital products in your Tribute. Make one per term and send the key again.",
+                    'ru': "❌ В вашем Tribute нет цифровых товаров. Создайте по товару на срок и пришлите ключ снова."
+                },
+                'pick_product': {'en': "Pick a product with the buttons below.", 'ru': "Выберите товар кнопкой ниже."},
                 'cryptobot_token': {
                     'en': "❌ CryptoBot did not take the token. Check that you copied all of it and send it again.",
                     'ru': "❌ CryptoBot не принял токен. Проверьте, что скопировали его целиком, и пришлите ещё раз."
@@ -693,6 +746,20 @@ owner_tools_messages = {
                                 'ru': "Не получилось отправить в группу: у бота нет права писать сообщения."},
                 'no_requests': {'en': "No requests waiting", 'ru': "Новых заявок нет"},
                 'requests_sent': {'en': "The requests are below", 'ru': "Заявки ниже"},
+                'yoomoney_connected': {
+                    'en': "✅ YooMoney is connected. Tap \"Test\" on its notifications page: the bot will confirm.",
+                    'ru': "✅ ЮMoney подключён. Нажмите \"Протестировать\" на странице уведомлений: бот подтвердит."
+                },
+                'yoomoney_rubles': {
+                    'en': "✅ YooMoney is connected. It takes rubles only: set the prices in ₽.",
+                    'ru': "✅ ЮMoney подключён. Он принимает только рубли: укажите цены в ₽."
+                },
+                'tribute_connected': {
+                    'en': "✅ Tribute is connected. The last step: in Tribute → Settings → API Keys put this as the "
+                          "Webhook URL and save:\n<code>{url}</code>",
+                    'ru': "✅ Tribute подключён. Последний шаг: в Tribute → Настройки → API Keys вставьте в Webhook URL "
+                          "и сохраните:\n<code>{url}</code>"
+                },
                 'cryptobot_connected': {
                     'en': "✅ CryptoBot is connected: the app \"{label}\". The message with the token is deleted.",
                     'ru': "✅ CryptoBot подключён: приложение \"{label}\". Сообщение с токеном удалено."
@@ -707,6 +774,37 @@ owner_tools_messages = {
         },
         'providers': {
             'cryptobot': {'en': "CryptoBot", 'ru': "CryptoBot"},
+            'yoomoney': {'en': "YooMoney", 'ru': "ЮMoney"},
+            'tribute': {'en': "Tribute", 'ru': "Tribute"},
+        },
+        'providers_member': {
+            'cryptobot': {'en': "@CryptoBot", 'ru': "@CryptoBot"},
+            'yoomoney': {'en': "YooMoney (by card)", 'ru': "ЮMoney (картой)"},
+            'tribute': {'en': "Tribute", 'ru': "Tribute"},
+        },
+        # The managers hear what YooMoney and Tribute told the bot
+        'hooks': {
+            'yoomoney_test': {
+                'en': "✅ YooMoney reaches the bot: payments for <b>{chat_name}</b> will open access by themselves.",
+                'ru': "✅ ЮMoney достучался до бота: оплаты за <b>{chat_name}</b> будут открывать доступ сами."
+            },
+            'yoomoney_short': {
+                'en': "⚠️ {member} paid {paid} for <b>{chat_name}</b>, the price is {price}. Access is not opened: "
+                      "decide yourself.",
+                'ru': "⚠️ {member} заплатил(а) {paid} за <b>{chat_name}</b>, а цена {price}. Доступ не открыт: "
+                      "решите сами."
+            },
+            'tribute_no_buyer': {
+                'en': "⚠️ Tribute sold \"{product}\" for <b>{chat_name}</b> without the buyer's Telegram account, so "
+                      "access is not opened. Let them in yourself.",
+                'ru': "⚠️ Tribute продал \"{product}\" для <b>{chat_name}</b> без аккаунта Telegram покупателя, "
+                      "поэтому доступ не открыт. Пустите его сами."
+            },
+            'tribute_refund': {
+                'en': "↩️ Tribute refunded the payment of {member} for <b>{chat_name}</b>. Take the access away?",
+                'ru': "↩️ Tribute вернул оплату {member} за <b>{chat_name}</b>. Убрать доступ?"
+            },
+            'remove_access': {'en': "🚫 Take the access away", 'ru': "🚫 Убрать доступ"},
         },
         'notice': {
             'en': "Your message is deleted: only members on the list write in this group.\n\nGet access: {link}",
@@ -755,10 +853,16 @@ owner_tools_messages = {
                       "2. Вернитесь и нажмите \"Я оплатил(а)\": владелец проверит оплату и откроет доступ."
             },
             'plan_auto': {
-                'en': "💳 <b>{chat_name}</b>: {plan}\n\nPay through @CryptoBot with the button below. Access opens "
+                'en': "💳 <b>{chat_name}</b>: {plan}\n\nPay through {provider} with the button below. Access opens "
                       "by itself, usually within a minute of paying.",
-                'ru': "💳 <b>{chat_name}</b>: {plan}\n\nОплатите через @CryptoBot по кнопке ниже. Доступ откроется "
+                'ru': "💳 <b>{chat_name}</b>: {plan}\n\nОплатите через {provider} по кнопке ниже. Доступ откроется "
                       "сам, обычно в течение минуты после оплаты."
+            },
+            'plan_tribute': {
+                'en': "💳 <b>{chat_name}</b>: {plan}\n\nPay in Tribute with the button below, from this Telegram "
+                      "account. Access opens by itself, usually within a minute of paying.",
+                'ru': "💳 <b>{chat_name}</b>: {plan}\n\nОплатите в Tribute по кнопке ниже, с этого же аккаунта "
+                      "Telegram. Доступ откроется сам, обычно в течение минуты после оплаты."
             },
             'plan_auto_note': {
                 'en': "<i>The money goes to the group's owner; the bot only checks the payment.</i>",

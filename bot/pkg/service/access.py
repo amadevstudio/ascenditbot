@@ -198,10 +198,14 @@ def effective_mode(chat: dict, owner_tariff_id: int | None) -> str:
 
 def ready_to_pay(chat: dict) -> bool:
     """The owner's link or requisites, or a provider connected (its secret readable)."""
-    if (chat.get('access_provider') or 'link') == 'link':
+    provider = chat.get('access_provider') or 'link'
+    if provider == 'link':
         return bool(chat.get('access_payment'))
     from pkg.service.secret_box import unseal
-    return unseal(chat.get('access_secret')) is not None
+    if unseal(chat.get('access_secret')) is None:
+        return False
+    # Tribute: every term sold as one of the owner's products
+    return provider != 'tribute' or all(plan.get('product_id') and plan.get('url') for plan in plans_of(chat))
 
 
 def payment_url(chat: dict) -> str | None:

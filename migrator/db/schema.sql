@@ -188,7 +188,8 @@ CREATE TABLE public.moderated_chats (
     access_provider character varying(16) DEFAULT 'link'::character varying NOT NULL,
     access_payment text,
     access_secret text,
-    access_provider_label character varying(255)
+    access_provider_label character varying(255),
+    access_hook_key character varying(64)
 );
 
 
@@ -631,6 +632,13 @@ CREATE UNIQUE INDEX moderated_chat_statistics_moderated_chat_id_day_key ON publi
 
 
 --
+-- Name: moderated_chats_access_hook_key_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX moderated_chats_access_hook_key_index ON public.moderated_chats USING btree (access_hook_key) WHERE (access_hook_key IS NOT NULL);
+
+
+--
 -- Name: service_id_index_on_moderated_chats; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -780,4 +788,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20261106120000'),
     ('20261107120000'),
     ('20261108120000'),
-    ('20261109120000');
+    ('20261109120000'),
+    ('20261110120000');

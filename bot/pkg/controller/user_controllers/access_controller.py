@@ -18,15 +18,18 @@ from pkg.controller.user_controllers.common_controller import raise_error
 from pkg.service import access
 from pkg.service.access import Requests
 from pkg.service.access_messages import send_request
-from pkg.service.access_providers import cryptobot
+from pkg.service import access_providers
+from pkg.service.access_providers import cryptobot, hook_key, tribute, yoomoney
 from pkg.service.secret_box import seal
+from project import constants
 from pkg.service.chat import Chat
 from pkg.service.tariff import Tariff
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 
 ROUTE = 'chat_access'
-EDITABLE = ('prices', 'payment', 'terms', 'cryptobot')
+EDITABLE = ('prices', 'payment', 'terms', 'cryptobot', 'yoomoney_wallet', 'yoomoney_secret', 'tribute_key',
+            'tribute_map')
 
 
 def _text(path: list, language_code: str | None, **kwargs) -> str:
@@ -50,9 +53,11 @@ def _editing(params: ControllerParams) -> str | None:
     return editing if editing in EDITABLE else None
 
 
-def _set_editing(params: ControllerParams, editing: str | None):
-    UserStorage.add_user_state_data(params['message'].chat.id, ROUTE, {'editing': editing} if editing else {})
-    params['state_data'] = {'editing': editing} if editing else {}
+def _set_editing(params: ControllerParams, editing: str | None, **extra):
+    """What the page waits for, with what that step needs (the wallet typed, the products of Tribute)."""
+    state = {'editing': editing, **extra} if editing else {}
+    UserStorage.add_user_state_data(params['message'].chat.id, ROUTE, state)
+    params['state_data'] = state
 
 
 def _wizard_step(chat: dict, editing: str) -> int | None:
@@ -61,7 +66,7 @@ def _wizard_step(chat: dict, editing: str) -> int | None:
         return None
     if editing == 'prices' and not access.plans_of(chat):
         return 1
-    if editing in ('payment', 'cryptobot') and not access.ready_to_pay(chat):
+    if editing not in ('prices', 'terms') and not access.ready_to_pay(chat):
         return 2
     return None
 
@@ -98,7 +103,8 @@ async def _render(params: ControllerParams, chat: dict, notice: str | None = Non
             payment = chat.get('access_payment')
             if provider != 'link' and access.ready_to_pay(chat):
                 lines.append(_text(['payment_provider', provider], language_code,
-                                   label=html.escape(chat.get('access_provider_label') or '')))
+                                   label=html.escape(chat.get('access_provider_label') or ''),
+                                   url=_hook_url(chat)))
             elif provider == 'link' and payment:
                 lines.append(_text(['payment'], language_code, payment=html.escape(payment)))
             else:
@@ -131,13 +137,25 @@ async def _render(params: ControllerParams, chat: dict, notice: str | None = Non
         step = _wizard_step(chat, editing)
         if step:
             lines.append(_text(['step'], language_code, step=step))
+        state = params['state_data'] or {}
+        wallet = state.get('wallet') or ''
+        unmapped = next((plan for plan in access.plans_of(chat) if not plan.get('product_id')), None)
         lines.append(_text(['prompt', editing], language_code, currency=access.CURRENCIES[
-            access.default_currency(language_code)]['symbol']))
+            access.default_currency(language_code)]['symbol'], wallet=wallet, settings=yoomoney.SETTINGS_URL,
+            url=f"{constants.hooks_url}/{yoomoney.NAME}/{hook_key(yoomoney.NAME, wallet)}" if wallet else '',
+            plans=', '.join(access.plan_text(plan, language_code) for plan in access.plans_of(chat)),
+            plan=access.plan_text(unmapped, language_code) if unmapped else ''))
         rows = []
         if editing == 'payment':
             # A link is typed; a provider that confirms payments is picked
             rows.append([button('use_cryptobot', {'tp': 'acc_edit', 'f': 'cryptobot'})])
-        elif editing == 'cryptobot':
+            if access_providers.HOOKS_ENABLED:
+                rows.append([button('use_yoomoney', {'tp': 'acc_edit', 'f': 'yoomoney_wallet'})])
+                rows.append([button('use_tribute', {'tp': 'acc_edit', 'f': 'tribute_key'})])
+        elif editing == 'tribute_map':
+            rows += [[_button(product['name'], {'tp': 'acc_map', 'p': product['id']})]
+                     for product in state.get('products', [])[:20]]
+        elif editing in ('cryptobot', 'yoomoney_wallet', 'yoomoney_secret', 'tribute_key'):
             rows.append([button('other_ways', {'tp': 'acc_edit', 'f': 'payment'})])
         rows.append([button('cancel', {'tp': 'acc_cancel'})])
     else:
@@ -179,6 +197,15 @@ async def _save(params: ControllerParams, chat: dict, editing: str, text: str):
     if editing == 'cryptobot':
         await _connect_cryptobot(params, chat, text)
         return
+    if editing in ('yoomoney_wallet', 'yoomoney_secret'):
+        await _connect_yoomoney(params, chat, editing, text)
+        return
+    if editing == 'tribute_key':
+        await _connect_tribute(params, chat, text)
+        return
+    if editing == 'tribute_map':
+        await _render(params, chat, notice=_text(['errors', 'pick_product'], language_code))
+        return
 
     if editing == 'prices':
         plans, bad = access.parse_plans(text, access.default_currency(language_code))
@@ -206,10 +233,7 @@ async def _save(params: ControllerParams, chat: dict, editing: str, text: str):
 async def _connect_cryptobot(params: ControllerParams, chat: dict, token: str):
     """The token of the owner's Crypto Pay app: checked with getMe, kept encrypted, its message deleted."""
     language_code, message = params['language_code'], params['message']
-    try:
-        await bot.delete_message(message.chat.id, message.message_id)
-    except (telegram_exceptions.TelegramBadRequest, telegram_exceptions.TelegramForbiddenError):
-        pass
+    await _delete_typed(params)
     try:
         label = await cryptobot.connect(token.strip())
     except cryptobot.ProviderError as e:
@@ -222,6 +246,107 @@ async def _connect_cryptobot(params: ControllerParams, chat: dict, token: str):
     _set_editing(params, 'prices' if unsupported else None)
     await _render(params, chat, notice=_text(['toasts', 'cryptobot_connected'], language_code,
                                              label=html.escape(label)))
+
+
+def _hook_url(chat: dict) -> str:
+    provider = chat.get('access_provider') or ''
+    return f"{constants.hooks_url}/{provider}/{chat.get('access_hook_key')}" if chat.get('access_hook_key') else ''
+
+
+async def _delete_typed(params: ControllerParams):
+    """A secret typed into the chat does not stay there."""
+    message = params['message']
+    try:
+        await bot.delete_message(message.chat.id, message.message_id)
+    except (telegram_exceptions.TelegramBadRequest, telegram_exceptions.TelegramForbiddenError):
+        pass
+
+
+async def _connect_yoomoney(params: ControllerParams, chat: dict, editing: str, text: str):
+    """The wallet, then (with the address to set in YooMoney) the secret of its HTTP notifications."""
+    language_code = params['language_code']
+    if editing == 'yoomoney_wallet':
+        wallet = yoomoney.parse_wallet(text)
+        if wallet is None:
+            await _render(params, chat, notice=_text(['errors', 'yoomoney_wallet'], language_code))
+            return
+        _set_editing(params, 'yoomoney_secret', wallet=wallet)
+        await _render(params, chat)
+        return
+
+    await _delete_typed(params)
+    wallet = (params['state_data'] or {}).get('wallet')
+    secret = text.strip()
+    if not wallet:
+        _set_editing(params, 'yoomoney_wallet')
+        await _render(params, chat)
+        return
+    if len(secret) < 8 or ' ' in secret:
+        await _render(params, chat, notice=_text(['errors', 'yoomoney_secret'], language_code))
+        return
+    chat = await Chat.update_settings(chat['id'], {
+        'access_provider': yoomoney.NAME, 'access_secret': seal(json.dumps({'wallet': wallet, 'secret': secret})),
+        'access_hook_key': hook_key(yoomoney.NAME, wallet), 'access_provider_label': f'{wallet[:4]}…{wallet[-4:]}'})
+    rubles = all(yoomoney.supports(plan['currency']) for plan in access.plans_of(chat))
+    _set_editing(params, None if rubles else 'prices')
+    await _render(params, chat, notice=_text(['toasts', 'yoomoney_connected' if rubles else 'yoomoney_rubles'],
+                                             language_code))
+
+
+async def _connect_tribute(params: ControllerParams, chat: dict, api_key: str):
+    """The API key: checked by listing the owner's digital products, then each term is mapped to one."""
+    language_code = params['language_code']
+    await _delete_typed(params)
+    api_key = api_key.strip()
+    try:
+        products = await tribute.products(api_key)
+    except tribute.ProviderError as e:
+        tribute.log_error('the API key did not work', e)
+        await _render(params, chat, notice=_text(['errors', 'tribute_key'], language_code))
+        return
+    if not products:
+        await _render(params, chat, notice=_text(['errors', 'tribute_no_products'], language_code))
+        return
+    known = {str(product['id']) for product in products}
+    plans = [plan if str(plan.get('product_id')) in known
+             else {key: value for key, value in plan.items() if key not in ('product_id', 'product_name', 'url')}
+             for plan in access.plans_of(chat)]
+    chat = await Chat.update_settings(chat['id'], {
+        'access_provider': tribute.NAME, 'access_secret': seal(json.dumps({'api_key': api_key})),
+        'access_hook_key': hook_key(tribute.NAME, api_key), 'access_provider_label': 'Tribute',
+        'access_plans': json.dumps(plans)})
+    await _next_mapping(params, chat, products)
+
+
+async def _next_mapping(params: ControllerParams, chat: dict, products: list[dict]):
+    language_code = params['language_code']
+    if any(not plan.get('product_id') for plan in access.plans_of(chat)):
+        _set_editing(params, 'tribute_map', products=products)
+        await _render(params, chat)
+        return
+    _set_editing(params, None)
+    await _render(params, chat, notice=_text(['toasts', 'tribute_connected'], language_code, url=_hook_url(chat)))
+
+
+async def map_product(params: ControllerParams):
+    """A product of Tribute for the first term without one."""
+    chat = await _chat(params)
+    if chat is None:
+        return
+    state = params['state_data'] or {}
+    products = state.get('products', [])
+    product = next((p for p in products if str(p['id']) == str(state.get('p'))), None)
+    await params['call'].answer()
+    if product is None:
+        await _render(params, chat)
+        return
+    plans = access.plans_of(chat)
+    for plan in plans:
+        if not plan.get('product_id'):
+            plan.update({'product_id': product['id'], 'product_name': product['name'], 'url': product['link']})
+            break
+    chat = await Chat.update_settings(chat['id'], {'access_plans': json.dumps(plans)})
+    await _next_mapping(params, chat, products)
 
 
 async def set_mode(params: ControllerParams):

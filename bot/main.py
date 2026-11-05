@@ -41,7 +41,8 @@ async def run():
     await Database(max_connections=max_connections, min_alive_connections=min_alive_connections)\
         .connect(database_configuration)
 
-    server = PaymentServer(3000, list(payment_processors.values()))
+    from pkg.service.access_hooks import routes as access_hook_routes
+    server = PaymentServer(3000, list(payment_processors.values()), access_hook_routes())
     await before_bot_startup()
 
     await bot.delete_webhook(drop_pending_updates=False)
