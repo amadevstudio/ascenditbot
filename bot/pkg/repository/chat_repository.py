@@ -257,7 +257,7 @@ async def chat_whitelist(
 
 async def update_settings(chat_id: int, settings: dict) -> ModeratedChatInterface | None:
     """Changes the group's own settings (who may write, the posting limit, the owner's alerts, the way in)."""
-    allowed = {'everyone_can_write', 'post_limit', 'post_limit_period', 'owner_alerts',
+    allowed = {'everyone_can_write', 'post_limit', 'post_limit_hours', 'owner_alerts',
                'access_mode', 'access_terms', 'access_plans', 'access_provider', 'access_payment',
                'access_secret', 'access_provider_label', 'access_hook_key'}
     assert set(settings) <= allowed, settings

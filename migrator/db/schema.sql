@@ -180,7 +180,6 @@ CREATE TABLE public.moderated_chats (
     restriction_duration_minutes integer DEFAULT 5 NOT NULL,
     everyone_can_write boolean DEFAULT false NOT NULL,
     post_limit smallint,
-    post_limit_period character varying(8),
     owner_alerts boolean DEFAULT true NOT NULL,
     access_mode character varying(16) DEFAULT 'off'::character varying NOT NULL,
     access_terms text,
@@ -189,7 +188,8 @@ CREATE TABLE public.moderated_chats (
     access_payment text,
     access_secret text,
     access_provider_label character varying(255),
-    access_hook_key character varying(64)
+    access_hook_key character varying(64),
+    post_limit_hours smallint
 );
 
 
@@ -789,4 +789,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20261107120000'),
     ('20261108120000'),
     ('20261109120000'),
-    ('20261110120000');
+    ('20261110120000'),
+    ('20261111120000');

@@ -295,21 +295,24 @@ routed_messages = {
         'restriction_duration': {
             'text': {
                 'en':
-                    "Current restriction time: <b>{duration} min</b>\n\n"
-                    "Send a number from {min_duration} to {max_duration}. "
-                    "Users outside the allowed list will be restricted for this time after their message is deleted.",
+                    "🔇 <b>Mute offenders</b>\n\n"
+                    "Now: <b>{duration} min</b>\n\n"
+                    "When the bot deletes a message of someone off the whitelist, it also mutes them for this long, "
+                    "so that they do not keep trying. Send the minutes, from {min_duration} to {max_duration}.",
                 'ru':
-                    "Текущее время ограничения: <b>{duration} мин</b>\n\n"
-                    "Пришлите число от {min_duration} до {max_duration}. "
-                    "Пользователи вне белого списка будут ограничены на это время после удаления сообщения."
+                    "🔇 <b>Мут нарушителю</b>\n\n"
+                    "Сейчас: <b>{duration} мин</b>\n\n"
+                    "Когда бот удаляет сообщение того, кого нет в белом списке, он ещё и запрещает ему писать на "
+                    "это время, чтобы тот не пробовал снова и снова. Пришлите число минут, от {min_duration} до "
+                    "{max_duration}."
             },
             'success': {
-                'en': "Restriction time saved: {duration} min",
-                'ru': "Время ограничения сохранено: {duration} мин"
+                'en': "Mute saved: {duration} min",
+                'ru': "Мут сохранён: {duration} мин"
             },
             'success_with_warning': {
-                'en': "Restriction time saved: {duration} min, but temporary restriction needs attention.",
-                'ru': "Время ограничения сохранено: {duration} мин, но временное ограничение требует внимания."
+                'en': "Mute saved: {duration} min, but it needs attention.",
+                'ru': "Мут сохранён: {duration} мин, но требует внимания."
             },
             'errors': {
                 'invalid': {

@@ -14,7 +14,7 @@ from pkg.config import routes
 from pkg.controller.user_controllers.common_controller import chat_access_denied, raise_error
 from pkg.service.user_storage import UserStorage
 from pkg.service.chat import Chat
-from pkg.service.post_limit import CHOICES as POST_LIMIT_CHOICES, PERIODS
+from pkg.service import post_limit
 from pkg.service.tariff import Tariff
 from project.i18n_owner_tools import ADD_TO_GROUP_URL
 from project.types import ModeratedChatInterface
@@ -204,10 +204,7 @@ async def open_chat_page(message: telegram_types.Message, chat_id: int, language
 
 
 def _limit_text(chat_data: dict, language_code: str) -> str:
-    if not chat_data.get('post_limit') or chat_data.get('post_limit_period') not in PERIODS:
-        return localization.get_message(['chat', 'show', 'limit', 'off'], language_code)
-    return localization.get_message(
-        ['chat', 'show', 'limit', chat_data['post_limit_period']], language_code, limit=chat_data['post_limit'])
+    return post_limit.limit_text(chat_data.get('post_limit'), chat_data.get('post_limit_hours'), language_code)
 
 
 async def show(params: ControllerParams):
@@ -279,7 +276,7 @@ async def show(params: ControllerParams):
         [{'text': ('' if paid else localization.get_message(['chat', 'show', 'locked'], language_code))
             + localization.get_message(['chat', 'show', 'limit_button'], language_code,
                                        limit=_limit_text(chat_data, language_code)),
-          'callback_data': {'tp': 'cycle_limit'}}],
+          'callback_data': {'tp': 'chat_post_limit'}}],
         [button(['restriction_duration_button'], {'tp': 'chat_restriction_duration'},
                 duration=chat_data.get('restriction_duration_minutes', 5)),
          button(['alerts_button', 'on' if chat_data.get('owner_alerts', True) else 'off'], {'tp': 'switch_alerts'})],
@@ -341,23 +338,6 @@ async def switch_mode(params: ControllerParams):
     chat_data = await Chat.update_settings(current['id'], {'everyone_can_write': everyone})
     await notify(params['call'], params['message'], localization.get_message(
         ['chat', 'show', 'who_toast', 'everyone' if everyone else 'whitelist'], params['language_code']))
-    await _refresh(params, chat_data)
-
-
-async def cycle_limit(params: ControllerParams):
-    """The posting limit per member: off, 1, 2, 3, 5 a day, 1, 3 a week. A paid setting."""
-    current = params['state_data']
-    language_code = params['language_code']
-    if not Tariff.is_paid(await Chat.owner_tariff_id(current['id'])):
-        await notify(params['call'], params['message'], localization.get_message(
-            ['chat', 'show', 'limit', 'paid_only'], language_code), alert=True)
-        return
-
-    now = (current.get('post_limit'), current.get('post_limit_period')) if current.get('post_limit') else None
-    index = POST_LIMIT_CHOICES.index(now) if now in POST_LIMIT_CHOICES else 0
-    chosen = POST_LIMIT_CHOICES[(index + 1) % len(POST_LIMIT_CHOICES)]
-    chat_data = await Chat.update_settings(current['id'], {
-        'post_limit': chosen[0] if chosen else None, 'post_limit_period': chosen[1] if chosen else None})
     await _refresh(params, chat_data)
 
 
