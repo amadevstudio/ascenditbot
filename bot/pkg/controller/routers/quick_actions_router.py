@@ -93,7 +93,7 @@ def quick_actions_router() -> Router:
             await lift_restriction(int(chat['service_id']), int(payload['u']))
 
         member = member_label(payload.get('n'), payload.get('name'), payload.get('u'))
-        chat_name = html.escape(chat.get('name') or '')
+        chat_name = html.escape(await Chat.name_of(chat))
         if entry.get('expires_at') is not None:
             result = localization.get_message(['alerts', 'allowed_until'], language_code, member=member,
                                               chat_name=chat_name, date=format_date(entry['expires_at']))
@@ -121,7 +121,7 @@ def quick_actions_router() -> Router:
         await AllowedUser.disallow(chat['id'], payload.get('u'), payload.get('n'))
         member = member_label(payload.get('n'), payload.get('name'), payload.get('u'))
         await _edit(call, localization.get_message(
-            ['alerts', 'undone'], language_code, member=member, chat_name=html.escape(chat.get('name') or '')),
+            ['alerts', 'undone'], language_code, member=member, chat_name=html.escape(await Chat.name_of(chat))),
             access_buttons(data['k'], chat['id'], language_code))
         await call.answer()
 
@@ -133,7 +133,7 @@ def quick_actions_router() -> Router:
             return
         enabled = data['tp'] == 'qn'
         await Chat.update_settings(chat['id'], {'owner_alerts': enabled})
-        chat_name = html.escape(chat.get('name') or '')
+        chat_name = html.escape(await Chat.name_of(chat))
         if enabled:
             await _edit(call, localization.get_message(['alerts', 'unmuted'], language_code, chat_name=chat_name),
                         None)

@@ -439,3 +439,22 @@ async def test_stats_for_bot_admins_only(bench: Bench):
     await bench.private_message(OWNER, '/usersCount')
     [stats] = bench.telegram.texts_to(OWNER['id'])
     assert 'Всего: 1' in stats and 'Модерируются: 1' in stats, stats
+
+
+async def test_allow_result_names_the_group(bench: Bench):
+    """the result of "Allow" names the group even when its title was never saved"""
+    await _scene(bench)
+    await bench.sql('UPDATE moderated_chats SET name = NULL')
+    await bench.group_message(GROUP, STRANGER)
+    allow = next(b for b in _buttons(await _alert(bench)) if b['data'] and b['data']['tp'] == 'qa')
+    await bench.tap(OWNER, json.dumps(allow['data']))
+    [edited] = bench.telegram.calls_of('editMessageText')
+    assert f'Group {GROUP}' in edited.text, edited.text
+
+
+async def test_help_is_html(bench: Bench):
+    """/help is sent as HTML (its text has bold headings)"""
+    await bench.owner(OWNER)
+    await bench.private_message(OWNER, '/help')
+    [page] = [call for call in bench.telegram.sent_to(OWNER['id']) if '<b>' in (call.text or '')]
+    assert page.parse_mode == 'HTML'

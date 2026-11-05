@@ -340,6 +340,17 @@ class Chat(Service):
         return await pkg.repository.chat_repository.chat_whitelist(chat_id, search_query, order_by, limit, offset)
 
     @classmethod
+    async def name_of(cls, chat: ModeratedChatInterface) -> str:
+        """The group's title: the saved one, else asked from Telegram and saved."""
+        if chat.get('name'):
+            return chat['name']
+        chat_info = await cls.load_info(chat_service_id=str(chat['service_id']))
+        if 'error' in chat_info:
+            return ''
+        await chat_repository.update({'id': chat['id'], 'name': chat_info['title']})
+        return chat_info['title']
+
+    @classmethod
     async def update_names(cls, user_service_id: int):
         user_chats = await cls.data_provider_by_service_id(user_service_id)
         for chat in user_chats:
