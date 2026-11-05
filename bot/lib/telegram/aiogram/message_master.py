@@ -165,6 +165,8 @@ def build_markup(message_structure: MessageStructuresInterface):
                     ))
 
             keyboard_builder.row(*row_buttons)
+        # As tall as its buttons, not the height of the letters keyboard
+        return keyboard_builder.as_markup(resize_keyboard=True)
     return keyboard_builder.as_markup()
 
 
