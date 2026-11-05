@@ -219,6 +219,47 @@ async def test_declined_payment(bench: Bench):
     assert 'отклонил заявку' in page.text and not _buttons(page), page.text
 
 
+async def test_decline_can_be_undone(bench: Bench):
+    """a "no" by mistake: Undo puts the request back with its answers; confirming then lets the member in"""
+    chat = await _paid_scene(bench)
+    await bench.private_message(BUYER, f'/start j_{chat["id"]}')
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), '7 дней'))
+    await bench.tap(BUYER, _press(_last_to(bench, BUYER), 'Я оплатил'))
+    alert = _last_to(bench, OWNER)
+    await bench.tap(OWNER, _press(alert, 'Отклонить'))
+    declined = _last_to(bench, OWNER)
+    assert 'отклонена' in declined.text, declined.text
+
+    # Later, from the menu: the group's "Outsiders" page lists the declined, each with Undo
+    await bench.private_message(OWNER, f'/start chat_{chat["id"]}')
+    await bench.tap(OWNER, '{"tp":"chat_access"}')
+    page = _last_to(bench, OWNER)
+    await bench.tap(OWNER, _press(page, 'Отклонённые (1)'))
+    declined = _last_to(bench, OWNER)
+    assert 'отклонена' in declined.text and '@buyer' in declined.text, declined.text
+    bench.telegram.calls.clear()
+    await bench.tap(OWNER, _press(declined, 'Отменить'))
+    # Unmuted in the group at once
+    [unmute] = bench.telegram.calls_of('restrictChatMember')
+    assert int(unmute.user_id) == BUYER['id'] and unmute.permissions.can_send_messages
+    again = _last_to(bench, OWNER)
+    assert 'сообщает об оплате: 7 дней – 300 ₽' in again.text, again.text
+    [request] = await bench.sql('SELECT status, decided_at FROM access_requests')
+    assert request['status'] == 'pending' and request['decided_at'] is None
+    await bench.private_message(BUYER, f'/start j_{chat["id"]}')
+    assert 'Об оплате сообщили' in _last_to(bench, BUYER).text
+
+    # A second Undo does nothing; confirming lets the member in
+    await bench.tap(OWNER, _press(declined, 'Отменить'))
+    assert 'уже ответили' in _last_to(bench, OWNER).text
+    await bench.tap(OWNER, _press(again, 'Подтвердить: 7 дней'))
+    assert await bench.sql('SELECT 1 FROM allowed_users')
+    assert 'Владелец открыл вам доступ' in _last_to(bench, BUYER).text
+    await bench.private_message(OWNER, f'/start chat_{chat["id"]}')
+    await bench.tap(OWNER, '{"tp":"chat_access"}')
+    assert not [b for b in _buttons(_last_to(bench, OWNER)) if 'Отклонённые' in b['text']]
+
+
 async def test_paid_entry_falls_back_to_requests_without_a_paid_tariff(bench: Bench):
     """the owner's tariff ended: members can still ask, for free"""
     chat = await _paid_scene(bench)

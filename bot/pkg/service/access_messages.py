@@ -62,6 +62,23 @@ def request_markup(chat: dict, request: dict, language_code: str | None, paid: b
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+def declined_message(chat: dict, request: dict, language_code: str | None) -> tuple[str, InlineKeyboardMarkup]:
+    """A declined request, with Undo: a "no" by mistake would otherwise keep the member out for hours."""
+    text = localization.get_message(['access', 'alert', 'rejected'], language_code, member=request_member(request),
+                                    chat_name=html.escape(chat.get('name') or ''))
+    if request.get('decided_at') is not None:
+        text += f" ({format_date(request['decided_at'])})"
+    return text, InlineKeyboardMarkup(inline_keyboard=[[
+        _button(localization.get_message(['alerts', 'buttons', 'undo'], language_code),
+                {'tp': 'au', 'r': request['id']}),
+        _button(localization.get_message(['alerts', 'buttons', 'group'], language_code),
+                {'tp': 'chat', 'id': chat['id']})]])
+
+
+async def send_declined(chat: dict, request: dict, to: int, language_code: str | None) -> None:
+    await _send(to, *declined_message(chat, request, language_code))
+
+
 async def _send(service_id: str | int, text: str, markup: InlineKeyboardMarkup | None) -> bool:
     try:
         await bot.send_message(int(service_id), text, parse_mode='HTML', reply_markup=markup,

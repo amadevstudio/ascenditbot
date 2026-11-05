@@ -250,6 +250,8 @@ class Requests:
     find = staticmethod(access_repository.find)
     latest = staticmethod(access_repository.latest)
     decide = staticmethod(access_repository.decide)
+    reopen = staticmethod(access_repository.reopen)
+    declined = staticmethod(access_repository.declined)
     update = staticmethod(access_repository.update)
     pending = staticmethod(access_repository.pending)
     pending_count = staticmethod(access_repository.pending_count)

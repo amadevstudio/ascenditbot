@@ -39,6 +39,31 @@ async def decide(request_id: int, status: str, decided_by: str | None) -> dict |
     """, (status, decided_by, request_id), returning='*')
 
 
+async def declined(chat_id: int, days: int = 7, limit: int = 10) -> list[dict]:
+    """Members whose last request to the group was declined in these days, the latest first."""
+    return await databaseExecutor.run(db.fetchall, """
+        SELECT * FROM (
+            SELECT DISTINCT ON (user_service_id) * FROM access_requests
+            WHERE moderated_chat_id = %s ORDER BY user_service_id, id DESC
+        ) AS last
+        WHERE status = 'rejected' AND decided_at > LOCALTIMESTAMP - make_interval(days => %s)
+        ORDER BY decided_at DESC LIMIT %s
+    """, (chat_id, days, limit)) or []
+
+
+async def reopen(request_id: int) -> dict | None:
+    """A declined request waits for an answer again (the owner took the "no" back); None when it was not
+    declined or the member has asked again since."""
+    return await databaseExecutor.run(db.execute_single_model, """
+        UPDATE access_requests AS r
+        SET status = 'pending', decided_by = NULL, decided_at = NULL, updated_at = LOCALTIMESTAMP
+        WHERE r.id = %s AND r.status = 'rejected' AND NOT EXISTS (
+            SELECT 1 FROM access_requests AS newer
+            WHERE newer.moderated_chat_id = r.moderated_chat_id AND newer.user_service_id = r.user_service_id
+              AND newer.id > r.id)
+    """, (request_id,), returning='*')
+
+
 async def update(request_id: int, fields: dict) -> dict | None:
     assert set(fields) <= {'days', 'amount', 'currency', 'kind', 'reminded_at', 'external_id', 'pay_url'}, fields
     sets = ', '.join(f'{name} = %s' for name in fields)
