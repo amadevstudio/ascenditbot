@@ -145,6 +145,10 @@ owner_tools_messages = {
                     'en': "Who writes: the whitelist ({count}) and admins",
                     'ru': "Кто пишет: белый список ({count}) и админы"
                 },
+                'whitelist_only': {
+                    'en': "Who writes: the whitelist ({count}); admins are checked too",
+                    'ru': "Кто пишет: белый список ({count}), админы тоже проверяются"
+                },
             },
             'limit': {
                 'off': {
@@ -201,6 +205,14 @@ owner_tools_messages = {
                 'ru':
                     "Белый список пуст, поэтому писать могут только админы. Добавьте участников кнопкой ниже "
                     "или ответьте /allow на сообщение в группе."
+            },
+            'empty_whitelist_hint_strict': {
+                'en':
+                    "The whitelist is empty and admins are checked too, so nobody can write, you included. Add "
+                    "members with the button below, or reply /allow to a message in the group.",
+                'ru':
+                    "Белый список пуст, а админы тоже проверяются, поэтому писать не может никто, даже вы. "
+                    "Добавьте участников кнопкой ниже или ответьте /allow на сообщение в группе."
             },
             'add_to_whitelist_button': {
                 'en': "➕ Allow members",
@@ -265,6 +277,21 @@ owner_tools_messages = {
                 'whitelist': {
                     'en': "Only the whitelist and admins can write now",
                     'ru': "Теперь пишут только белый список и админы"
+                },
+            },
+            'admins_button': {
+                'free': {'en': "👮 Admins: not checked", 'ru': "👮 Админы: без проверки"},
+                'checked': {'en': "👮 Admins: checked too", 'ru': "👮 Админы: тоже проверять"},
+            },
+            'admins_toast': {
+                'free': {
+                    'en': "Admins write without the whitelist again",
+                    'ru': "Админы снова пишут без белого списка"
+                },
+                'checked': {
+                    'en': "Admins are checked too now: off the whitelist, their messages are deleted, yours too",
+                    'ru': "Теперь админов тоже проверяем: если их нет в белом списке, сообщения удаляются. "
+                          "Ваши тоже"
                 },
             },
             'alerts_toast': {

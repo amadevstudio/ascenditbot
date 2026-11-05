@@ -249,7 +249,8 @@ async def show(params: ControllerParams):
         state_key = 'on'
     message_text += "\n\n" + localization.get_message(['chat', 'show', 'state', state_key], language_code)
     message_text += "\n" + localization.get_message(
-        ['chat', 'show', 'who', 'everyone' if chat_data.get('everyone_can_write') else 'whitelist'],
+        ['chat', 'show', 'who', 'everyone' if chat_data.get('everyone_can_write')
+         else 'whitelist' if chat_data.get('allow_administrators', True) else 'whitelist_only'],
         language_code, count=whitelist_count)
     if chat_data.get('post_limit'):
         message_text += "\n" + localization.get_message(
@@ -261,7 +262,8 @@ async def show(params: ControllerParams):
     if chat_data['disabled']:
         message_text += "\n\n" + localization.get_message(['chat', 'show', 'disabled'], language_code)
     elif whitelist_count == 0 and not chat_data.get('everyone_can_write'):
-        message_text += "\n\n" + localization.get_message(['chat', 'show', 'empty_whitelist_hint'], language_code)
+        message_text += "\n\n" + localization.get_message(['chat', 'show', 'empty_whitelist_hint' if chat_data.get(
+            'allow_administrators', True) else 'empty_whitelist_hint_strict'], language_code)
 
     def button(path: list, callback_data: dict, **kwargs) -> dict:
         return {'text': localization.get_message(['chat', 'show', *path], language_code, **kwargs),
@@ -272,6 +274,8 @@ async def show(params: ControllerParams):
          button(['whitelist_button'], {'tp': 'chat_whitelist'}, count=whitelist_count)],
         [button(['who_button', 'everyone' if chat_data.get('everyone_can_write') else 'whitelist'],
                 {'tp': 'switch_mode'})],
+        [button(['admins_button', 'free' if chat_data.get('allow_administrators', True) else 'checked'],
+                {'tp': 'switch_admins'})],
         [button(['access_button', chat_data.get('access_mode') or 'off'], {'tp': 'chat_access'})],
         [{'text': ('' if paid else localization.get_message(['chat', 'show', 'locked'], language_code))
             + localization.get_message(['chat', 'show', 'limit_button'], language_code,
@@ -338,6 +342,18 @@ async def switch_mode(params: ControllerParams):
     chat_data = await Chat.update_settings(current['id'], {'everyone_can_write': everyone})
     await notify(params['call'], params['message'], localization.get_message(
         ['chat', 'show', 'who_toast', 'everyone' if everyone else 'whitelist'], params['language_code']))
+    await _refresh(params, chat_data)
+
+
+async def switch_admins(params: ControllerParams):
+    """Whether the group's owner and admins are checked like everyone (allow_administrators off): to try the bot
+    on oneself, or for a group where admins must be on the whitelist too."""
+    current = params['state_data']
+    allowed = not current.get('allow_administrators', True)
+    chat_data = await Chat.update_settings(current['id'], {'allow_administrators': allowed})
+    await notify(params['call'], params['message'], localization.get_message(
+        ['chat', 'show', 'admins_toast', 'free' if allowed else 'checked'], params['language_code']),
+        alert=not allowed)
     await _refresh(params, chat_data)
 
 
