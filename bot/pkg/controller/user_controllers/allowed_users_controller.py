@@ -10,8 +10,8 @@ from lib.language import localization
 from lib.python.dict_interface import validate_typed_dict_interface
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
-from pkg.controller.user_controllers.chats_controller import _PER_PAGE
 from pkg.controller.user_controllers.common_controller import raise_error
+from pkg.repository import allowed_user_repository
 from pkg.service.allowed_user import AllowedUser, parse_members
 from pkg.service.chat import Chat
 from pkg.service.member_alerts import format_date, member_label
@@ -100,12 +100,27 @@ async def add_to_chat_whitelist(params: ControllerParams):
 
 
 # Show chat whitelist
+_WHITELIST_PER_PAGE = 10
+
+
+def _entry_state(entry: dict) -> str:
+    """active, inactive (switched off) or ended (the term is over)."""
+    expires_at = entry.get('expires_at')
+    if expires_at is not None and expires_at <= datetime.datetime.now():
+        return 'ended'
+    return 'active' if entry['active'] else 'inactive'
+
+
 async def chat_whitelist(params: ControllerParams):
     call, message, current_state_data = params['call'], params['message'], params['state_data']
+    language_code = params['language_code']
 
     # Getting data and full navigation setup
     chat = state_data.get_local_state_data(message, routes.RouteMap.type('chat'))
 
+    # A long number is an id to find, not a page
+    if call is None and (message.text or '').strip().isdigit() and len(message.text.strip()) >= 5:
+        current_state_data = {**current_state_data, 'search_query': message.text.strip(), 'p': 1}
     current_state_data = determine_search_query(call, message, current_state_data)
     search_query = current_state_data.get('search_query', None)
 
@@ -113,11 +128,12 @@ async def chat_whitelist(params: ControllerParams):
 
     current_page, chat_whitelist_page_data, routing_helper_message, nav_layout = \
         await NavigationBuilder().full_message_setup(
-            call, message, current_state_data, params['route_name'], params['language_code'],
+            call, message,
+            current_state_data, params['route_name'], language_code,
 
             Chat.whitelist_data_provider, [chat['id'], search_query],
             Chat.whitelist_data_count_provider, [chat['id'], search_query],
-            _PER_PAGE, 'nickname'
+            _WHITELIST_PER_PAGE, 'status'
         )
 
     # Error processing
@@ -138,7 +154,7 @@ async def chat_whitelist(params: ControllerParams):
             error = chat_whitelist_page_data['error'] if search_query is None else 'empty_search'
             error_message = localization.get_message(
                 ['whitelist', 'errors', error],
-                params['language_code'],
+                language_code,
                 command=routes.RouteMap.get_route_main_command('add_chat'))
 
             # When already opened, message (or go_back without search) and not results at all, save state
@@ -149,37 +165,55 @@ async def chat_whitelist(params: ControllerParams):
         else:
             error_message = localization.get_message(
                 ['navigation_builder', 'errors', chat_whitelist_page_data['error']],
-                params['language_code'])
+                language_code)
             await notify(call, message, error_message, alert=True)
 
         return False
 
-    # Building message
-    message_text = localization.get_message(['whitelist', 'list', 'text'], params['language_code'])
-    message_text += " " + localization.get_message(
-        ['chat', 'show', 'text'], params['language_code'], chat_name=chat_info['title'])
-    if chat_info['nickname'] is not None:
-        message_text += f" @{chat_info['nickname']}"
-    message_text += '\n' + routing_helper_message
+    def text(path: list, **kwargs) -> str:
+        return localization.get_message(['whitelist', 'list', *path], language_code, **kwargs)
 
-    # Chat buttons
+    # The group, who can write and who cannot, how to find someone, the page
+    summary = await Chat.whitelist_summary(chat['id'])
+    chat_name = html.escape(chat_info['title']) + (f" @{chat_info['nickname']}" if chat_info['nickname'] else '')
+    message_text = text(['text'], chat_name=chat_name)
+    message_text += "\n" + " · ".join(
+        [text(['writing'], count=summary['writing'])]
+        + [text([key], count=summary[key]) for key in ('off', 'ended') if summary[key]])
+    if search_query is not None:
+        message_text += "\n\n" + text(['search_now'], query=html.escape(search_query))
+    else:
+        message_text += "\n\n" + text(['search_hint'])
+    page_count = chat_whitelist_page_data['page_count']
+    if page_count > 1:
+        message_text += "\n" + text(['pages'], page=current_page, pages=page_count)
+
+    # The members: what they can do now, and until when
     reply_markup = []
-    for whitelist_data in chat_whitelist_page_data['data']:
-        button_text = localization.get_message(
-            ['whitelist', 'list', 'button', 'active' if whitelist_data['active'] else 'inactive'],
-            params['language_code'], nickname=member_text(whitelist_data))
-        if whitelist_data.get('expires_at') is not None:
+    for entry in chat_whitelist_page_data['data']:
+        entry_state = _entry_state(entry)
+        button_text = text(['button', entry_state], nickname=member_text(entry))
+        if entry_state == 'ended':
+            button_text += ' · ' + text(['ended_short'], date=format_date(entry['expires_at']))
+        elif entry.get('expires_at') is not None:
             button_text += ' · ' + localization.get_message(
-                ['allowed_user', 'show', 'term', 'until_short'], params['language_code'],
-                date=format_date(whitelist_data['expires_at']))
-
-        reply_markup.append([{
-            'text': button_text, 'callback_data': {'tp': 'allowed_user', 'id': whitelist_data['id']}}])
+                ['allowed_user', 'show', 'term', 'until_short'], language_code,
+                date=format_date(entry['expires_at']))
+        reply_markup.append([{'text': button_text, 'callback_data': {'tp': 'allowed_user', 'id': entry['id']}}])
 
     if search_query is not None:
         reply_markup.append([{
-            'text': localization.get_message(['buttons', 'clear_search'], params['language_code']),
+            'text': localization.get_message(['buttons', 'clear_search'], language_code),
             'callback_data': {'tp': params['route_name'], 'p': 1, 'search_query': None}}])
+    else:
+        reply_markup.append([{
+            'text': localization.get_message(['chat', 'show', 'add_to_whitelist_button'], language_code),
+            'callback_data': {'tp': 'add_to_chat_whitelist'}}])
+        if summary['ended']:
+            confirming = current_state_data.get('cleaning')
+            reply_markup.append([{
+                'text': text(['clean_confirm_button' if confirming else 'clean_button'], count=summary['ended']),
+                'callback_data': {'tp': 'wl_clean'}}])
 
     # Navigation markup
     reply_markup.append(nav_layout)
@@ -188,11 +222,37 @@ async def chat_whitelist(params: ControllerParams):
     message_structures = [{
         'type': 'text',
         'text': message_text,
-        'reply_markup': reply_markup
+        'reply_markup': reply_markup,
+        'parse_mode': 'HTML'
     }]
     await message_sender(message.chat.id, message_structures=message_structures)
 
+    current_state_data.pop('cleaning', None)
     UserStorage.add_user_state_data(message.chat.id, params['route_name'], {**current_state_data, 'p': current_page})
+
+
+async def clean_ended(params: ControllerParams):
+    """"Remove the ended": those whose access is over go from the list, on the second tap."""
+    call, message, current_state_data = params['call'], params['message'], params['state_data']
+    language_code = params['language_code']
+    chat = state_data.get_local_state_data(message, routes.RouteMap.type('chat'))
+
+    if not current_state_data.get('cleaning'):
+        params['state_data'] = {**current_state_data, 'cleaning': True}
+        await chat_whitelist(params)
+        UserStorage.add_user_state_data(message.chat.id, 'chat_whitelist', params['state_data'])
+        return
+
+    removed = await Chat.delete_ended(chat['id'])
+    await notify(call, message, localization.get_message(
+        ['whitelist', 'list', 'cleaned'], language_code, count=removed))
+    current_state_data.pop('cleaning', None)
+    params['state_data'] = current_state_data
+    UserStorage.add_user_state_data(message.chat.id, 'chat_whitelist', current_state_data)
+    if await Chat.whitelist_data_count_provider(chat['id']):
+        await chat_whitelist(params)
+    else:
+        await params['go_back_action'](call)
 
 
 # Show allowed user
@@ -225,37 +285,53 @@ async def show(params: ControllerParams):
         return False
 
     language_code = params['language_code']
+
+    # Known by id only: the name from Telegram, while they are in the group, kept for the list
+    if not allowed_user_data.get('nickname') and not allowed_user_data.get('display_name') \
+            and allowed_user_data.get('user_service_id'):
+        names = await Chat.member_names(int(chat_state_data['service_id']), int(allowed_user_data['user_service_id']))
+        if names is not None:
+            await allowed_user_repository.remember_member(
+                allowed_user_data['id'], allowed_user_data['user_service_id'], names[0], names[1])
+            allowed_user_data = await AllowedUser.find(allowed_user_data['id']) or allowed_user_data
+
     message_text = localization.get_message(
         ['allowed_user', 'show', 'text'], language_code, chat_name=html.escape(chat_info['title']),
         member=member_label(allowed_user_data.get('nickname'), allowed_user_data.get('display_name'),
                             allowed_user_data.get('user_service_id')))
     expires_at = allowed_user_data.get('expires_at')
-    if expires_at is None:
-        message_text += "\n" + localization.get_message(['allowed_user', 'show', 'term', 'forever'], language_code)
-    elif expires_at <= datetime.datetime.now():
-        message_text += "\n" + localization.get_message(
-            ['allowed_user', 'show', 'term', 'ended'], language_code, date=format_date(expires_at))
+    entry_state = _entry_state(allowed_user_data)
+    if entry_state == 'ended':
+        state_key = 'ended'
+    elif entry_state == 'inactive':
+        state_key = 'off' if expires_at is None else 'off_until'
     else:
-        message_text += "\n" + localization.get_message(
-            ['allowed_user', 'show', 'term', 'until'], language_code, date=format_date(expires_at))
+        state_key = 'forever' if expires_at is None else 'until'
+    message_text += "\n\n" + localization.get_message(
+        ['allowed_user', 'show', 'state', state_key], language_code,
+        date=format_date(expires_at) if expires_at is not None else '')
     if not allowed_user_data.get('user_service_id'):
         message_text += "\n\n" + localization.get_message(['allowed_user', 'show', 'no_id_hint'], language_code)
 
     reply_markup = []
 
-    state_button = {
-        'text': localization.get_message(
-            ['allowed_user', 'show', 'active_button', 'active' if allowed_user_data['active'] else 'inactive'],
-            language_code,
-        ), 'callback_data': {'tp': 'switch_active'}}
-    reply_markup.append([state_button])
+    # Switching off or on; an access that has ended comes back with a term below instead
+    if entry_state != 'ended':
+        reply_markup.append([{
+            'text': localization.get_message(
+                ['allowed_user', 'show', 'active_button', entry_state], language_code),
+            'callback_data': {'tp': 'switch_active'}}])
 
+    # A running term grows by the days; otherwise they count from today
+    running = entry_state != 'ended' and expires_at is not None
     paid = Tariff.is_paid(await Chat.owner_tariff_id(chat_state_data['id']))
     reply_markup.append([{
         'text': ('' if paid or days == 0 else localization.get_message(['chat', 'show', 'locked'], language_code))
-        + localization.get_message(['allowed_user', 'show', 'term_button', 'forever' if days == 0 else 'days'],
-                                   language_code, days=days),
-        'callback_data': {'tp': 'set_term', 'd': days}} for days in _TERM_CHOICES])
+        + localization.get_message(
+            ['allowed_user', 'show', 'term_button',
+             'forever' if days == 0 else 'extend' if running else 'days'], language_code, days=days),
+        'callback_data': {'tp': 'set_term', 'd': days}}
+        for days in _TERM_CHOICES if days or expires_at is not None or entry_state != 'active'])
 
     reply_markup.append([{
         'text': localization.get_message(
@@ -325,7 +401,8 @@ async def delete(params: ControllerParams):
 
 
 async def set_term(params: ControllerParams):
-    """How long the member may write: for good, or 7 or 30 days from now (timed access is a paid feature)."""
+    """How long the member may write: for good, or 7 or 30 days more (added to a running term, else from today;
+    timed access is a paid feature)."""
     call, message, current_state_data = params['call'], params['message'], params['state_data']
     language_code = params['language_code']
     chat_state_data = state_data.get_local_state_data(message, routes.RouteMap.type('chat'))
@@ -340,7 +417,8 @@ async def set_term(params: ControllerParams):
         await raise_error(call, message, 'unexpected')
         return
     await notify(call, message, localization.get_message(
-        ['allowed_user', 'show', 'term_toast', 'forever' if days == 0 else 'days'], language_code, days=days))
+        ['allowed_user', 'show', 'term_toast', 'forever' if days == 0 else 'until'], language_code,
+        date=format_date(updated['expires_at']) if updated.get('expires_at') else ''))
     current_state_data.pop('deleting', None)
     params['state_data'] = {**current_state_data, **dict(updated)}
     UserStorage.add_user_state_data(message.chat.id, 'allowed_user', params['state_data'])

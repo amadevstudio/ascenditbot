@@ -88,20 +88,17 @@ class NavigationBuilder(metaclass=Singleton):
     ) -> list[MessageStructuresInterface]:
         buttons: list[MessageStructuresInterface] = []
 
-        # Previous
-        cb_data = {"tp": curr_type, "p": curr_page - 1}
-        text = ("❮" if curr_page > 1 else "-")
-        buttons.append({'text': text, 'callback_data': cb_data})
+        # Previous and next only where there is a page to go to
+        if curr_page > 1:
+            buttons.append({'text': "❮", 'callback_data': {"tp": curr_type, "p": curr_page - 1}})
 
         # Go back
         buttons.append({
             'text': self.get_message(["actions", back_button_text], language_code),
             'callback_data': self.back_button_data})
 
-        # Next
-        text = ("❯" if curr_page < page_count else "-")
-        cb_data = {"tp": curr_type, "p": curr_page + 1}
-        buttons.append({'text': text, 'callback_data': cb_data})
+        if curr_page < page_count:
+            buttons.append({'text': "❯", 'callback_data': {"tp": curr_type, "p": curr_page + 1}})
 
         return buttons
 

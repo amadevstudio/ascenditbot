@@ -184,6 +184,11 @@ class Bench:
             'host': os.environ.get('TEST_POSTGRES_HOST', 'db'), 'database': os.environ['POSTGRES_DB'],
             'user': os.environ['POSTGRES_USER'], 'password': os.environ['POSTGRES_PASSWORD']})
 
+        # The paged lists (groups, the whitelist), set up as main.py does
+        from lib.language import localization
+        from lib.telegram.aiogram.navigation_builder import NavigationBuilder
+        NavigationBuilder(localization.get_message, ["navigation_builder"])
+
         bench = cls()
         init_routes(bench.dispatcher)
         return bench
