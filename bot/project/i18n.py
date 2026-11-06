@@ -60,11 +60,11 @@ routed_messages = {
             'ru': "Меню",
         },
         'my_chats': {
-            'en': f"{emoji_codes.get('chat', '')} My chats",
+            'en': f"{emoji_codes.get('chat', '')} My groups",
             'ru': f"{emoji_codes.get('chat', '')} Мои группы"
         },
         'add_chat': {
-            'en': f"{emoji_codes.get('new', '')} Add chat",
+            'en': f"{emoji_codes.get('new', '')} Add a group",
             'ru': f"{emoji_codes.get('new', '')} Добавить группу"
         },
         'help': {
@@ -126,10 +126,14 @@ routed_messages = {
     },
     'menu': {
         'text': {
-            'en': "<b>Main menu</b>, navigate to the desired section using the buttons below "
-                  "or type / to preview commands",
-            'ru': "<b>Главное меню</b>, перейдите в нужный раздел с помощью кнопок ниже "
-                  "или введите / для предпросмотра команд"
+            'en': "<b>Main menu</b>",
+            'ru': "<b>Главное меню</b>"
+        },
+        'start_hint': {
+            'en': "👇 Start with <b>🆕 Add a group</b>: it takes a minute. How it all works, with pictures: "
+                  "<b>📖 How it works</b>.",
+            'ru': "👇 Начните с <b>🆕 Добавить группу</b>: это минута. Как всё устроено, с картинками: "
+                  "<b>📖 Как пользоваться</b>."
         }
     },
     'help': {
@@ -236,7 +240,7 @@ routed_messages = {
     'my_chats': {
         'list': {
             'main': {
-                'en': f"{emoji_codes.get('chat', '')} My chats",
+                'en': f"{emoji_codes.get('chat', '')} My groups",
                 'ru': f"{emoji_codes.get('chat', '')} Мои группы"
             },
             'chat_button': {
@@ -260,7 +264,7 @@ routed_messages = {
         },
         'errors': {
             'empty': {
-                'en': "You don't have any chats, add the first one using the menu item 'Add chat'",
+                'en': "You don't have any groups yet, add the first one with \"Add a group\" in the menu",
                 'ru': "У вас нет групп, добавьте первую с помощью пункта меню 'Добавить группу'"
             },
             'empty_search': {
@@ -566,8 +570,11 @@ routed_messages = {
             }
         },
         'free_trial': {
-            'en': "<b>Try the bot for free!</b> You have a trial period included, more details: /subscription",
-            'ru': "<b>Попробуйте бота бесплатно!</b> Вам включён пробный период, подробнее: /subscription"
+            'en': "🎁 <b>{days} days of everything, free</b>: paid entry, posting limits, access for a term, up "
+                  "to {groups} groups. After that one group stays free for good, the rest needs a tariff: "
+                  "/subscription",
+            'ru': "🎁 <b>{days} дней всё бесплатно</b>: платный вход, лимит постов, доступ на срок, до {groups} "
+                  "групп. Потом одна группа остаётся бесплатной навсегда, остальное по тарифу: /subscription"
         },
         'updated': {
             'en': "Subscription updated!",
@@ -590,11 +597,15 @@ routed_messages = {
             },
             'non-prolongable': {
                 'en':
-                    emoji_codes.get('warning_sign', '') + "Not enough funds for next renewal!"
-                                                          " Top up your balance to continue using the bot. More info /subscription",
+                    emoji_codes.get('warning_sign', '') + " Not enough on the balance to renew the tariff."
+                                                          " When it ends, the bot keeps working for free in your"
+                                                          " first group; the other groups, paid entry, posting limits"
+                                                          " and access for a term stop. To keep them: /subscription",
                 'ru':
-                    emoji_codes.get('warning_sign', '') + " Недостаточно средств для следующего продления!"
-                                                          " Пополните баланс, чтобы продолжать пользоваться ботом. Подробнее /subscription"
+                    emoji_codes.get('warning_sign', '') + " На балансе не хватает на продление тарифа."
+                                                          " Когда он закончится, бот продолжит бесплатно работать"
+                                                          " в первой группе, а остальные группы, платный вход, лимит"
+                                                          " постов и доступ на срок выключатся. Чтобы оставить: /subscription"
             },
             'disabled': {
                 'en':
@@ -622,7 +633,7 @@ routed_messages = {
                     "Выберите валюту баланса. Затем введите сумму или нажмите на одну из кнопок со стоимостями тарифов бота."
                     " После этого следуйте инструкциям оплаты."
                     " Если всё пройдёт успешно, бот пришлёт вам уведомление\n\n"
-                    "Важа текущая почта <b>{email}</b>, на неё придёт чек об оплате"
+                    "Ваша текущая почта <b>{email}</b>, на неё придёт чек об оплате"
             },
             'currency_page': {
                 'en': "Top up {currency} balance",

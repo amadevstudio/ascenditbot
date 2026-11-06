@@ -6,6 +6,12 @@ from project import constants
 
 _bot = constants.bot_nickname
 ADD_TO_GROUP_URL = f"https://t.me/{_bot}?startgroup=connect&admin=delete_messages+restrict_members+pin_messages"
+# How it all works, with screenshots: posts in the bot's channel
+GUIDE_URLS = {'en': "https://t.me/ascendit_group/21", 'ru': "https://t.me/ascendit_group/13"}
+
+
+def guide_url(language_code: str | None) -> str:
+    return GUIDE_URLS['ru' if (language_code or '').lower().startswith('ru') else 'en']
 
 owner_tools_messages = {
     'welcome': {
@@ -68,6 +74,7 @@ owner_tools_messages = {
                 "Вопросы и идеи: кнопка ниже, отвечаем лично."
         },
         'contact_button': {'en': "💬 Write to us", 'ru': "💬 Написать нам"},
+        'guide_button': {'en': "📖 How it works", 'ru': "📖 Как пользоваться"},
     },
     'add_chat': {
         # HTML
@@ -212,6 +219,12 @@ owner_tools_messages = {
                 'ru':
                     "Белый список пуст, поэтому писать могут только админы. Добавьте участников кнопкой ниже "
                     "или ответьте /allow на сообщение в группе."
+            },
+            'paid_entry_hint': {
+                'en': "💡 Want people to pay for the right to write? \"🚪 Outsiders\" → \"💳 Paid\": they pick a "
+                      "term and pay you, access opens and ends by itself.",
+                'ru': "💡 Хотите, чтобы за право писать платили? \"🚪 Посторонние\" → \"💳 За плату\": человек "
+                      "выбирает срок и платит вам, доступ открывается и заканчивается сам."
             },
             'empty_whitelist_hint_strict': {
                 'en':

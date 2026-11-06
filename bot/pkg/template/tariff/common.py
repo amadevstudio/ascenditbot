@@ -15,9 +15,12 @@ def build_subscription_info_short(user_tariff_info: UserTariffInfoInterface | No
     if days_left_message is not None:
         info_message += ", " + days_left_message.lower()
 
-    cant_renew_message = build_cant_renew_message(user_tariff_info, language_code)
-    if cant_renew_message is not None:
-        info_message += "\n" + cant_renew_message
+    # Not enough to renew: worth saying in the menu only when the end is near, not to someone who just came
+    end_date = user_tariff_info['end_date']
+    if end_date is not None and end_date - datetime.datetime.now() <= datetime.timedelta(days=3):
+        cant_renew_message = build_cant_renew_message(user_tariff_info, language_code)
+        if cant_renew_message is not None:
+            info_message += "\n" + cant_renew_message
 
     return info_message
 

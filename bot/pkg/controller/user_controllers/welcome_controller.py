@@ -1,11 +1,20 @@
+import datetime
+
 from framework.controller.message_tools import message_sender, go_back_inline_markup, chat_id_sender
 from framework.controller.types import ControllerParams
 from pkg.controller.user_controllers import chats_controller
+from pkg.service.chat import Chat
 from lib.language import localization
 from pkg.service.tariff import Tariff
 from pkg.service.user import User
 from pkg.template.tariff.common import build_subscription_info_short
+from project.i18n_owner_tools import guide_url
 from project.types import UserInterface
+
+
+def guide_button(language_code: str | None) -> dict:
+    """How it all works, with screenshots: the guide in the bot's channel."""
+    return {'text': localization.get_message(['help', 'guide_button'], language_code), 'url': guide_url(language_code)}
 
 
 async def start(params: ControllerParams):
@@ -33,7 +42,7 @@ async def start(params: ControllerParams):
 
     markup = [[{
         'text': localization.get_message(['welcome', 'lets_begin'], params['language_code']),
-        'callback_data': {'tp': 'menu'}}]]
+        'callback_data': {'tp': 'menu'}}], [guide_button(params['language_code'])]]
 
     message_structures = [{
         'type': 'text',
@@ -59,7 +68,7 @@ async def menu(params: ControllerParams):
         buttons.append({
             'text': localization.get_message(['buttons', button_type], params['language_code']),
             'callback_data': {'tp': button_type}})
-    markup = [[buttons[0], buttons[1]], [buttons[2], buttons[3]], [buttons[4]]]
+    markup = [[buttons[0], buttons[1]], [buttons[2], buttons[3]], [buttons[4], guide_button(params['language_code'])]]
 
     answer_messages = []
 
@@ -69,18 +78,25 @@ async def menu(params: ControllerParams):
 
     trial_info = await Tariff.activate_trial(user_tariff_info)
     if trial_info is not None:
+        user_tariff_info = await Tariff.user_tariff_info(user_id)
+        end_date = user_tariff_info['end_date']
         answer_messages.append({
             'type': 'text',
-            'text': localization.get_message(['subscription', 'free_trial'], params['language_code']),
+            'text': localization.get_message(
+                ['subscription', 'free_trial'], params['language_code'],
+                days=(end_date - datetime.datetime.now()).days + 1 if end_date is not None else 15,
+                groups=user_tariff_info['channels_count'] or 3),
             'parse_mode': 'HTML'
         })
-        user_tariff_info = await Tariff.user_tariff_info(user_id)
+
+    # Someone with no group yet: where to start
+    menu_text = localization.get_message(['menu', 'text'], params['language_code'])
+    if not await Chat.data_count_provider(user_id):
+        menu_text += "\n\n" + localization.get_message(['menu', 'start_hint'], params['language_code'])
 
     answer_messages.append({
         'type': 'text',
-        'text':
-            build_subscription_info_short(user_tariff_info, params['language_code'])
-            + "\n\n" + localization.get_message(['menu', 'text'], params['language_code']),
+        'text': build_subscription_info_short(user_tariff_info, params['language_code']) + "\n\n" + menu_text,
         'reply_markup': markup,
         'parse_mode': 'HTML'
     })
@@ -98,7 +114,8 @@ async def help_page(params: ControllerParams):
         'type': 'text',
         'text': localization.get_message(['help', 'text'], params['language_code']),
         # Questions go to the direct messages of the bot's channel
-        'reply_markup': [[{'text': localization.get_message(['help', 'contact_button'], params['language_code']),
+        'reply_markup': [[guide_button(params['language_code'])],
+                         [{'text': localization.get_message(['help', 'contact_button'], params['language_code']),
                            'url': SUPPORT_URL}], *go_back_inline_markup(params['language_code'])],
         'parse_mode': 'HTML',
         'disable_web_page_preview': True

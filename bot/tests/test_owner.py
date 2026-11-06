@@ -35,8 +35,10 @@ async def test_start_twice_keeps_one_user(bench: Bench):
 
 
 async def test_menu_starts_trial_once(bench: Bench):
-    """the first menu says the 15-day trial started; the next one does not"""
-    trial = localization.get_message(['subscription', 'free_trial'], 'en')
+    """the first menu says the 15-day trial started and what stays after it; the next one does not. Someone
+    with no group is told where to start, and a balance short of the renewal is not raised two weeks early"""
+    trial = localization.get_message(['subscription', 'free_trial'], 'en', days=15, groups=3)
+    assert trial.startswith('🎁 <b>15 days of everything, free</b>') and 'one group stays free' in trial, trial
     await bench.private_message(OWNER_EN, '/start')
     bench.telegram.calls.clear()
 
@@ -44,6 +46,8 @@ async def test_menu_starts_trial_once(bench: Bench):
     first = bench.telegram.texts_to(OWNER_EN['id']) + [
         call.text for call in bench.telegram.calls_of('editMessageText')]
     assert trial in first, first
+    [menu] = [text for text in first if 'Main menu' in text]
+    assert 'Start with <b>🆕 Add a group</b>' in menu and 'Insufficient' not in menu, menu
 
     bench.telegram.calls.clear()
     await bench.tap(OWNER_EN, json.dumps({'tp': 'menu'}))

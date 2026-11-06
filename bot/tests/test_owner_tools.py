@@ -496,6 +496,26 @@ async def test_page_check_admins_too(bench: Bench):
     assert not _deleted(bench)
 
 
+async def test_page_hints_paid_entry_once_someone_may_write(bench: Bench):
+    """the group's page: first the hint to fill the whitelist; with someone on it, on a paid tariff, the hint
+    that people can pay to write; gone once outsiders pay, and on the free tariff"""
+    hint = 'Хотите, чтобы за право писать платили?'
+    _, chat = await _scene(bench, paid=True)
+    await _open_page(bench, chat)
+    assert 'Белый список пуст' in _shown(bench).text and hint not in _shown(bench).text
+    await bench.sql("INSERT INTO allowed_users (moderated_chat_id, nickname, created_at, updated_at) "
+                    "VALUES ($1, 'anna', NOW(), NOW())", chat['id'])
+    await _open_page(bench, chat)
+    assert hint in _shown(bench).text, _shown(bench).text
+    await bench.sql("UPDATE moderated_chats SET access_mode = 'paid'")
+    await _open_page(bench, chat)
+    assert hint not in _shown(bench).text
+    await bench.sql("UPDATE moderated_chats SET access_mode = 'off'")
+    await bench.sql("UPDATE user_tariff_connections SET tariff_id = 0")
+    await _open_page(bench, chat)
+    assert hint not in _shown(bench).text
+
+
 async def test_page_limit_is_paid(bench: Bench):
     """on the free tariff the limit page says it works on a paid one; set now, it waits for the tariff"""
     _, chat = await _scene(bench)
@@ -661,12 +681,12 @@ async def test_add_group_from_the_menu_button(bench: Bench):
 
 
 async def test_help_has_a_button_to_write_to_us(bench: Bench):
-    """/help: a button to the direct messages of the bot's channel"""
+    """/help: the guide in the bot's channel, and a button to the channel's direct messages"""
     await bench.owner(OWNER)
     await bench.private_message(OWNER, '/help')
     [page] = [call for call in bench.telegram.sent_to(OWNER['id']) if 'Вопросы и идеи' in (call.text or '')]
     urls = [button.url for row in page.reply_markup.inline_keyboard for button in row if button.url]
-    assert urls == ['https://t.me/ascendit_group?direct'], urls
+    assert urls == ['https://t.me/ascendit_group/13', 'https://t.me/ascendit_group?direct'], urls
 
 
 async def test_an_edit_by_someone_who_may_not_write_goes(bench: Bench):
