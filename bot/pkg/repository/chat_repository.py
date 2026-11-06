@@ -98,7 +98,7 @@ async def user_chats_count(user_id: str) -> int | None:
     return (await databaseExecutor.run(db.fetchone, """
         SELECT COUNT(*) FROM user_moderated_chat_connections
         WHERE user_id = %s
-    """, (user_id,)))['count']
+    """, (int(user_id),)))['count']
 
 
 async def user_chats_count_by_service_id(user_chat_id: str, search_query: str | None = None) -> int | None:

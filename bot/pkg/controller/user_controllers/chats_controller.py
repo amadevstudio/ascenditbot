@@ -263,6 +263,9 @@ async def show(params: ControllerParams):
     elif whitelist_count == 0 and not chat_data.get('everyone_can_write'):
         message_text += "\n\n" + localization.get_message(['chat', 'show', 'empty_whitelist_hint' if chat_data.get(
             'allow_administrators', True) else 'empty_whitelist_hint_strict'], language_code)
+    elif paid and chat_data['active'] and outsiders_mode(chat_data) in ('silent', 'alert'):
+        # The next step once someone may write: what the paid tariff (or the trial) is mostly for
+        message_text += "\n\n" + localization.get_message(['chat', 'show', 'paid_entry_hint'], language_code)
 
     def button(path: list, callback_data: dict, **kwargs) -> dict:
         return {'text': localization.get_message(['chat', 'show', *path], language_code, **kwargs),

@@ -37,7 +37,7 @@ async def remaining_days_left_message(user_id: int, language_code: str, days_lef
                 days_left if days_left >= 0 else 0, days_left=days_left)
 
     user_tariff_info = await Tariff.user_tariff_info(user_id)
-    message_text + "\n\n" + localization.get_message(['tariffs', 'current'], language_code) \
-                   + "\n" + build_subscription_info(user_tariff_info, language_code)
+    message_text += "\n\n" + localization.get_message(['tariffs', 'current'], language_code) \
+                    + "\n" + build_subscription_info(user_tariff_info, language_code)
 
     return message_text
