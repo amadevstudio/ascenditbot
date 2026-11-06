@@ -127,8 +127,11 @@ class RouteMap:
         'chat_whitelist': {
             'method': allowed_users_controller.chat_whitelist,
             'available_from': ['message', 'call'],
-            'routes': ['allowed_user'],
+            'routes': ['allowed_user', 'add_to_chat_whitelist'],
             'wait_for_input': True,
+            'actions': {
+                'wl_clean': {'method': allowed_users_controller.clean_ended},
+            },
             'validator': chat_access_validator
         },
         'chat_restriction_duration': {

@@ -41,6 +41,14 @@ class AllowedUser(Service):
 
     @staticmethod
     async def set_term(allowed_user_id: int, days: int | None) -> AllowedUserInterface | None:
+        """For good (days 0), or `days` more: added to a term still running, else from now. Switches the member
+        back on."""
+        entry = await allowed_user_repository.find(allowed_user_id)
+        if entry is None:
+            return None
+        expires_at = entry.get('expires_at')
+        if days and expires_at is not None and expires_at > datetime.datetime.now():
+            return await allowed_user_repository.set_expiry(allowed_user_id, expires_at + datetime.timedelta(days=days))
         return await allowed_user_repository.set_expiry(allowed_user_id, term_end(days))
 
 

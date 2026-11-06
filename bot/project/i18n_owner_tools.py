@@ -123,16 +123,6 @@ owner_tools_messages = {
             },
         }
     },
-    'access': {
-        'chat': {
-            'errors': {
-                'not_registered': {
-                    'en': "you have not started the bot yet",
-                    'ru': "вы ещё не запускали бота"
-                },
-            }
-        }
-    },
     'chat': {
         # The group's page, HTML
         'show': {
@@ -350,12 +340,14 @@ owner_tools_messages = {
                     "<b>Who may write?</b>\n\n"
                     "Send nicknames, ids or t.me links, separated by spaces: <code>@anna 123456789</code>\n"
                     "Or forward a message from the member, or pick them from your contacts with the button below.\n\n"
-                    "Adding a term is possible: <code>@anna 7d</code>",
+                    "For a term, add it at the end: <code>@anna 7d</code>. It is for everyone in the message: "
+                    "<code>@anna @kate 7d</code> gives both 7 days.",
                 'ru':
                     "<b>Кому разрешить писать?</b>\n\n"
                     "Пришлите ники, id или ссылки t.me через пробел: <code>@anna 123456789</code>\n"
                     "Или перешлите сообщение участника, или выберите его из контактов кнопкой ниже.\n\n"
-                    "Можно указать срок: <code>@anna 7d</code>"
+                    "На срок: добавьте его в конце, <code>@anna 7d</code>. Срок для всех в сообщении: "
+                    "<code>@anna @kate 7d</code> даст 7 дней обеим."
             },
             'pick_button': {
                 'en': "👤 Pick from contacts",
@@ -375,8 +367,10 @@ owner_tools_messages = {
                 'ru': "✅ Могут писать до {date}: {members}"
             },
             'not_understood': {
-                'en': "Not understood: {words}. Send a nickname, an id or a t.me link",
-                'ru': "Не понял: {words}. Пришлите ник, id или ссылку t.me"
+                'en': "Not understood: {words}. A nickname is 4 to 32 Latin letters, digits or _; or send an id or "
+                      "a t.me link",
+                'ru': "Не понял: {words}. Ник – от 4 до 32 латинских букв, цифр или _; или пришлите id или ссылку "
+                      "t.me"
             },
             'more': {
                 'en': "Send more or go back.",
@@ -410,6 +404,17 @@ owner_tools_messages = {
                     'ru': "до {date}"
                 },
             },
+            # What the member can do now
+            'state': {
+                'forever': {'en': "✅ Can write, for good", 'ru': "✅ Может писать, бессрочно"},
+                'until': {'en': "✅ Can write until {date}", 'ru': "✅ Может писать до {date}"},
+                'off': {'en': "⏸ Switched off: their messages are deleted",
+                        'ru': "⏸ Выключен: сообщения удаляются"},
+                'off_until': {'en': "⏸ Switched off: their messages are deleted (the term runs until {date})",
+                              'ru': "⏸ Выключен: сообщения удаляются (срок до {date})"},
+                'ended': {'en': "⌛️ Access ended {date}: their messages are deleted",
+                          'ru': "⌛️ Доступ закончился {date}: сообщения удаляются"},
+            },
             'no_id_hint': {
                 'en':
                     "Known by the nickname only: if they change it, they lose access. When they write in the "
@@ -427,17 +432,51 @@ owner_tools_messages = {
                     'en': "{days} days",
                     'ru': "{days} дней"
                 },
+                # Added to a running term
+                'extend': {
+                    'en': "+{days} days",
+                    'ru': "+{days} дней"
+                },
             },
             'term_toast': {
                 'forever': {
                     'en': "Access for good",
                     'ru': "Доступ бессрочный"
                 },
-                'days': {
-                    'en': "Access for {days} days from now",
-                    'ru': "Доступ на {days} дней с сегодняшнего дня"
+                'until': {
+                    'en': "Access until {date}",
+                    'ru': "Доступ до {date}"
                 },
             },
+            'active_button': {
+                'active': {'en': "⏸ Stop them writing", 'ru': "⏸ Запретить писать"},
+                'inactive': {'en': "▶️ Let them write again", 'ru': "▶️ Разрешить снова"},
+            },
+        },
+    },
+    # The group's whitelist, a paged list
+    'whitelist': {
+        'list': {
+            # HTML
+            'text': {'en': "📋 <b>Whitelist</b>: {chat_name}", 'ru': "📋 <b>Белый список</b>: {chat_name}"},
+            'writing': {'en': "✅ can write: {count}", 'ru': "✅ пишут: {count}"},
+            'off': {'en': "⏸ switched off: {count}", 'ru': "⏸ выключены: {count}"},
+            'ended': {'en': "⌛️ access ended: {count}", 'ru': "⌛️ срок истёк: {count}"},
+            'search_hint': {'en': "🔎 To find someone, send a nickname, a name or an id.",
+                            'ru': "🔎 Чтобы найти, пришлите ник, имя или id."},
+            'search_now': {'en': "🔎 Found by \"{query}\"", 'ru': "🔎 Найдено по \"{query}\""},
+            'pages': {'en': "Page {page} of {pages}: send a number to go to that page.",
+                      'ru': "Страница {page} из {pages}: пришлите номер, чтобы перейти."},
+            # Plain, the buttons
+            'button': {
+                'active': {'en': "✅ {nickname}", 'ru': "✅ {nickname}"},
+                'inactive': {'en': "⏸ {nickname}", 'ru': "⏸ {nickname}"},
+                'ended': {'en': "⌛️ {nickname}", 'ru': "⌛️ {nickname}"},
+            },
+            'ended_short': {'en': "ended {date}", 'ru': "истёк {date}"},
+            'clean_button': {'en': "🧹 Remove the ended ({count})", 'ru': "🧹 Убрать истёкшие ({count})"},
+            'clean_confirm_button': {'en': "⚠️ Remove {count}? Tap again", 'ru': "⚠️ Убрать {count}? Нажмите ещё раз"},
+            'cleaned': {'en': "Removed: {count}", 'ru': "Убрано: {count}"},
         },
     },
     'work': {
@@ -627,6 +666,14 @@ owner_tools_messages = {
     },
     # The way in through the bot (pkg/service/access.py). HTML unless noted
     'access': {
+        'chat': {
+            'errors': {
+                'not_registered': {
+                    'en': "you have not started the bot yet",
+                    'ru': "вы ещё не запускали бота"
+                },
+            }
+        },
         'term': {
             'one': {'en': "{days} day", 'ru': "{days} день"},
             'few': {'en': "{days} days", 'ru': "{days} дня"},

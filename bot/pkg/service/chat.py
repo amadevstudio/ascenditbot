@@ -329,6 +329,23 @@ class Chat(Service):
             return {'error': 'unexpected'}
 
     @staticmethod
+    async def whitelist_summary(chat_id: int) -> dict:
+        return dict(await chat_repository.whitelist_summary(chat_id) or {'writing': 0, 'off': 0, 'ended': 0})
+
+    @staticmethod
+    async def delete_ended(chat_id: int) -> int:
+        return await chat_repository.delete_ended(chat_id)
+
+    @classmethod
+    async def member_names(cls, chat_service_id: int, user_service_id: int) -> tuple[str | None, str] | None:
+        """The member's username and name as Telegram has them, when they are in the group."""
+        chat_member = await cls._get_chat_member(chat_service_id, user_service_id)
+        if isinstance(chat_member, dict) or chat_member.user is None:
+            return None
+        user = chat_member.user
+        return user.username, ' '.join(part for part in (user.first_name, user.last_name) if part)
+
+    @staticmethod
     async def whitelist_data_count_provider(chat_id: int, search_query: str | None = None) -> int:
         return await chat_repository.chat_whitelist_count(chat_id, search_query)
 

@@ -705,3 +705,87 @@ async def test_an_edit_by_someone_who_may_not_write_goes(bench: Bench):
     assert _deleted(bench) == [message['message_id']]
     assert not bench.telegram.calls_of('restrictChatMember')
     assert not [call for call in bench.telegram.sent_to(OWNER['id'])]
+
+
+# The whitelist page
+
+async def _whitelist_scene(bench: Bench) -> dict:
+    """Six on the list: two writing (one for good, one until a date), one switched off, two whose access ended,
+    one known by id only."""
+    _, chat = await _scene(bench, paid=True)
+    await bench.sql(
+        "INSERT INTO allowed_users (moderated_chat_id, nickname, user_service_id, expires_at, active, created_at, "
+        "updated_at) VALUES "
+        "($1, 'anna', NULL, NULL, TRUE, NOW(), NOW()), "
+        "($1, 'bella', NULL, NOW() + interval '3 days', TRUE, NOW(), NOW()), "
+        "($1, 'carl', NULL, NULL, FALSE, NOW(), NOW()), "
+        "($1, 'dora', NULL, NOW() - interval '1 day', TRUE, NOW(), NOW()), "
+        "($1, 'egor', NULL, NOW() - interval '2 days', FALSE, NOW(), NOW()), "
+        "($1, NULL, '900000001', NULL, TRUE, NOW(), NOW())", chat['id'])
+    await _open_page(bench, chat)
+    await bench.tap(OWNER, json.dumps({'tp': 'chat_whitelist'}))
+    return chat
+
+
+async def test_whitelist_shows_who_can_write(bench: Bench):
+    """the list says how many write, are off, have ended; those who write come first, then the switched off,
+    then the ended, each with a mark; a way to add and to find someone; the ended go on the second tap"""
+    await _whitelist_scene(bench)
+    page = _shown(bench)
+    assert '✅ пишут: 3 · ⏸ выключены: 1 · ⌛️ срок истёк: 2' in page.text, page.text
+    assert 'пришлите ник, имя или id' in page.text, page.text
+    labels = [b['text'] for b in _buttons(page)]
+    until = (datetime.date.today() + datetime.timedelta(days=3)).strftime('%d.%m.%Y')
+    assert labels[:4] == ['✅ @anna', f'✅ @bella · до {until}', '✅ id 900000001', '⏸ @carl'], labels
+    assert labels[4].startswith('⌛️ @dora · истёк') and labels[5].startswith('⌛️ @egor · истёк'), labels
+    assert labels[6:] == ['➕ Разрешить писать', '🧹 Убрать истёкшие (2)', 'Назад'], labels
+
+    await bench.tap(OWNER, json.dumps({'tp': 'wl_clean'}))
+    assert '⚠️ Убрать 2? Нажмите ещё раз' in [b['text'] for b in _buttons(_shown(bench))]
+    assert len(await bench.sql('SELECT id FROM allowed_users')) == 6
+    await bench.tap(OWNER, json.dumps({'tp': 'wl_clean'}))
+    names = sorted(row['nickname'] or '' for row in await bench.sql('SELECT nickname FROM allowed_users'))
+    assert names == ['', 'anna', 'bella', 'carl'], names
+    assert 'Убрано: 2' in bench.telegram.calls_of('answerCallbackQuery')[-1].text
+    assert '🧹' not in ' '.join(b['text'] for b in _buttons(_shown(bench)))
+
+
+async def test_whitelist_finds_by_id(bench: Bench):
+    """a long number sent on the list is an id to find, not a page"""
+    await _whitelist_scene(bench)
+    await bench.private_message(OWNER, '900000001')
+    page = _shown(bench)
+    assert 'Найдено по "900000001"' in page.text, page.text
+    assert [b['text'] for b in _buttons(page)][:2] == ['✅ id 900000001', '🆑 Очистить поиск']
+
+
+async def test_member_page_adds_days_and_says_what_they_can_do(bench: Bench):
+    """the member's page: what they can do now; "Stop them writing" and back; +7 days adds to a running term;
+    an ended access has no switch, its terms count from today; the name of someone known by id comes from
+    Telegram"""
+    await _whitelist_scene(bench)
+    [bella] = await bench.sql("SELECT id, expires_at FROM allowed_users WHERE nickname = 'bella'")
+    await bench.tap(OWNER, json.dumps({'tp': 'allowed_user', 'id': bella['id']}))
+    page = _shown(bench)
+    assert '✅ Может писать до' in page.text, page.text
+    assert [b['text'] for b in _buttons(page)][:4] == ['⏸ Запретить писать', 'Бессрочно', '+7 дней', '+30 дней']
+    await bench.tap(OWNER, json.dumps({'tp': 'set_term', 'd': 7}))
+    [row] = await bench.sql("SELECT expires_at FROM allowed_users WHERE nickname = 'bella'")
+    assert abs((row['expires_at'] - bella['expires_at']) - datetime.timedelta(days=7)) < datetime.timedelta(seconds=5)
+    await bench.tap(OWNER, json.dumps({'tp': 'switch_active'}))
+    page = _shown(bench)
+    assert '⏸ Выключен: сообщения удаляются (срок до' in page.text, page.text
+    assert _buttons(page)[0]['text'] == '▶️ Разрешить снова'
+
+    [dora] = await bench.sql("SELECT id FROM allowed_users WHERE nickname = 'dora'")
+    await bench.tap(OWNER, json.dumps({'tp': 'allowed_user', 'id': dora['id']}))
+    page = _shown(bench)
+    assert '⌛️ Доступ закончился' in page.text, page.text
+    assert [b['text'] for b in _buttons(page)][:3] == ['Бессрочно', '7 дней', '30 дней']
+
+    bench.telegram.members[(GROUP, 900000001)] = member(person(900000001, 'masha_m', first_name='Маша'))
+    [by_id] = await bench.sql("SELECT id FROM allowed_users WHERE user_service_id = '900000001'")
+    await bench.tap(OWNER, json.dumps({'tp': 'allowed_user', 'id': by_id['id']}))
+    assert 'Участник: Маша' in _shown(bench).text or '@masha_m' in _shown(bench).text, _shown(bench).text
+    [row] = await bench.sql("SELECT nickname, display_name FROM allowed_users WHERE id = $1", by_id['id'])
+    assert dict(row) == {'nickname': 'masha_m', 'display_name': 'Маша'}

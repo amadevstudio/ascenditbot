@@ -204,8 +204,8 @@ async def chat_whitelist_count(chat_id: int, search_query: str | None = None) ->
     if search_query is not None and search_query != "":
         search_query_sql = (
             " AND (LOWER(nickname) LIKE LOWER('%%' || %s || '%%')"
-            " OR LOWER(display_name) LIKE LOWER('%%' || %s || '%%'))")
-        request_params += (search_query, search_query)
+            " OR LOWER(display_name) LIKE LOWER('%%' || %s || '%%') OR user_service_id = %s)")
+        request_params += (search_query.lstrip('@'), search_query, search_query.strip())
     else:
         search_query_sql = ""
 
@@ -216,6 +216,26 @@ async def chat_whitelist_count(chat_id: int, search_query: str | None = None) ->
         request_params))['count']
 
 
+async def whitelist_summary(chat_id: int) -> dict:
+    """How many on the whitelist may write, are switched off, have an access that has ended."""
+    return await databaseExecutor.run(db.fetchone, """
+        SELECT COUNT(*) FILTER (WHERE active AND (expires_at IS NULL OR expires_at > LOCALTIMESTAMP)) AS writing,
+            COUNT(*) FILTER (WHERE NOT active AND (expires_at IS NULL OR expires_at > LOCALTIMESTAMP)) AS off,
+            COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at <= LOCALTIMESTAMP) AS ended
+        FROM allowed_users WHERE moderated_chat_id = %s
+    """, (chat_id,))
+
+
+async def delete_ended(chat_id: int) -> int:
+    """Takes those whose access has ended off the whitelist; how many."""
+    rows = await databaseExecutor.run(db.fetchall, """
+        DELETE FROM allowed_users
+        WHERE moderated_chat_id = %s AND expires_at IS NOT NULL AND expires_at <= LOCALTIMESTAMP
+        RETURNING id
+    """, (chat_id,))
+    return len(rows or [])
+
+
 async def chat_whitelist(
         chat_id: int, search_query: str | None = None,
         order_by: Literal['nickname', 'created_at'] = 'nickname', limit: int | None = None, offset: int = 0) \
@@ -223,19 +243,20 @@ async def chat_whitelist(
 
     request_params = (chat_id,)
 
+    # Those who may write first, then those switched off, then those whose access has ended; by name in each
+    name = "LOWER(COALESCE(nickname, display_name)) NULLS LAST, user_service_id"
     match order_by:
         case 'created_at':
             order_by = "created_at"
-        case 'nickname':
-            order_by = "LOWER(COALESCE(nickname, display_name)), created_at"
         case _:
-            order_by = "LOWER(COALESCE(nickname, display_name)), created_at"
+            order_by = (f"CASE WHEN expires_at IS NOT NULL AND expires_at <= LOCALTIMESTAMP THEN 2 "
+                        f"WHEN NOT active THEN 1 ELSE 0 END, {name}, created_at")
 
     if search_query is not None and search_query != "":
         search_query_sql = (
             " AND (LOWER(nickname) LIKE LOWER('%%' || %s || '%%')"
-            " OR LOWER(display_name) LIKE LOWER('%%' || %s || '%%'))")
-        request_params += (search_query, search_query)
+            " OR LOWER(display_name) LIKE LOWER('%%' || %s || '%%') OR user_service_id = %s)")
+        request_params += (search_query.lstrip('@'), search_query, search_query.strip())
     else:
         search_query_sql = ""
 
