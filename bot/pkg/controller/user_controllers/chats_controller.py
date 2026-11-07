@@ -139,13 +139,14 @@ async def my_chats(params: ControllerParams):
         chat_info = await Chat.load_info(chat_service_id=str(chat_data['service_id']))
 
         if 'error' not in chat_info:
+            working = chat_data['active'] and not chat_data['disabled']
+            # On, but the owner took the bot's rights away: nothing is moderated there, so no ✅
+            if working and await Chat.bot_rights_problem(chat_data['service_id']):
+                state = 'no_rights'
+            else:
+                state = 'active' if working else ('disabled' if chat_data['disabled'] else 'inactive')
             button_text = localization.get_message(
-                [
-                    'my_chats', 'list', 'chat_button',
-                    'active' if (chat_data['active'] and not chat_data['disabled'])
-                    else ('disabled' if chat_data['disabled'] else 'inactive')
-                ],
-                params['language_code'], chat_name=chat_info['title'])
+                ['my_chats', 'list', 'chat_button', state], params['language_code'], chat_name=chat_info['title'])
         else:
             button_text = localization.get_message(
                 ['my_chats', 'list', 'chat_button', 'not_found_tg'], params['language_code']) \

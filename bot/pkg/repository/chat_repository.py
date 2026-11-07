@@ -119,6 +119,16 @@ async def user_chats_count_by_service_id(user_chat_id: str, search_query: str | 
         request_params))['count']
 
 
+async def user_working_chats(user_id: int) -> List[ModeratedChatInterface]:
+    """The user's groups the bot should be moderating now: switched on and covered by the tariff."""
+    return await databaseExecutor.run(db.fetchall, """
+        SELECT mc.* FROM moderated_chats AS mc
+        INNER JOIN user_moderated_chat_connections AS umcc ON (umcc.moderated_chat_id = mc.id)
+        WHERE umcc.user_id = %s AND mc.active AND NOT mc.disabled
+        ORDER BY mc.name, mc.created_at
+    """, (int(user_id),))
+
+
 async def user_chats(user_id: str, order_by: str, limit: int, offset: int) -> List[ModeratedChatInterface]:
     if order_by == "created_at":
         order_by = "mc.created_at"

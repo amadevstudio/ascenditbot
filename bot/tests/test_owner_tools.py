@@ -789,3 +789,32 @@ async def test_member_page_adds_days_and_says_what_they_can_do(bench: Bench):
     assert 'Участник: Маша' in _shown(bench).text or '@masha_m' in _shown(bench).text, _shown(bench).text
     [row] = await bench.sql("SELECT nickname, display_name FROM allowed_users WHERE id = $1", by_id['id'])
     assert dict(row) == {'nickname': 'masha_m', 'display_name': 'Маша'}
+
+
+
+async def test_lost_rights_say_how_to_fix_in_list_page_and_menu(bench: Bench):
+    """the owner took the bot's admin rights away: the list marks the group, opening it explains and offers the
+    rights in one tap, and the menu names the group; with the rights back all is quiet"""
+    _, chat = await _scene(bench)
+    bench.telegram.members[(GROUP, BOT_ID)] = member(BOT_USER)
+    await bench.private_message(OWNER, '/start')
+
+    await bench.tap(OWNER, json.dumps({'tp': 'my_chats'}))
+    assert any(b['text'].endswith(': у бота нет прав') for b in _buttons(_shown(bench))), _buttons(_shown(bench))
+
+    bench.telegram.calls.clear()
+    await bench.tap(OWNER, json.dumps({'tp': 'chat', 'id': chat['id']}))
+    [fix] = bench.telegram.sent_to(OWNER['id'])
+    assert 'Бот не может удалять сообщения в этой группе' in fix.text, fix.text
+    assert _buttons(fix)[0]['text'] == '🔧 Дать боту права' and 'startgroup' in _buttons(fix)[0]['url']
+
+    await bench.tap(OWNER, json.dumps({'tp': 'menu'}))
+    [menu] = [text for text in _private_texts(bench, OWNER) if 'Главное меню' in text][-1:]
+    assert 'бот не может удалять сообщения' in menu and 'В группе <b>' in menu, menu
+
+    bench.telegram.members[(GROUP, BOT_ID)] = administrator(BOT_USER)
+    bench.telegram.calls.clear()
+    await bench.tap(OWNER, json.dumps({'tp': 'my_chats'}))
+    assert not any('нет прав' in b['text'] for b in _buttons(_shown(bench)))
+    await bench.tap(OWNER, json.dumps({'tp': 'menu'}))
+    assert not any('не может удалять' in text for text in _private_texts(bench, OWNER))
