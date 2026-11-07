@@ -7,7 +7,7 @@ from project import constants
 _bot = constants.bot_nickname
 ADD_TO_GROUP_URL = f"https://t.me/{_bot}?startgroup=connect&admin=delete_messages+restrict_members+pin_messages"
 # How it all works, with screenshots: posts in the bot's channel
-GUIDE_URLS = {'en': "https://t.me/ascendit_group/21", 'ru': "https://t.me/ascendit_group/13"}
+GUIDE_URLS = {'en': "https://t.me/ascendit_channel/21", 'ru': "https://t.me/ascendit_channel/13"}
 
 
 def guide_url(language_code: str | None) -> str:

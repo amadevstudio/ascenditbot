@@ -686,7 +686,7 @@ async def test_help_has_a_button_to_write_to_us(bench: Bench):
     await bench.private_message(OWNER, '/help')
     [page] = [call for call in bench.telegram.sent_to(OWNER['id']) if 'Вопросы и идеи' in (call.text or '')]
     urls = [button.url for row in page.reply_markup.inline_keyboard for button in row if button.url]
-    assert urls == ['https://t.me/ascendit_group/13', 'https://t.me/ascendit_group?direct'], urls
+    assert urls == ['https://t.me/ascendit_channel/13', 'https://t.me/ascendit_channel?direct'], urls
 
 
 async def test_an_edit_by_someone_who_may_not_write_goes(bench: Bench):
