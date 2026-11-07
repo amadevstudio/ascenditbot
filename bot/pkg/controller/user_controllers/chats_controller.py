@@ -13,7 +13,9 @@ from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
 from pkg.controller.user_controllers.common_controller import chat_access_denied, raise_error
 from pkg.service.user_storage import UserStorage
+from pkg.service.channel_bonus import ChannelBonus
 from pkg.service.chat import Chat
+from pkg.service.user import User
 from pkg.service import group_connect, post_limit
 from pkg.service.access import outsiders_mode
 from pkg.service.tariff import Tariff
@@ -259,7 +261,10 @@ async def show(params: ControllerParams):
             message_text += " " + localization.get_message(['chat', 'show', 'limit', 'paused_free'], language_code)
     message_text += "\n" + localization.get_message(
         ['chat', 'show', 'removed_week'], language_code, count=removed_week)
-    if chat_data['disabled']:
+    if chat_data['disabled'] and await ChannelBonus.free_group_withheld(
+            await User.get_id_by_service_id(message.chat.id)):
+        message_text += "\n\n" + localization.get_message(['bonus', 'group_withheld'], language_code)
+    elif chat_data['disabled']:
         message_text += "\n\n" + localization.get_message(['chat', 'show', 'disabled'], language_code)
     elif whitelist_count == 0 and not chat_data.get('everyone_can_write'):
         message_text += "\n\n" + localization.get_message(['chat', 'show', 'empty_whitelist_hint' if chat_data.get(

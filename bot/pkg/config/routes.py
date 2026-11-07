@@ -2,7 +2,7 @@ from typing import Any, TypedDict, Callable, Dict, Literal
 
 from pkg.config.routes_dict import AvailableCommands, AvailableRoutes
 from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller, \
-    subscription_controller, settings_controller, access_controller, post_limit_controller
+    subscription_controller, settings_controller, access_controller, post_limit_controller, channel_bonus_controller
 from pkg.controller.user_controllers.validators.chat_access_validator import chat_access_validator
 from pkg.controller.user_controllers.validators.user_validator import email_presence_validator
 
@@ -43,6 +43,7 @@ class RoutesInterface(TypedDict):
     settings: RouteInterface
     settings_email: RouteInterface
     settings_currency: RouteInterface
+    bonus: RouteInterface
     nowhere: RouteInterface
 
 
@@ -68,8 +69,16 @@ class RouteMap:
                 'my_chats',
                 'help',
                 'subscription',
-                'settings'
+                'settings',
+                'bonus'
             ],
+        },
+        'bonus': {
+            'method': channel_bonus_controller.page,
+            'available_from': ['command', 'call'],
+            'actions': {
+                'bonus_check': {'method': channel_bonus_controller.check},
+            },
         },
         'help': {
             'method': welcome_controller.help_page,

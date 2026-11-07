@@ -103,6 +103,19 @@ ALTER SEQUENCE public.allowed_users_id_seq OWNED BY public.allowed_users.id;
 
 
 --
+-- Name: channel_bonus_claims; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.channel_bonus_claims (
+    user_id bigint NOT NULL,
+    channel_ids character varying(255)[] NOT NULL,
+    claimed_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    lost_at timestamp without time zone,
+    checked_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
 -- Name: currencies; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -251,6 +264,39 @@ CREATE SEQUENCE public.payments_history_id_seq
 --
 
 ALTER SEQUENCE public.payments_history_id_seq OWNED BY public.payments_history.id;
+
+
+--
+-- Name: promo_channels; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.promo_channels (
+    id bigint NOT NULL,
+    service_id character varying(255) NOT NULL,
+    title character varying(255),
+    link character varying(255),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: promo_channels_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.promo_channels_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: promo_channels_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.promo_channels_id_seq OWNED BY public.promo_channels.id;
 
 
 --
@@ -439,6 +485,13 @@ ALTER TABLE ONLY public.payments_history ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: promo_channels id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_channels ALTER COLUMN id SET DEFAULT nextval('public.promo_channels_id_seq'::regclass);
+
+
+--
 -- Name: tariffs id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -481,6 +534,14 @@ ALTER TABLE ONLY public.allowed_users
 
 ALTER TABLE ONLY public.allowed_users
     ADD CONSTRAINT allowed_users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: channel_bonus_claims channel_bonus_claims_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_bonus_claims
+    ADD CONSTRAINT channel_bonus_claims_pkey PRIMARY KEY (user_id);
 
 
 --
@@ -529,6 +590,22 @@ ALTER TABLE ONLY public.payments_history
 
 ALTER TABLE ONLY public.payments_history
     ADD CONSTRAINT payments_history_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: promo_channels promo_channels_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_channels
+    ADD CONSTRAINT promo_channels_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: promo_channels promo_channels_service_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.promo_channels
+    ADD CONSTRAINT promo_channels_service_id_key UNIQUE (service_id);
 
 
 --
@@ -661,6 +738,14 @@ ALTER TABLE ONLY public.access_requests
 
 
 --
+-- Name: channel_bonus_claims channel_bonus_claims_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.channel_bonus_claims
+    ADD CONSTRAINT channel_bonus_claims_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: tariff_prices fk_currency; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -790,4 +875,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20261108120000'),
     ('20261109120000'),
     ('20261110120000'),
-    ('20261111120000');
+    ('20261111120000'),
+    ('20261112120000');

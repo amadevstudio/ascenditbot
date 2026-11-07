@@ -277,6 +277,9 @@ async def chats_number_satisfactory(chat_id: str, strong: bool = True) -> bool:
             ELSE (
                     CASE WHEN user_chats_stat.chats_count IS NULL THEN 0 ELSE user_chats_stat.chats_count END
                 ) {('<' if strong else '<=')} t.channels_count
+                -- the free group waits for those who took the bonus for subscribing and then unsubscribed
+                AND NOT (utc.tariff_id = 0 AND EXISTS (
+                    SELECT 1 FROM channel_bonus_claims AS cbc WHERE cbc.user_id = u.id AND cbc.lost_at IS NOT NULL))
             END AS satisfies
 
             -- , CASE WHEN user_chats_stat.chats_count IS NULL THEN 0 ELSE user_chats_stat.chats_count END
@@ -377,6 +380,12 @@ async def process_subscriptions(update_batch: int = 1000) -> Generator[ProcessSu
 
 
 async def update_user_moderated_chats(user_id: int, offset: int | None):
+    # Took the bonus for subscribing, then unsubscribed: on the free tariff no group until they subscribe again
+    if offset is not None and offset > 0:
+        from pkg.repository.channel_bonus_repository import free_group_withheld
+        if await free_group_withheld(user_id):
+            offset = 0
+
     # All enabled
     if offset is None:
         await databaseExecutor.run(db.execute_single_model, """

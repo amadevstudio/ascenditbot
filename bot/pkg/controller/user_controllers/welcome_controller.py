@@ -4,6 +4,7 @@ import html
 from framework.controller.message_tools import message_sender, go_back_inline_markup, chat_id_sender
 from framework.controller.types import ControllerParams
 from pkg.controller.user_controllers import chats_controller
+from pkg.service.channel_bonus import ChannelBonus
 from pkg.service.chat import Chat
 from lib.language import localization
 from pkg.service.tariff import Tariff
@@ -101,6 +102,14 @@ async def menu(params: ControllerParams):
             names = ', '.join(f"<b>{html.escape(chat['name'] or str(chat['service_id']))}</b>" for chat in blocked)
             menu_text += "\n\n" + localization.get_message(
                 ['menu', 'no_rights', 'one' if len(blocked) == 1 else 'many'], params['language_code'], chats=names)
+
+    # +15 days for subscribing to the bot's channels, or the free group back after unsubscribing
+    bonus_state = await ChannelBonus.state(user_id)
+    if bonus_state is not None:
+        if bonus_state == 'lost':
+            menu_text += "\n\n" + localization.get_message(['bonus', 'menu_lost'], params['language_code'])
+        markup.append([{'text': localization.get_message(['bonus', 'menu_button', bonus_state], params['language_code']),
+                        'callback_data': {'tp': 'bonus'}}])
 
     answer_messages.append({
         'type': 'text',
