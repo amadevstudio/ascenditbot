@@ -22,9 +22,29 @@ CHECKS_PER_ROUND = 30
 
 
 class ChannelBonus:
+    @classmethod
+    async def channels(cls) -> list[dict]:
+        """The listed channels, title and link fresh from Telegram: a renamed channel needs no new /addchannel."""
+        channels = [dict(channel) for channel in await channel_bonus_repository.channels()]
+        await asyncio.gather(*(cls._refresh(channel) for channel in channels))
+        return channels
+
+    @classmethod
+    async def _refresh(cls, channel: dict) -> None:
+        """Telegram not answering (the bot lost the channel) keeps what is stored."""
+        try:
+            chat = await bot.get_chat(int(channel['service_id']))
+        except Exception as e:
+            logger.warning('Cannot refresh a bonus channel', channel['service_id'], e)
+            return
+        title, link = chat.title or channel['title'], cls.link(chat) or channel['link']
+        if (title, link) != (channel['title'], channel['link']):
+            channel.update(title=title, link=link)
+            await channel_bonus_repository.update_channel(channel['service_id'], title, link)
+
     @staticmethod
-    async def channels() -> list[dict]:
-        return await channel_bonus_repository.channels()
+    def link(chat) -> str | None:
+        return f"https://t.me/{chat.username}" if chat.username else chat.invite_link
 
     @staticmethod
     async def is_subscribed(channel_service_id: str, user_service_id: int | str) -> bool | None:

@@ -62,6 +62,30 @@ async def test_admin_adds_and_removes_channels(bench: Bench):
     assert await bench.sql('SELECT * FROM promo_channels') == []
 
 
+async def test_renamed_channel_shows_its_new_link(bench: Bench):
+    """the channel's @username changed: opening the bonus page shows and stores the new title and link, no
+    new /addchannel; Telegram not answering keeps the stored ones"""
+    await _channel(bench)
+    await bench.owner(OWNER)
+    await bench.tap(OWNER, json.dumps({'tp': 'bonus'}))
+    assert 'https://t.me/ascendit_news' in [b['url'] for b in _buttons(_last(bench, OWNER))]
+
+    bench.telegram.answers['getChat'] = lambda method: {
+        'id': CHANNEL, 'type': 'channel', 'title': 'Ascendit Channel', 'username': 'ascendit_channel',
+        'accent_color_id': 0, 'max_reaction_count': 11, 'accepted_gift_types': {
+            'unlimited_gifts': False, 'limited_gifts': False, 'unique_gifts': False,
+            'premium_subscription': False, 'gifts_from_channels': False}}
+    await bench.tap(OWNER, json.dumps({'tp': 'bonus'}))
+    page = _last(bench, OWNER)
+    assert 'Ascendit Channel' in page.text and 'https://t.me/ascendit_channel' in [b['url'] for b in _buttons(page)]
+    [row] = await bench.sql('SELECT title, link FROM promo_channels')
+    assert row == {'title': 'Ascendit Channel', 'link': 'https://t.me/ascendit_channel'}, row
+
+    del bench.telegram.answers['getChat']
+    await bench.tap(OWNER, json.dumps({'tp': 'bonus'}))
+    assert 'https://t.me/ascendit_channel' in [b['url'] for b in _buttons(_last(bench, OWNER))]
+
+
 async def test_subscribe_for_days_then_unsubscribe_pauses_the_free_group(bench: Bench):
     """the menu offers the bonus; not subscribed, no days; subscribed, 15 days on top of the trial. On the free
     tariff, unsubscribing pauses the free group and says so; subscribing again brings it back"""
