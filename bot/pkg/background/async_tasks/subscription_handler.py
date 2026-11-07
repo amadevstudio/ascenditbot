@@ -95,15 +95,24 @@ async def subscription_handler_notifier():
             logger.error(e, "Subscription Handler")
 
 
-async def notify_bonus_lost(claim: dict, channels: list[dict]):
-    """Unsubscribed after taking the bonus: the free group waits, and how to get it back."""
+async def notify_bonus_lost(claim: dict, channels: list[dict], days: int, end_date: datetime.datetime | None):
+    """Unsubscribed after taking the bonus: the days taken, the free group waits (now or when the term ends), and
+    how to get it back."""
     from pkg.controller.user_controllers.channel_bonus_controller import channel_buttons, channel_names
+    language_code = claim['language_code']
+
+    def text(key: str, **kwargs) -> str:
+        return localization.get_message(['bonus', key], language_code, **kwargs)
+
     try:
+        lines = [text('lost_notice', channels=channel_names(channels))]
+        if days:
+            lines.append(text('lost_days', days=days, date=end_date.strftime('%d.%m.%Y')))
+        on_free = (await Tariff.user_tariff_info(claim['user_id']))['tariff_id'] == Tariff.FREE_TARIFF_ID
+        lines.append(text('lost_free' if on_free else 'lost_later'))
         await message_sender(int(claim['service_id']), resending=True, message_structures=[{
             'type': 'text', 'parse_mode': 'HTML', 'disable_web_page_preview': True,
-            'text': localization.get_message(['bonus', 'lost_notice'], claim['language_code'],
-                                             channels=channel_names(channels)),
-            'reply_markup': channel_buttons(channels)}])
+            'text': '\n\n'.join(lines), 'reply_markup': channel_buttons(channels)}])
         UserStorage.set_resend(int(claim['service_id']))
     except Exception as e:
         logger.warning('Channel bonus: cannot tell the user', claim['user_id'], e)

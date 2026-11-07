@@ -506,3 +506,14 @@ async def increase_amount_with_payment_history(
                 'balance': new_balance['balance'],
                 'payment_history': payment_history
             }
+
+
+async def take_days(user_id: int, days: int) -> datetime.datetime | None:
+    """Days off a running term, never below now; None when no term runs (the free tariff): nothing to take."""
+    row = await databaseExecutor.run(db.fetchone, """
+        UPDATE user_tariff_connections
+        SET end_date = GREATEST(end_date - make_interval(days => %s), LOCALTIMESTAMP)
+        WHERE user_id = %s AND tariff_id <> 0 AND end_date > LOCALTIMESTAMP
+        RETURNING end_date
+    """, (days, int(user_id)))
+    return row['end_date'] if row is not None else None

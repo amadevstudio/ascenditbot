@@ -78,3 +78,25 @@ async def free_group_withheld(user_id: int) -> bool:
         WHERE c.user_id = %s AND c.lost_at IS NOT NULL AND utc.tariff_id = 0
     """, (int(user_id),))
     return row is not None
+
+
+async def claim_of(user_service_id: int | str) -> dict | None:
+    """The claim by the user's Telegram id, with what the bot needs to write to them."""
+    return await databaseExecutor.run(db.fetchone, """
+        SELECT c.*, u.service_id, u.language_code
+        FROM channel_bonus_claims AS c
+        INNER JOIN users AS u ON (u.id = c.user_id)
+        WHERE u.service_id = %s
+    """, (str(user_service_id),))
+
+
+async def mark_penalized(user_id: int, channel_service_id: str) -> int | None:
+    """How many channels the user has lost days for, this one counted; None when it was counted already. One
+    UPDATE, so the event and the daily check together cannot take the days twice."""
+    row = await databaseExecutor.run(db.fetchone, """
+        UPDATE channel_bonus_claims
+        SET penalized_channel_ids = array_append(penalized_channel_ids, %s)
+        WHERE user_id = %s AND NOT (%s = ANY(penalized_channel_ids))
+        RETURNING cardinality(penalized_channel_ids) AS penalized
+    """, (channel_service_id, int(user_id), channel_service_id))
+    return row['penalized'] if row is not None else None

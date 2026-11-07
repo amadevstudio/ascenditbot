@@ -111,7 +111,8 @@ CREATE TABLE public.channel_bonus_claims (
     channel_ids character varying(255)[] NOT NULL,
     claimed_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     lost_at timestamp without time zone,
-    checked_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    checked_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    penalized_channel_ids character varying(255)[] DEFAULT '{}'::character varying[] NOT NULL
 );
 
 
@@ -876,4 +877,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20261109120000'),
     ('20261110120000'),
     ('20261111120000'),
-    ('20261112120000');
+    ('20261112120000'),
+    ('20261113120000');
