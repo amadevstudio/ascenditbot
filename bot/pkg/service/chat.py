@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import typing
 from typing import TypedDict, List, Literal
@@ -79,6 +80,29 @@ class Chat(Service):
         if isinstance(chat_member, dict):
             return False
         return chat_member.status in ('creator', 'administrator')
+
+    @classmethod
+    async def bot_rights_problem(cls, chat_service_id: int | str) -> Literal['no_rights', 'not_in_group'] | None:
+        """What keeps the bot from moderating the group: 'not_in_group' (removed, or the group is gone),
+        'no_rights' (a plain member, or an admin that cannot delete); None when it can, or Telegram did not say.
+        Rights are checked when a group is connected, but an owner may take them away later."""
+        try:
+            chat_member = await cls._get_chat_member(int(chat_service_id), bot.id)
+        except Exception as e:
+            logger.warning('Cannot check the bot rights', chat_service_id, e)
+            return None
+        if isinstance(chat_member, dict) or chat_member.status in ('left', 'kicked'):
+            return 'not_in_group'
+        if chat_member.status != 'administrator' or not getattr(chat_member, 'can_delete_messages', False):
+            return 'no_rights'
+        return None
+
+    @classmethod
+    async def working_groups_without_rights(cls, user_id: int) -> list[ModeratedChatInterface]:
+        """The user's switched-on groups where the bot cannot delete messages."""
+        chats = await chat_repository.user_working_chats(user_id)
+        problems = await asyncio.gather(*(cls.bot_rights_problem(chat['service_id']) for chat in chats))
+        return [chat for chat, problem in zip(chats, problems) if problem is not None]
 
     @staticmethod
     async def _validate_bot_rights(chat_member: telegram_types.ChatMember) -> ErrorDictInterface:

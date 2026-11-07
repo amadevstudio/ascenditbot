@@ -1,4 +1,5 @@
 import datetime
+import html
 
 from framework.controller.message_tools import message_sender, go_back_inline_markup, chat_id_sender
 from framework.controller.types import ControllerParams
@@ -93,6 +94,13 @@ async def menu(params: ControllerParams):
     menu_text = localization.get_message(['menu', 'text'], params['language_code'])
     if not await Chat.data_count_provider(user_id):
         menu_text += "\n\n" + localization.get_message(['menu', 'start_hint'], params['language_code'])
+    else:
+        # Groups that are on but where the bot cannot delete: nothing is moderated there, and the page looks fine
+        blocked = await Chat.working_groups_without_rights(user_id)
+        if blocked:
+            names = ', '.join(f"<b>{html.escape(chat['name'] or str(chat['service_id']))}</b>" for chat in blocked)
+            menu_text += "\n\n" + localization.get_message(
+                ['menu', 'no_rights', 'one' if len(blocked) == 1 else 'many'], params['language_code'], chats=names)
 
     answer_messages.append({
         'type': 'text',

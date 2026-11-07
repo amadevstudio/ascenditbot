@@ -672,7 +672,27 @@ owner_tools_messages = {
                     'en': "you have not started the bot yet",
                     'ru': "вы ещё не запускали бота"
                 },
-            }
+            },
+            # Opening a group whose rights the owner took away: what is wrong and the one tap that fixes it
+            'fix_rights': {
+                'no_rights': {
+                    'en': "⚠️ <b>The bot cannot delete messages in this group</b>: it is not an admin, or lacks the "
+                          "right to delete. Until then nothing is moderated there.\n\nTap the button below and pick "
+                          "the group: Telegram will offer the rights, already ticked. Then the group works again "
+                          "and its page opens.",
+                    'ru': "⚠️ <b>Бот не может удалять сообщения в этой группе</b>: он не админ или у него нет права "
+                          "удалять. Пока так, модерации там нет.\n\nНажмите кнопку ниже и выберите группу: Telegram "
+                          "предложит права, уже отмеченные. После этого группа снова заработает и откроется."
+                },
+                'not_member': {
+                    'en': "⚠️ <b>The bot is not in this group</b>, so nothing is moderated there.\n\nTap the "
+                          "button below and pick the group: Telegram will add the bot with the rights it needs. "
+                          "Then the group works again and its page opens.",
+                    'ru': "⚠️ <b>Бота нет в этой группе</b>, модерации там нет.\n\nНажмите кнопку ниже и "
+                          "выберите группу: Telegram добавит бота с нужными правами. После этого группа снова "
+                          "заработает и откроется."
+                },
+            },
         },
         'term': {
             'one': {'en': "{days} day", 'ru': "{days} день"},

@@ -134,6 +134,20 @@ routed_messages = {
                   "<b>📖 How it works</b>.",
             'ru': "👇 Начните с <b>🆕 Добавить группу</b>: это минута. Как всё устроено, с картинками: "
                   "<b>📖 Как пользоваться</b>."
+        },
+        'no_rights': {
+            'one': {
+                'en': "⚠️ In {chats} the bot cannot delete messages, so nothing is moderated there. Open the group "
+                      "in <b>👥 My groups</b> and tap <b>🔧 Give the bot its rights</b>.",
+                'ru': "⚠️ В группе {chats} бот не может удалять сообщения, модерации там нет. Откройте её в "
+                      "<b>👥 Мои группы</b> и нажмите <b>🔧 Дать боту права</b>."
+            },
+            'many': {
+                'en': "⚠️ In {chats} the bot cannot delete messages, so nothing is moderated there. Open each group "
+                      "in <b>👥 My groups</b> and tap <b>🔧 Give the bot its rights</b>.",
+                'ru': "⚠️ В группах {chats} бот не может удалять сообщения, модерации там нет. Откройте каждую в "
+                      "<b>👥 Мои группы</b> и нажмите <b>🔧 Дать боту права</b>."
+            }
         }
     },
     'help': {
@@ -255,6 +269,10 @@ routed_messages = {
                 'disabled': {
                     'en': emoji_codes.get('warning_sign', '') + " {chat_name}",
                     'ru': emoji_codes.get('warning_sign', '') + " {chat_name}"
+                },
+                'no_rights': {
+                    'en': "❗️ {chat_name}: the bot has no rights",
+                    'ru': "❗️ {chat_name}: у бота нет прав"
                 },
                 'not_found_tg': {
                     'en': emoji_codes.get('sos', '') + emoji_codes.get('warning_sign', '') + " Not found!",
