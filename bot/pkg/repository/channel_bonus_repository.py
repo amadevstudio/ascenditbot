@@ -25,6 +25,13 @@ async def add_channel(service_id: str, title: str | None, link: str | None) -> d
     """, (service_id, title, link))
 
 
+async def update_channel(service_id: str, title: str | None, link: str | None) -> dict | None:
+    return await databaseExecutor.run(db.fetchone, """
+        UPDATE promo_channels SET title = %s, link = %s, updated_at = CURRENT_TIMESTAMP WHERE service_id = %s
+        RETURNING *
+    """, (title, link, service_id))
+
+
 async def delete_channel(channel_id: int) -> dict | None:
     return await databaseExecutor.run(db.fetchone, """
         DELETE FROM promo_channels WHERE id = %s RETURNING *

@@ -34,7 +34,7 @@ class RemoveChannel(BaseFilter):
 
 
 async def channels_page() -> tuple[str, InlineKeyboardMarkup]:
-    channels = await channel_bonus_repository.channels()
+    channels = await ChannelBonus.channels()
     lines = [f"<b>Каналы за подписку</b> (+{BONUS_DAYS} дней платного тарифа)", ""]
     if not channels:
         lines.append("Пока ни одного: бонус в меню не показывается.")
@@ -81,7 +81,7 @@ def admin_router() -> Router:
             await message.answer("Не получается проверить подписчиков этого канала. Сделайте бота админом канала "
                                  f"и попробуйте ещё раз.\n\nTelegram: {html.escape(str(e))}", parse_mode='HTML')
             return
-        link = f"https://t.me/{chat.username}" if chat.username else chat.invite_link
+        link = ChannelBonus.link(chat)
         if not link:
             await message.answer("У канала нет ни @username, ни ссылки-приглашения: людям некуда перейти. "
                                  "Сделайте канал публичным или создайте ссылку и попробуйте ещё раз.")
