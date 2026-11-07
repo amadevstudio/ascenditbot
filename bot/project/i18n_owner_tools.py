@@ -14,6 +14,67 @@ def guide_url(language_code: str | None) -> str:
     return GUIDE_URLS['ru' if (language_code or '').lower().startswith('ru') else 'en']
 
 owner_tools_messages = {
+    # 🎁 Bonus days for subscribing to the bot's channels (pkg/service/channel_bonus.py), HTML
+    'bonus': {
+        'menu_button': {
+            'offer': {'en': "🎁 +15 days for subscribing", 'ru': "🎁 +15 дней за подписку"},
+            'lost': {'en': "🔔 Get the free group back", 'ru': "🔔 Вернуть бесплатную группу"},
+        },
+        'menu_lost': {
+            'en': "⚠️ You unsubscribed from our channels, so your free group is paused. Subscribe again: "
+                  "<b>🔔 Get the free group back</b>.",
+            'ru': "⚠️ Вы отписались от наших каналов, поэтому бесплатная группа на паузе. Подпишитесь снова: "
+                  "<b>🔔 Вернуть бесплатную группу</b>."
+        },
+        'offer': {
+            'en': "🎁 <b>+{days} days of everything, free</b>\n\nSubscribe to {channels} and tap "
+                  "<b>✅ I subscribed</b>. The days go on top of your current term, or start today on the free "
+                  "tariff.\n\nThe condition: if you unsubscribe later, your free group pauses until you "
+                  "subscribe again.",
+            'ru': "🎁 <b>+{days} дней всех функций бесплатно</b>\n\nПодпишитесь на {channels} и нажмите "
+                  "<b>✅ Я подписался</b>. Дни добавятся к текущему сроку, а на бесплатном тарифе начнутся "
+                  "сегодня.\n\nУсловие: если потом отпишетесь, бесплатная группа встанет на паузу, пока не "
+                  "подпишетесь снова."
+        },
+        'check_button': {'en': "✅ I subscribed", 'ru': "✅ Я подписался"},
+        'granted': {
+            'en': "🎉 <b>Done: +{days} days of everything.</b> Your tariff runs until {date}. Thanks for subscribing!",
+            'ru': "🎉 <b>Готово: +{days} дней всех функций.</b> Тариф действует до {date}. Спасибо за подписку!"
+        },
+        'restored': {
+            'en': "✅ Thank you! Your free group works again.",
+            'ru': "✅ Спасибо! Бесплатная группа снова работает."
+        },
+        'lost': {
+            'en': "⚠️ You unsubscribed from {channels}, so your free group is paused. Subscribe again and tap "
+                  "<b>✅ I subscribed</b>: the group works at once.",
+            'ru': "⚠️ Вы отписались от {channels}, поэтому бесплатная группа на паузе. Подпишитесь снова и нажмите "
+                  "<b>✅ Я подписался</b>: группа сразу заработает."
+        },
+        'already': {
+            'en': "✅ You have the bonus for subscribing already. Thanks for being with us!",
+            'ru': "✅ Бонус за подписку уже получен. Спасибо, что с нами!"
+        },
+        'none': {'en': "There is no bonus for subscribing right now.", 'ru': "Сейчас бонуса за подписку нет."},
+        'not_subscribed': {
+            'en': "I do not see you subscribed to: {channels}. Subscribe and tap again.",
+            'ru': "Пока не вижу подписки на: {channels}. Подпишитесь и нажмите ещё раз."
+        },
+        'toast': {'en': "✅", 'ru': "✅"},
+        'group_withheld': {
+            'en': "⚠️ Paused: you unsubscribed from the channels you got the bonus for. Subscribe again: /bonus",
+            'ru': "⚠️ На паузе: вы отписались от каналов, за подписку на которые получили бонус. Подпишитесь "
+                  "снова: /bonus"
+        },
+        'lost_notice': {
+            'en': "⚠️ You unsubscribed from {channels}. You got 15 free days for subscribing, on the condition "
+                  "of staying, so your free group is paused now. Subscribe again and send /bonus: the group "
+                  "works at once.",
+            'ru': "⚠️ Вы отписались от {channels}. За подписку вы получили 15 дней, а условием было оставаться "
+                  "подписанным, поэтому бесплатная группа теперь на паузе. Подпишитесь снова и отправьте /bonus: "
+                  "группа сразу заработает."
+        },
+    },
     'welcome': {
         'introduction': {
             'en':

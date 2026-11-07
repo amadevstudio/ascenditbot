@@ -1,3 +1,4 @@
+from pkg.controller.routers.admin_router import admin_router
 from pkg.controller.routers.stats_router import stats_router
 from pkg.controller.routers.access_router import access_router
 from pkg.controller.routers.direct_messages_router import direct_messages_router
@@ -22,6 +23,7 @@ def init_routes(dispatcher):
     dispatcher.include_router(access_router())
 
     dispatcher.include_router(stats_router())
+    dispatcher.include_router(admin_router())
 
     dispatcher.include_router(user_router())
 

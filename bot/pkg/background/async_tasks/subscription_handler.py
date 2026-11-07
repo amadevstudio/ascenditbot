@@ -2,6 +2,8 @@ import asyncio
 import datetime
 
 from framework.controller.message_tools import message_sender
+from lib.language import localization
+from pkg.service.channel_bonus import ChannelBonus
 from pkg.service.member_alerts import MemberAlerts
 from pkg.service.tariff import Tariff
 from pkg.service.user_storage import UserStorage
@@ -36,6 +38,9 @@ async def subscription_handler_round():
 
         # Timed whitelist access: remind the managers a day before it ends, tell them when it has
         await MemberAlerts.expiry_round()
+
+        # Took the bonus for subscribing: still subscribed? (each taker once a day)
+        await ChannelBonus.recheck_round(notify_bonus_lost)
     except Exception as e:
         logger.error(e, "Subscription Handler: the round failed, the next one is in an hour")
 
@@ -88,3 +93,17 @@ async def subscription_handler_notifier():
             UserStorage.set_resend(int(user['service_id']))
         except Exception as e:
             logger.error(e, "Subscription Handler")
+
+
+async def notify_bonus_lost(claim: dict, channels: list[dict]):
+    """Unsubscribed after taking the bonus: the free group waits, and how to get it back."""
+    from pkg.controller.user_controllers.channel_bonus_controller import channel_buttons, channel_names
+    try:
+        await message_sender(int(claim['service_id']), resending=True, message_structures=[{
+            'type': 'text', 'parse_mode': 'HTML', 'disable_web_page_preview': True,
+            'text': localization.get_message(['bonus', 'lost_notice'], claim['language_code'],
+                                             channels=channel_names(channels)),
+            'reply_markup': channel_buttons(channels)}])
+        UserStorage.set_resend(int(claim['service_id']))
+    except Exception as e:
+        logger.warning('Channel bonus: cannot tell the user', claim['user_id'], e)
