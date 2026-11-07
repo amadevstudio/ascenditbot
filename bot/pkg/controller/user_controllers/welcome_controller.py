@@ -121,7 +121,7 @@ async def menu(params: ControllerParams):
     await message_sender(message.chat.id, message_structures=answer_messages)
 
 
-SUPPORT_URL = 'https://t.me/ascendit_group?direct'
+SUPPORT_URL = 'https://t.me/ascendit_channel?direct'
 
 
 async def help_page(params: ControllerParams):
