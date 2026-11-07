@@ -71,7 +71,8 @@ async def incoming_chat_message(message: telegram_types.Message, edited: bool = 
             await notify_removed(message, chat_data['id'])
             return
         await Chat.restrict_user(
-            chat_service_id, sender.id, chat_data.get('restriction_duration_minutes', 5), message.chat.type)
+            chat_service_id, sender.id, chat_data.get('restriction_duration_minutes', 5), message.chat.type,
+            is_admin=is_admin)
         await notify_removed(message, chat_data['id'])
         await MemberAlerts.removed(chat_data, message)
         return

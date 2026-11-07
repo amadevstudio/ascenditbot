@@ -195,11 +195,17 @@ async def test_owner_and_admins_write(bench: Bench):
 
 
 async def test_admins_moderated_when_not_allowed(bench: Bench):
-    """with admins not allowed (allow_administrators off) an admin off the whitelist is moderated too"""
+    """with admins not allowed (allow_administrators off) the owner's and an admin's messages off the whitelist
+    go too, but they are not muted: Telegram refuses it ("can't remove chat owner"); a stranger still is"""
     from tests.bench import administrator
 
     await _scene(bench, allow_administrators=False)
     admin = person(611, 'moderator')
     bench.telegram.members[(GROUP, admin['id'])] = administrator(admin)
+    await bench.group_message(GROUP, OWNER)
     await bench.group_message(GROUP, admin)
-    assert len(bench.telegram.calls_of('deleteMessage')) == 1
+    assert len(bench.telegram.calls_of('deleteMessage')) == 2
+    assert not bench.telegram.calls_of('restrictChatMember')
+    await bench.group_message(GROUP, STRANGER)
+    [restricted] = bench.telegram.calls_of('restrictChatMember')
+    assert restricted.user_id == STRANGER['id']

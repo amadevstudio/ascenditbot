@@ -314,8 +314,16 @@ class Chat(Service):
 
     @classmethod
     async def restrict_user(
-            cls, chat_service_id: int, user_service_id: int, duration_minutes: int, chat_type: str | None = None):
+            cls, chat_service_id: int, user_service_id: int, duration_minutes: int, chat_type: str | None = None,
+            is_admin: bool | None = None):
+        """Mutes the member for a while after a removed message. The owner and the admins are not muted (with
+        admins not allowed to write their messages only go): Telegram refuses it, "can't remove chat owner".
+        `is_admin` when the caller knows it already, so it is not asked again."""
         if duration_minutes <= 0 or cls._chat_type_value(chat_type) != 'supergroup':
+            return
+        if is_admin is None:
+            is_admin = await cls.is_administrator(chat_service_id, user_service_id)
+        if is_admin:
             return
 
         try:
