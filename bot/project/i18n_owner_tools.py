@@ -29,12 +29,12 @@ owner_tools_messages = {
         'offer': {
             'en': "🎁 <b>+{days} days of everything, free</b>\n\nSubscribe to {channels} and tap "
                   "<b>✅ I subscribed</b>. The days go on top of your current term, or start today on the free "
-                  "tariff.\n\nThe condition: if you unsubscribe later, your free group pauses until you "
-                  "subscribe again.",
+                  "tariff.\n\nThe condition: if you unsubscribe later, each channel left takes {penalty} days off "
+                  "your term, and your free group pauses until you subscribe again.",
             'ru': "🎁 <b>+{days} дней всех функций бесплатно</b>\n\nПодпишитесь на {channels} и нажмите "
                   "<b>✅ Я подписался</b>. Дни добавятся к текущему сроку, а на бесплатном тарифе начнутся "
-                  "сегодня.\n\nУсловие: если потом отпишетесь, бесплатная группа встанет на паузу, пока не "
-                  "подпишетесь снова."
+                  "сегодня.\n\nУсловие: если потом отпишетесь, за каждый канал из срока снимется дней: "
+                  "{penalty}, а бесплатная группа встанет на паузу, пока не подпишетесь снова."
         },
         'check_button': {'en': "✅ I subscribed", 'ru': "✅ Я подписался"},
         'granted': {
@@ -66,13 +66,26 @@ owner_tools_messages = {
             'ru': "⚠️ На паузе: вы отписались от каналов, за подписку на которые получили бонус. Подпишитесь "
                   "снова: /bonus"
         },
+        # The notice when someone unsubscribes: the first line, then the days taken (if any), then the free group
         'lost_notice': {
             'en': "⚠️ You unsubscribed from {channels}. You got 15 free days for subscribing, on the condition "
-                  "of staying, so your free group is paused now. Subscribe again and send /bonus: the group "
-                  "works at once.",
+                  "of staying.",
             'ru': "⚠️ Вы отписались от {channels}. За подписку вы получили 15 дней, а условием было оставаться "
-                  "подписанным, поэтому бесплатная группа теперь на паузе. Подпишитесь снова и отправьте /bonus: "
-                  "группа сразу заработает."
+                  "подписанным."
+        },
+        'lost_days': {
+            'en': "{days} days are taken off: your tariff runs until {date}.",
+            'ru': "Из срока снято дней: {days}, тариф действует до {date}."
+        },
+        'lost_free': {
+            'en': "Your free group is paused now. Subscribe again and send /bonus: the group works at once.",
+            'ru': "Бесплатная группа теперь на паузе. Подпишитесь снова и отправьте /bonus: группа сразу "
+                  "заработает."
+        },
+        'lost_later': {
+            'en': "When the tariff ends, your free group will pause until you subscribe again and send /bonus.",
+            'ru': "Когда тариф закончится, бесплатная группа будет на паузе, пока не подпишетесь снова и не "
+                  "отправите /bonus."
         },
     },
     'welcome': {

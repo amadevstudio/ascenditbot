@@ -39,7 +39,8 @@ async def page(params: ControllerParams, done: str | None = None, end_date=None)
     elif not channels:
         body = text('none')
     else:
-        body = text('offer', days=BONUS_DAYS, channels=channel_names(channels))
+        body = text('offer', days=BONUS_DAYS, channels=channel_names(channels),
+                    penalty=ChannelBonus.penalty_days(len(channels)))
         markup = [*channel_buttons(channels), [{'text': text('check_button'), 'callback_data': {'tp': 'bonus_check'}}]]
 
     await message_sender(message.chat.id, message_structures=[{

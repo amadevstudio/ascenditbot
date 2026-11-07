@@ -1,16 +1,17 @@
 """/admin for the bot's owner (users.is_admin): the channels whose subscribers get the bonus days
-(pkg/service/channel_bonus.py). /addchannel @name adds one, the buttons remove. Others get nothing here."""
+(pkg/service/channel_bonus.py). /addchannel @name adds one, the buttons remove. Others get nothing here.
+Joins and leaves in those channels (chat_member, sent to the channel's admins) check the bonus at once."""
 import html
 import json
 import re
 
 from aiogram import F, Router
 from aiogram.filters import BaseFilter, Command, CommandObject
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, ChatMemberUpdated, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from pkg.repository import channel_bonus_repository
-from pkg.service.channel_bonus import BONUS_DAYS
+from pkg.service.channel_bonus import BONUS_DAYS, ChannelBonus
 from pkg.service.user import User
 from pkg.system.logger import logger
 
@@ -99,5 +100,18 @@ def admin_router() -> Router:
         except TelegramBadRequest as e:
             if 'message is not modified' not in str(e):
                 logger.warning('Cannot edit the admin page', e)
+
+    @router.chat_member(F.chat.type == 'channel')
+    async def channel_membership(event: ChatMemberUpdated):
+        """Left or joined a bonus channel: no waiting for the daily check."""
+        from pkg.background.async_tasks.subscription_handler import notify_bonus_lost
+        was, now = ChannelBonus.in_channel(event.old_chat_member), ChannelBonus.in_channel(event.new_chat_member)
+        if was == now:
+            return
+        try:
+            await ChannelBonus.membership_changed(
+                str(event.chat.id), event.new_chat_member.user.id, now, notify_bonus_lost)
+        except Exception as e:
+            logger.error(e, 'Channel bonus: cannot handle a membership change', event.chat.id)
 
     return router
