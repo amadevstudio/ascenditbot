@@ -1,6 +1,7 @@
 from typing import TypedDict
 
 from pkg.repository import user_repository
+from pkg.service.attribution import TAG, Attribution
 from pkg.service.service import Service
 from pkg.service.tariff import Tariff
 from pkg.service.user_storage import UserStorage
@@ -30,8 +31,7 @@ class User(Service):
 
         registration_result = await user_repository.register_or_update_by_service_id(
             user, referral_service_id=initial_data['referral'],
-            first_source=initial_data.get('src') if initial_data.get('src') == 'ph2' else None,
-            start_event_key=start_event_key)
+            source=await Attribution.source_of(initial_data.get('src')), start_event_key=start_event_key)
 
         result: RegistrationResultInterface = {'user': registration_result['user']}
 
@@ -93,7 +93,7 @@ class User(Service):
                 param_name, param_value = param_pair.split('_', 1)
                 if param_name in ('referral', 'chat', 'j') and param_value.isdigit():
                     params = {**params, param_name: param_value}
-                elif param_name == 'src' and param_value == 'ph2':
+                elif param_name == 'src' and TAG.fullmatch(param_value):
                     params = {**params, 'src': param_value}
 
         except Exception as e:

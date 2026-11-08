@@ -114,6 +114,10 @@ async def menu(params: ControllerParams):
         markup.append([{'text': localization.get_message(['bonus', 'menu_button', bonus_state], params['language_code']),
                         'callback_data': {'tp': 'bonus'}}])
 
+    # The admin pages, for the bot's owners only (the route's validator checks it again)
+    if (await User.get_by_id(user_id) or {}).get('is_admin'):
+        markup.append([{'text': "🛠 Админка", 'callback_data': {'tp': 'admin'}}])
+
     answer_messages.append({
         'type': 'text',
         'text': build_subscription_info_short(user_tariff_info, params['language_code']) + "\n\n" + menu_text,
