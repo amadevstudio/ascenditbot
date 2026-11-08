@@ -99,10 +99,16 @@ async def test_tariff_charge_trial_bonus_funding_and_duplicate_callback(bench: B
     rows = await bench.sql("SELECT amount_minor, currency_code FROM attribution_events "
                            "WHERE event_type = 'owner_subscription_charged'")
     assert rows == [{'amount_minor': 30000, 'currency_code': 'rub'}]
+    duplicate = await Tariff.change(owner['id'], 1, charge_event_key='tariff-callback:test-1')
+    assert duplicate == {'error': 'already_chosen'}
+    assert (await bench.sql(
+        "SELECT balance FROM user_balances WHERE user_id = $1 AND currency_code = 'rub'", owner['id']))[0][
+            'balance'] == balance_after_charge
 
     # A bonus/forced switch changes entitlement without recording a sale.
     await Tariff.change(owner['id'], 0, force=True)
     await Tariff.change(owner['id'], 1, force=True)
+    await Tariff.prolong(owner['id'], 15)  # bonus days do not debit the balance
     assert len(await bench.sql("SELECT id FROM attribution_events WHERE event_type = 'owner_subscription_charged'")) == 1
 
 

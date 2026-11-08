@@ -54,7 +54,8 @@ def format_stats(stats: dict) -> str:
 def format_product_hunt_attribution(stats: dict) -> str:
     lines = [
         "<b>Product Hunt (последние 12 месяцев)</b>",
-        f"Стартов по ссылке: {stats['starts']} (новые {stats['new_starters']}, повторные {stats['returning_starters']})",
+        f"Стартов по ссылке: {stats['starts']} (новые пользователи {stats['new_starters']}, "
+        f"вернувшиеся {stats['returning_starters']}; человек может попасть в обе группы)",
         f"Новых регистраций: {stats['registrations']} (последние 30 дней ещё не созрели: {stats['immature']})",
         f"Созрела когорта 30 дней: владельцы с группой {stats['owners_connected']}, групп {stats['groups_connected']}; "
         f"владельцы с оплатой тарифа {stats['owners_paid']}",
