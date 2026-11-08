@@ -563,8 +563,8 @@ async def test_add_members_picked_from_contacts(bench: Bench):
 
 # The bot's admins
 
-async def test_users_count_for_a_group_owner(bench: Bench):
-    """/usersCount for a group owner: their groups with members, whitelist and removed messages, nothing of the bot"""
+async def test_stats_for_a_group_owner(bench: Bench):
+    """/stats for a group owner: their groups with members, whitelist and removed messages, nothing of the bot"""
     await bench.private_message(STRANGER, '/stats')
     assert 'No groups yet' in bench.telegram.texts_to(STRANGER['id'])[-1]
 
@@ -577,7 +577,7 @@ async def test_users_count_for_a_group_owner(bench: Bench):
                     "created_at, updated_at) VALUES ($1, 5, CURRENT_DATE, NOW(), NOW()), "
                     "($1, 7, CURRENT_DATE - 3, NOW(), NOW()), ($1, 100, CURRENT_DATE - 20, NOW(), NOW())", chat['id'])
     bench.telegram.calls.clear()
-    await bench.private_message(OWNER, '/usersCount')
+    await bench.private_message(OWNER, '/stats')
     [stats] = bench.telegram.texts_to(OWNER['id'])
     assert 'Ваши группы: 1' in stats and 'Участников всего: 1 234' in stats, stats
     assert 'В белых списках: 2 (на срок: 1)' in stats, stats
@@ -588,21 +588,57 @@ async def test_users_count_for_a_group_owner(bench: Bench):
     assert stats.index('за 30 дней 112') < stats.index('<blockquote expandable><b>'), stats
 
 
-async def test_bot_numbers_in_admin_not_in_users_count(bench: Bench):
-    """the bot's owner: /usersCount shows their own groups as for anyone, the whole bot is in Menu, 🛠 Админка, Бот"""
-    owner, _ = await _scene(bench)
+async def test_users_count_opens_the_same_admin_bot_page(bench: Bench):
+    """the hidden command and Menu > Admin > Bot share the text, markup and admin route; /stats stays personal"""
+    from pkg.service.user_storage import UserStorage
+
+    await _scene(bench)
     bench.telegram.answers['getChatMemberCount'] = 10
     await bench.sql('UPDATE users SET is_admin = TRUE')
-    await bench.private_message(OWNER, '/usersCount')
-    [stats] = bench.telegram.texts_to(OWNER['id'])
-    assert stats.startswith('📊 <b>Ваши группы: 1') and 'Деньги' not in stats, stats
-
     await bench.private_message(OWNER, '/menu')
     await bench.tap(OWNER, json.dumps({'tp': 'admin'}))
     await bench.tap(OWNER, json.dumps({'tp': 'admin_bot'}))
-    page = [c.text for c in bench.telegram.calls_of('sendMessage', 'editMessageText')
+    page = [c for c in bench.telegram.calls_of('sendMessage', 'editMessageText')
             if int(c.chat_id) == OWNER['id']][-1]
-    assert 'Всего: 1' in page and 'Модерируются: 1' in page and 'Деньги' in page, page
+    assert 'Всего: 1' in page.text and 'Модерируются: 1' in page.text and 'Деньги' in page.text, page.text
+
+    for command in ('/usersCount', '/userscount', '/USERSCOUNT', '/usersCount@ascenditbot'):
+        bench.telegram.calls.clear()
+        await bench.private_message(OWNER, command)
+        [result] = bench.telegram.calls_of('sendMessage')
+        assert result.text == page.text, result.text
+        assert result.parse_mode == page.parse_mode == 'HTML'
+        assert result.reply_markup == page.reply_markup
+        assert UserStorage.curr_state(OWNER['id']) == 'admin_bot'
+        assert not bench.telegram.calls_of('getChatMemberCount')
+        await bench.tap(OWNER, json.dumps({'tp': 'back'}))
+        assert UserStorage.curr_state(OWNER['id']) == 'menu'
+
+    bench.telegram.calls.clear()
+    await bench.private_message(OWNER, '/stats')
+    [stats] = bench.telegram.texts_to(OWNER['id'])
+    assert stats.startswith('📊 <b>Ваши группы: 1') and 'Деньги' not in stats, stats
+
+
+async def test_users_count_is_private_and_admin_only(bench: Bench):
+    """non-admin group owners and unknown users cannot read bot numbers; the command is ignored in groups"""
+    from pkg.service.user_storage import UserStorage
+
+    await _scene(bench)
+    for person in (OWNER, STRANGER):
+        previous_state = UserStorage.curr_state(person['id'])
+        for command in ('/usersCount', '/USERSCOUNT'):
+            bench.telegram.calls.clear()
+            await bench.private_message(person, command)
+            # The menu middleware may briefly remove an old reply keyboard. No page is rendered.
+            assert all(text == '⌛️' for text in bench.telegram.texts_to(person['id'])), bench.telegram.calls
+            assert not bench.telegram.calls_of('editMessageText')
+            assert UserStorage.curr_state(person['id']) == previous_state
+
+    await bench.sql('UPDATE users SET is_admin = TRUE')
+    bench.telegram.calls.clear()
+    await bench.group_message(GROUP, OWNER, '/usersCount')
+    assert not any('Пользователи' in text or 'Деньги' in text for text in bench.telegram.texts_to(GROUP))
 
 
 async def test_command_menus(bench: Bench):
@@ -622,7 +658,8 @@ async def test_command_menus(bench: Bench):
         'menu', 'my_chats', 'stats', 'add_chat', 'subscription', 'settings', 'access', 'help'}
     assert menus[('all_private_chats', None, None)]['my_chats'] == 'My groups'
     assert set(menus[('all_chat_administrators', None, 'ru')]) == {'allow', 'deny', 'settings'}
-    assert not any(scope == 'chat' or 'userscount' in menu for (scope, _, _), menu in menus.items())
+    assert not any(scope == 'chat' or any(c.lower() == 'userscount' for c in menu)
+                   for (scope, _, _), menu in menus.items())
     assert not any('admin' in menu for menu in menus.values())
     for menu in menus.values():
         for command, description in menu.items():
