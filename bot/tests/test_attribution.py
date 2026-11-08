@@ -145,7 +145,7 @@ async def test_report_keeps_subscription_currencies_separate(bench: Bench):
     await Tariff.change(usd_owner['id'], 1, charge_event_key='tariff-usd')
 
     report = await stats_repository.product_hunt_attribution()
-    assert {row['currency_code'] for row in report['paid_by_currency']} == {'rub', 'usd'}
+    assert {row['currency_code'] for row in report['paid_by_currency']} == {'rub', 'usd'}, report
 
 
 async def test_funding_duplicate_and_refund_are_separate_from_subscription(bench: Bench):
