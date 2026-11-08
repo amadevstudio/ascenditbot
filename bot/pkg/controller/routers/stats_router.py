@@ -51,6 +51,29 @@ def format_stats(stats: dict) -> str:
     return "\n".join(lines)
 
 
+def format_product_hunt_attribution(stats: dict) -> str:
+    lines = [
+        "<b>Product Hunt (последние 12 месяцев)</b>",
+        f"Стартов по ссылке: {stats['starts']} (новые {stats['new_starters']}, повторные {stats['returning_starters']})",
+        f"Новых регистраций: {stats['registrations']} (последние 30 дней ещё не созрели: {stats['immature']})",
+        f"Созрела когорта 30 дней: владельцы с группой {stats['owners_connected']}, групп {stats['groups_connected']}; "
+        f"владельцы с оплатой тарифа {stats['owners_paid']}",
+    ]
+    paid = stats['paid_by_currency'] or []
+    if paid:
+        lines.append("Списания за тариф: " + ", ".join(
+            f"{row['count']} на {Tariff.format_amount(row['amount'], row['minor_units'])} {row['currency_code']}"
+            for row in paid))
+    else:
+        lines.append("Списаний за тариф пока нет")
+    refunds = stats['refunds_by_currency'] or []
+    if refunds:
+        lines.append("Возвраты пополнений баланса (отдельно): " + ", ".join(
+            f"{row['count']} на {Tariff.format_amount(row['amount'], row['minor_units'])} {row['currency_code']}"
+            for row in refunds))
+    return "\n".join(lines)
+
+
 async def _member_count(bot, service_id: str) -> int | None:
     try:
         return await bot.get_chat_member_count(int(service_id))
@@ -133,7 +156,9 @@ def stats_router() -> Router:
             message.bot, user['id'] if user else None, language_code, collapse_all=is_owner)
         if is_owner:
             # The extended mode: the whole bot first, then the owner's own groups, collapsed
-            text = format_stats(await stats_repository.collect()) + "\n\n" + owner_text
+            attribution = await stats_repository.product_hunt_attribution()
+            text = format_stats(await stats_repository.collect()) + "\n\n" \
+                   + format_product_hunt_attribution(attribution) + "\n\n" + owner_text
         else:
             text = owner_text
         await message.answer(text, parse_mode='HTML', disable_web_page_preview=True)

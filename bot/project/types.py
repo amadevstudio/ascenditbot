@@ -16,6 +16,7 @@ class UserInterface(TypedDict, total=False):
     email: str
     nickname: str
     is_admin: bool
+    first_source: str | None
 
 
 class ModeratedChatInterface(TypedDict, total=False):

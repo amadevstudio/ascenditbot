@@ -93,3 +93,84 @@ async def owner_groups(user_id: int) -> list[dict]:
         ORDER BY mc.id
     """, (user_id,))
     return [dict(row) for row in rows]
+
+
+async def product_hunt_attribution() -> dict:
+    """PH starts and 30-day owner funnel; only the bot owner is given this aggregate."""
+    result = await databaseExecutor.run(db.fetchone, """
+        WITH ph_users AS (
+            SELECT id, created_at
+            FROM users
+            WHERE first_source = 'ph2' AND is_admin IS FALSE
+                AND created_at >= CURRENT_TIMESTAMP - interval '12 months'
+        ),
+        cohort AS (
+            SELECT * FROM ph_users WHERE created_at <= CURRENT_TIMESTAMP - interval '30 days'
+        )
+        SELECT
+            (SELECT COUNT(*) FROM attribution_events e
+                WHERE e.event_type = 'bot_start' AND e.touch_source = 'ph2') AS starts,
+            (SELECT COUNT(DISTINCT e.user_id) FROM attribution_events e
+                WHERE e.event_type = 'bot_start' AND e.touch_source = 'ph2'
+                    AND e.is_new_user IS TRUE) AS new_starters,
+            (SELECT COUNT(DISTINCT e.user_id) FROM attribution_events e
+                WHERE e.event_type = 'bot_start' AND e.touch_source = 'ph2'
+                    AND e.is_new_user IS FALSE) AS returning_starters,
+            (SELECT COUNT(*) FROM ph_users) AS registrations,
+            (SELECT COUNT(*) FROM ph_users WHERE created_at > CURRENT_TIMESTAMP - interval '30 days') AS immature,
+            (SELECT COUNT(*) FROM cohort cph WHERE EXISTS (
+                SELECT 1 FROM attribution_events e
+                WHERE e.user_id = cph.id AND e.event_type = 'group_connected' AND e.owner IS TRUE
+                    AND e.occurred_at >= cph.created_at
+                    AND e.occurred_at < cph.created_at + interval '30 days'
+            )) AS owners_connected,
+            (SELECT COUNT(DISTINCT e.moderated_chat_id) FROM attribution_events e
+                INNER JOIN cohort cph ON cph.id = e.user_id
+                WHERE e.event_type = 'group_connected' AND e.owner IS TRUE
+                    AND e.occurred_at >= cph.created_at
+                    AND e.occurred_at < cph.created_at + interval '30 days') AS groups_connected,
+            (SELECT COUNT(*) FROM cohort cph WHERE EXISTS (
+                SELECT 1 FROM attribution_events e
+                WHERE e.user_id = cph.id AND e.event_type = 'owner_subscription_charged'
+                    AND e.amount_minor > 0 AND e.occurred_at >= cph.created_at
+                    AND e.occurred_at < cph.created_at + interval '30 days'
+            )) AS owners_paid,
+            (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                'currency_code', currency_code, 'amount', amount, 'count', count, 'minor_units', minor_units
+            )), '[]'::jsonb) FROM (
+                SELECT e.currency_code, SUM(e.amount_minor)::bigint AS amount, COUNT(*) AS count,
+                    COALESCE(cur.minor_units, 2) AS minor_units
+                FROM attribution_events e INNER JOIN cohort cph ON cph.id = e.user_id
+                LEFT JOIN currencies cur ON cur.code = e.currency_code
+                WHERE e.event_type = 'owner_subscription_charged' AND e.amount_minor > 0
+                    AND e.occurred_at >= cph.created_at
+                    AND e.occurred_at < cph.created_at + interval '30 days'
+                GROUP BY e.currency_code, cur.minor_units
+            ) paid) AS paid_by_currency,
+            (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                'currency_code', currency_code, 'amount', amount, 'count', count, 'minor_units', minor_units
+            )), '[]'::jsonb) FROM (
+                SELECT e.currency_code, SUM(e.amount_minor)::bigint AS amount, COUNT(*) AS count,
+                    COALESCE(cur.minor_units, 2) AS minor_units
+                FROM attribution_events e INNER JOIN cohort cph ON cph.id = e.user_id
+                LEFT JOIN currencies cur ON cur.code = e.currency_code
+                WHERE e.event_type = 'owner_balance_refunded'
+                    AND e.occurred_at >= cph.created_at
+                    AND e.occurred_at < cph.created_at + interval '30 days'
+                    AND e.occurred_at >= CURRENT_TIMESTAMP - interval '12 months'
+                GROUP BY e.currency_code, cur.minor_units
+            ) refunds) AS refunds_by_currency
+    """)
+    return dict(result)
+
+
+async def delete_expired_attribution_events() -> int:
+    """Enforce the documented 12-month detail retention from the existing hourly task."""
+    result = await databaseExecutor.run(db.execute_single_model, """
+        WITH deleted AS (
+            DELETE FROM attribution_events
+            WHERE occurred_at < CURRENT_TIMESTAMP - interval '12 months'
+            RETURNING 1
+        ) SELECT COUNT(*) AS count FROM deleted
+    """)
+    return result['count']

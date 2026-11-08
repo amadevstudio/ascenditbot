@@ -20,6 +20,11 @@ before each deploy.
 | Telegram errors | as they come | `telegram.answers['deleteMessage'] = lambda m: TelegramBadRequest(m, '...')` |
 | Database, Redis | the production ones | throwaway, emptied before each case (`bench.reset`) |
 
+Product Hunt attribution uses the allowlisted `src_ph2` marker and records only starts carrying that marker. The
+immutable `users.first_source` label is retained as a cohort label; detailed attribution events are deleted after
+12 months by the existing hourly subscription task. The funnel uses a 30-day registration window. A group
+participant's posting-access payments are not subscription sales.
+
 ## A case
 
 Any `async def test_*(bench)` in `tests/test_*.py`; its docstring is what the run prints.

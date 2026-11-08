@@ -91,6 +91,13 @@ async def create(chat_service_id: str, user_service_id: str, is_owner: bool) \
             user_chat = await databaseExecutor.run(
                 db.insert_model, 'user_moderated_chat_connections', user_chat_data, connection=connection)
 
+            await connection.execute("""
+                INSERT INTO attribution_events
+                    (event_key, event_type, user_id, moderated_chat_id, owner)
+                VALUES ($1, 'group_connected', $2, $3, $4)
+                ON CONFLICT (event_key) DO NOTHING
+            """, f"group:{user_chat['id']}", user['id'], chat['id'], is_owner)
+
     return user_chat
 
 

@@ -112,7 +112,9 @@ async def change_tariff(params: ControllerParams):
         await raise_error(call, message, 'user_none')
         return
 
-    user_tariff_connection = await Tariff.change(user_id, chosen_tariff_id)
+    charge_event_key = f"tariff-callback:{call.id}" if call is not None else None
+    user_tariff_connection = await Tariff.change(
+        user_id, chosen_tariff_id, charge_event_key=charge_event_key)
     if 'error' in user_tariff_connection:
         if user_tariff_connection['error'] in ['currency_mess']:
             await raise_error(call, message, 'unexpected')

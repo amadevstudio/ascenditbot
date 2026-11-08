@@ -17,15 +17,21 @@ class RegistrationResultInterface(TypedDict, total=False):
 
 class BeginParamsInterface(TypedDict, total=False):
     referral: str | None
+    src: str | None
 
 
 class User(Service):
     @staticmethod
-    async def register(chat_id: int, language_code: str, initial_data: BeginParamsInterface) -> RegistrationResultInterface:
+    async def register(
+            chat_id: int, language_code: str, initial_data: BeginParamsInterface,
+            start_event_key: str | None = None,
+    ) -> RegistrationResultInterface:
         user: UserInterface = {"service_id": str(chat_id), "language_code": language_code}
 
         registration_result = await user_repository.register_or_update_by_service_id(
-            user, referral_service_id=initial_data['referral'])
+            user, referral_service_id=initial_data['referral'],
+            first_source=initial_data.get('src') if initial_data.get('src') == 'ph2' else None,
+            start_event_key=start_event_key)
 
         result: RegistrationResultInterface = {'user': registration_result['user']}
 
@@ -84,8 +90,11 @@ class User(Service):
                 if '_' not in param_pair:
                     continue
 
-                param_name, param_value = param_pair.split('_')
-                params = {**params, param_name: param_value}
+                param_name, param_value = param_pair.split('_', 1)
+                if param_name in ('referral', 'chat', 'j') and param_value.isdigit():
+                    params = {**params, param_name: param_value}
+                elif param_name == 'src' and param_value == 'ph2':
+                    params = {**params, 'src': param_value}
 
         except Exception as e:
             logger.error(e)

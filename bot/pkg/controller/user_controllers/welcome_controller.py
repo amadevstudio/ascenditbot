@@ -26,7 +26,10 @@ async def start(params: ControllerParams):
 
     if call is None:
         initial_data = User.analyze_initial_data(message.text)
-        registration_result = await User.register(message.chat.id, params['language_code'], initial_data)
+        # Telegram message_id is stable across update redelivery and unique within the bot chat.
+        event_key = f"start:{message.chat.id}:{message.message_id}"
+        registration_result = await User.register(
+            message.chat.id, params['language_code'], initial_data, start_event_key=event_key)
 
         # A link from a group (/settings there, an alert): straight to that group's page
         chat_id = str(initial_data.get('chat') or '')
