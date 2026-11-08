@@ -152,7 +152,65 @@ async def test_report_keeps_subscription_currencies_separate(bench: Bench):
                     "FROM users u WHERE u.id = e.user_id AND e.event_type = 'owner_subscription_charged'")
 
     report = await stats_repository.product_hunt_attribution()
-    assert {row['currency_code'] for row in report['paid_by_currency']} == {'rub', 'usd'}, report
+    assert {row['currency_code'] for row in report['mature']['paid_by_currency']} == {'rub', 'usd'}, report
+
+
+async def test_current_and_mature_funnels_use_their_own_30_day_windows(bench: Bench):
+    """today's paid owner appears in the preview now; an older user's in-window events count as mature"""
+    from pkg.controller.routers.stats_router import format_product_hunt_attribution
+    from pkg.repository import stats_repository
+    from pkg.service.chat import Chat
+    from pkg.service.tariff import Tariff
+    from pkg.service.user import User
+
+    current_person = person(99105, 'ph-today', 'ru')
+    current = (await User.register(current_person['id'], 'ru', {'referral': None, 'src': 'ph2'}))['user']
+    historical_person = person(99106, 'ph-historical', 'ru')
+    historical = (await User.register(
+        historical_person['id'], 'ru', {'referral': None, 'src': 'ph2'}))['user']
+    await bench.sql("UPDATE users SET created_at = CURRENT_TIMESTAMP - interval '45 days' WHERE id = $1",
+                    historical['id'])
+
+    for offset, owner, user in ((10, current_person, current), (11, historical_person, historical)):
+        group_id = GROUP - offset
+        bench.group_in_telegram(group_id, user)
+        connection = await Chat.add(group_id, owner['id'])
+        assert 'error' not in connection, connection
+        await Tariff.add_amount(user['id'], 30000, 'rub')
+        result = await Tariff.change(user['id'], 1, charge_event_key=f'window-charge:{user["id"]}')
+        assert result['tariff_id'] == 1
+
+    await bench.sql("UPDATE attribution_events e SET occurred_at = u.created_at + interval '15 days' "
+                    "FROM users u WHERE u.id = e.user_id AND u.id = $1", historical['id'])
+
+    report = await stats_repository.product_hunt_attribution()
+    assert report['current']['registrations'] == 2
+    assert report['current']['owners_connected'] == 2
+    assert report['current']['groups_connected'] == 2
+    assert report['current']['owners_paid'] == 2
+    assert report['mature']['registrations'] == 1
+    assert report['mature']['owners_connected'] == 1
+    assert report['mature']['groups_connected'] == 1
+    assert report['mature']['owners_paid'] == 1
+    rendered = format_product_hunt_attribution(report)
+    assert 'На сегодня' in rendered and 'Полные 30 дней' in rendered
+
+
+async def test_no_mature_cohort_keeps_current_results_visible(bench: Bench):
+    """a missing closed cohort is explained and does not hide today's registrations or sales"""
+    from pkg.controller.routers.stats_router import format_product_hunt_attribution
+    from pkg.repository import stats_repository
+    from pkg.service.tariff import Tariff
+    from pkg.service.user import User
+
+    owner = (await User.register(99107, 'ru', {'referral': None, 'src': 'ph2'}))['user']
+    await Tariff.add_amount(owner['id'], 30000, 'rub')
+    await Tariff.change(owner['id'], 1, charge_event_key='current-only-charge')
+    report = await stats_repository.product_hunt_attribution()
+    assert report['current']['owners_paid'] == 1
+    assert report['current']['paid_by_currency'][0]['currency_code'] == 'rub'
+    assert report['mature']['registrations'] == 0
+    assert 'Пока нет пользователей с полным 30-дневным окном' in format_product_hunt_attribution(report)
 
 
 async def test_funding_duplicate_and_refund_are_separate_from_subscription(bench: Bench):

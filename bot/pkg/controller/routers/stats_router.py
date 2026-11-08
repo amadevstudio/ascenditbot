@@ -52,26 +52,38 @@ def format_stats(stats: dict) -> str:
 
 
 def format_product_hunt_attribution(stats: dict) -> str:
+    def amounts(values: list[dict]) -> str:
+        return ", ".join(
+            f"{row['count']} на {Tariff.format_amount(row['amount'], row['minor_units'])} {row['currency_code']}"
+            for row in values)
+
+    def funnel_lines(label: str, window: dict) -> list[str]:
+        paid = window['paid_by_currency'] or []
+        refunds = window['refunds_by_currency'] or []
+        return [
+            f"<b>{label}</b>",
+            f"Новые PH-регистрации за период: {window['registrations']}",
+            f"Уникальные владельцы с группой: {window['owners_connected']}; "
+            f"групп подключено: {window['groups_connected']}",
+            f"Уникальные владельцы с реальным списанием за тариф: {window['owners_paid']}",
+            "Списания за тариф: " + (amounts(paid) if paid else "нет"),
+            "Возвраты пополнений баланса (отдельно): " + (amounts(refunds) if refunds else "нет"),
+        ]
+
+    current, mature = stats['current'], stats['mature']
     lines = [
-        "<b>Product Hunt (последние 12 месяцев)</b>",
-        f"Стартов по ссылке: {stats['starts']} (новые пользователи {stats['new_starters']}, "
-        f"вернувшиеся {stats['returning_starters']}; человек может попасть в обе группы)",
-        f"Новых регистраций: {stats['registrations']} (последние 30 дней ещё не созрели: {stats['immature']})",
-        f"Созрела когорта 30 дней: владельцы с группой {stats['owners_connected']}, групп {stats['groups_connected']}; "
-        f"владельцы с оплатой тарифа {stats['owners_paid']}",
+        "<b>Product Hunt · последние 12 месяцев</b>",
+        f"Стартов по src_ph2: {stats['starts']}; новых пользователей при старте: {stats['new_starters']}; "
+        f"существовавших ранее: {stats['returning_starters']} (это касания, не новые регистрации).",
+        "",
+        *funnel_lines("На сегодня · предварительный результат, окно конверсии ещё не закрыто", current),
+        "",
     ]
-    paid = stats['paid_by_currency'] or []
-    if paid:
-        lines.append("Списания за тариф: " + ", ".join(
-            f"{row['count']} на {Tariff.format_amount(row['amount'], row['minor_units'])} {row['currency_code']}"
-            for row in paid))
+    if mature['registrations'] == 0:
+        lines.append("<b>Полные 30 дней</b>")
+        lines.append("Пока нет пользователей с полным 30-дневным окном.")
     else:
-        lines.append("Списаний за тариф пока нет")
-    refunds = stats['refunds_by_currency'] or []
-    if refunds:
-        lines.append("Возвраты пополнений баланса (отдельно): " + ", ".join(
-            f"{row['count']} на {Tariff.format_amount(row['amount'], row['minor_units'])} {row['currency_code']}"
-            for row in refunds))
+        lines.extend(funnel_lines("Полные 30 дней", mature))
     return "\n".join(lines)
 
 

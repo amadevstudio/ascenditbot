@@ -22,8 +22,11 @@ before each deploy.
 
 Product Hunt attribution uses the allowlisted `src_ph2` marker and records only starts carrying that marker. The
 immutable `users.first_source` label is retained as a cohort label; detailed attribution events are deleted after
-12 months by the existing hourly subscription task. The funnel uses a 30-day registration window. A group
-participant's posting-access payments are not subscription sales.
+12 months by the existing hourly subscription task. The admin report explicitly limits starts and PH registrations
+to the last 12 months. It shows a preliminary "today" funnel using eligible events from registration until the
+earlier of now and day 30, then a separate complete 30-day funnel only for registrations at least 30 days old.
+These date filters are in the report query and do not depend on the hourly cleanup schedule. A group participant's
+posting-access payments are not subscription sales.
 
 ## A case
 
