@@ -156,7 +156,7 @@ class Tariff(Service):
         return await tariff_repository.update_subscription(subscription)
 
     @staticmethod
-    async def change(user_id: int, chosen_tariff_id: int, force=False) \
+    async def change(user_id: int, chosen_tariff_id: int, force=False, charge_event_key: str | None = None) \
             -> UserTariffConnectionInterface | ErrorDictInterface:
         user_subscription = await Tariff.user_tariff_info(user_id)
         if user_subscription['tariff_id'] == chosen_tariff_id:
@@ -209,7 +209,8 @@ class Tariff(Service):
         }
 
         return await tariff_repository.update_subscription_with_balance_delta(
-            new_subscription, -change_sum, user_subscription['currency_code'])
+            new_subscription, -change_sum, user_subscription['currency_code'],
+            charge_event_key=charge_event_key if force is False else None)
 
     @staticmethod
     async def add_amount(user_id: int, amount: int, currency_code: str) -> int:

@@ -233,10 +233,20 @@ async def update_subscription(subscription: UserTariffConnectionInterface, creat
 
 
 async def update_subscription_with_balance_delta(
-        subscription: UserTariffConnectionInterface, balance_delta: int, currency_code: str
+        subscription: UserTariffConnectionInterface, balance_delta: int, currency_code: str,
+        charge_event_key: str | None = None,
 ) -> UserTariffConnectionInterface:
     async with db.get_connection() as connection:
         async with connection.transaction():
+            if charge_event_key is not None:
+                await connection.execute("SELECT pg_advisory_xact_lock(hashtext($1))", charge_event_key)
+                duplicate = await connection.fetchval(
+                    "SELECT EXISTS (SELECT 1 FROM attribution_events WHERE event_key = $1)", charge_event_key)
+                if duplicate:
+                    result = await connection.fetchrow(
+                        "SELECT * FROM user_tariff_connections WHERE user_id = $1", subscription['user_id'])
+                    return result
+
             if balance_delta != 0:
                 await databaseExecutor.run(db.execute_single_model, """
                     UPDATE user_balances
@@ -248,6 +258,14 @@ async def update_subscription_with_balance_delta(
             result = await databaseExecutor.run(
                 db.update_model, 'user_tariff_connections', subscription, key_fields=['user_id'],
                 connection=connection)
+
+            if charge_event_key is not None and balance_delta < 0 and subscription['tariff_id'] != 0:
+                await connection.execute("""
+                    INSERT INTO attribution_events
+                        (event_key, event_type, user_id, amount_minor, currency_code)
+                    VALUES ($1, 'owner_subscription_charged', $2, $3, $4)
+                    ON CONFLICT (event_key) DO NOTHING
+                """, charge_event_key, subscription['user_id'], -balance_delta, currency_code)
 
     tariff = await databaseExecutor.run(db.find_model, 'tariffs', {'id': result['tariff_id']})
     if tariff is not None:
@@ -325,7 +343,8 @@ async def process_subscriptions(update_batch: int = 1000) -> Generator[ProcessSu
         """,
         """
             WITH subscription_filter AS (
-                SELECT utc.user_id, ub.balance >= tp.price * 2 AS prolongable, tp.price AS tariff_price
+                SELECT utc.user_id, ub.balance >= tp.price * 2 AS prolongable, tp.price AS tariff_price,
+                    utc.payment_currency_code AS currency_code, utc.end_date AS previous_end_date
                 FROM user_tariff_connections AS utc
                     INNER JOIN tariffs AS t ON (t.id = utc.tariff_id)
                     INNER JOIN tariff_prices AS tp ON (
@@ -346,14 +365,28 @@ async def process_subscriptions(update_batch: int = 1000) -> Generator[ProcessSu
                 WHERE ub.user_id = subscription_filter.user_id
                     AND ub.currency_code = utc.payment_currency_code
                 RETURNING ub.user_id
-            )
-            UPDATE user_tariff_connections AS utc
+            ),
+            updated_subscription AS (
+                UPDATE user_tariff_connections AS utc
             SET end_date = CURRENT_TIMESTAMP + interval '{tariff_duration_days} day'
             FROM users AS u
             INNER JOIN subscription_filter ON (u.id = subscription_filter.user_id)
             INNER JOIN updated_balance ON (updated_balance.user_id = subscription_filter.user_id)
             WHERE utc.user_id = u.id
             RETURNING u.id, u.service_id, u.language_code, subscription_filter.prolongable, utc.tariff_id
+                , subscription_filter.tariff_price, subscription_filter.currency_code,
+                    subscription_filter.previous_end_date
+            ), recorded_charges AS (
+                INSERT INTO attribution_events
+                    (event_key, event_type, user_id, amount_minor, currency_code, details)
+                SELECT 'renewal:' || id::text || ':' || previous_end_date::text,
+                    'owner_subscription_charged', id, tariff_price, currency_code,
+                    jsonb_build_object('kind', 'renewal')
+                FROM updated_subscription
+                ON CONFLICT (event_key) DO NOTHING
+                RETURNING id
+            )
+            SELECT id, service_id, language_code, prolongable, tariff_id FROM updated_subscription
         """
     ]
 
@@ -501,6 +534,14 @@ async def increase_amount_with_payment_history(
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = %s AND currency_code = %s
             """, (amount, user_id, currency_code,), returning='balance', connection=connection)
+
+            if amount < 0:
+                await connection.execute("""
+                    INSERT INTO attribution_events
+                        (event_key, event_type, user_id, amount_minor, currency_code)
+                    VALUES ($1, 'owner_balance_refunded', $2, $3, $4)
+                    ON CONFLICT (event_key) DO NOTHING
+                """, f"balance-refund:{payment_history['id']}", user_id, -amount, currency_code)
 
             return {
                 'balance': new_balance['balance'],
