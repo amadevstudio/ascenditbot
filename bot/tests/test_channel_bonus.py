@@ -1,4 +1,4 @@
-"""+15 days for subscribing to the bot owner's channels: /admin adds them, the menu offers the bonus, the hourly
+"""+15 days for subscribing to the bot owner's channels: the admin pages add them, the menu offers the bonus, the hourly
 round pauses the free group of those who unsubscribe, subscribing again brings it back. A channel left takes
 its share of the days off a running term, once, whether the bot hears of it at once or in the daily check."""
 import datetime
@@ -28,8 +28,15 @@ def _last(bench: Bench, user: dict):
     return [c for c in bench.telegram.calls_of('sendMessage', 'editMessageText') if int(c.chat_id or 0) == user['id']][-1]
 
 
+async def _admin_channels(bench: Bench):
+    """The bot's admin opens Menu, 🛠 Админка, Каналы за подписку."""
+    await bench.private_message(ADMIN, '/menu')
+    for page in ('admin', 'admin_channels'):
+        await bench.tap(ADMIN, json.dumps({'tp': page}))
+
+
 async def _channel(bench: Bench):
-    """The bot's admin adds the channel with /addchannel; the bot is an admin there."""
+    """The bot's admin adds the channel by sending its link to "➕ Добавить канал"; the bot is an admin there."""
     await bench.owner(ADMIN)
     await bench.sql('UPDATE users SET is_admin = true WHERE service_id = $1', str(ADMIN['id']))
     bench.telegram.answers['getChat'] = lambda method: {
@@ -40,31 +47,44 @@ async def _channel(bench: Bench):
         if str(method.chat_id) in ('@ascendit_news', str(CHANNEL)) else bench.telegram._answer(bench.bot, method)
     bench.telegram.members[(CHANNEL, BOT_ID)] = administrator(BOT_USER)
     bench.telegram.members[(CHANNEL, ADMIN['id'])] = member(ADMIN)
-    await bench.private_message(ADMIN, '/addchannel https://t.me/ascendit_news')
+    await _admin_channels(bench)
+    await bench.tap(ADMIN, json.dumps({'tp': 'admin_add_channel'}))
+    await bench.private_message(ADMIN, 'https://t.me/ascendit_news')
     del bench.telegram.answers['getChat']
 
 
 async def test_admin_adds_and_removes_channels(bench: Bench):
-    """/admin lists the channels, /addchannel adds one the bot can check, 🗑 removes it; others get no page"""
+    """the admin pages list the channels, "➕ Добавить канал" takes one the bot can check, 🗑 removes it; others
+    have no button and get nothing from the admin buttons"""
     await _channel(bench)
-    page = _last(bench, ADMIN)
-    assert 'Ascendit News' in page.text and 'взяли бонус 0' in page.text, page.text
+    assert 'Канал <b>Ascendit News</b> добавлен' in _last(bench, ADMIN).text, _last(bench, ADMIN).text
     [row] = await bench.sql('SELECT service_id, link FROM promo_channels')
     assert row == {'service_id': str(CHANNEL), 'link': 'https://t.me/ascendit_news'}
 
+    # Not a channel: said so, and the bot still waits
+    await bench.private_message(ADMIN, 'hello there')
+    assert 'Не похоже на канал' in _last(bench, ADMIN).text
+
+    await _admin_channels(bench)
+    page = _last(bench, ADMIN)
+    assert 'Ascendit News' in page.text and 'взяли бонус 0' in page.text, page.text
+
     await bench.owner(OWNER)
     bench.telegram.calls.clear()
-    await bench.private_message(OWNER, '/admin')
+    await bench.private_message(OWNER, '/menu')
+    assert '🛠 Админка' not in [b['text'] for b in _buttons(_last(bench, OWNER))]
+    for page_type in ('admin', 'admin_channels'):
+        await bench.tap(OWNER, json.dumps({'tp': page_type}))
     assert not any('Каналы за подписку' in t for t in _texts(bench, OWNER))
 
-    [remove] = _buttons(page)
+    [remove] = [b for b in _buttons(page) if b['text'].startswith('🗑')]
     await bench.tap(ADMIN, json.dumps(remove['data']))
     assert await bench.sql('SELECT * FROM promo_channels') == []
 
 
 async def test_renamed_channel_shows_its_new_link(bench: Bench):
     """the channel's @username changed: opening the bonus page shows and stores the new title and link, no
-    new /addchannel; Telegram not answering keeps the stored ones"""
+    adding it again; Telegram not answering keeps the stored ones"""
     await _channel(bench)
     await bench.owner(OWNER)
     await bench.tap(OWNER, json.dumps({'tp': 'bonus'}))

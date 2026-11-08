@@ -7,4 +7,5 @@ AvailableRoutes = Literal[
     'chat_post_limit',
     'subscription', 'tariffs', 'fund', 'fund_currency', 'fund_amount',
     'settings', 'settings_email', 'settings_currency', 'bonus',
+    'admin', 'admin_bot', 'admin_sources', 'admin_source', 'admin_add_source', 'admin_channels', 'admin_add_channel',
     'nowhere']

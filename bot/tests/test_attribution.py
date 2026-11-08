@@ -1,4 +1,5 @@
-"""Product Hunt attribution stays separate from referrals, participant payments and trial access."""
+"""Link sources (src_<tag>, made in /admin) stay separate from referrals, participant payments and trial access.
+ph2, the Product Hunt link, is the one the migration adds."""
 import json
 
 from tests.bench import Bench, person
@@ -7,8 +8,14 @@ OWNER = person(99101, 'ph-owner', 'ru')
 GROUP = -100199101
 
 
+def _pages(bench: Bench, user: dict) -> list[str]:
+    """What the user saw: messages and the /admin pages edited in place."""
+    return [getattr(c, 'text', None) or '' for c in bench.telegram.calls_of('sendMessage', 'editMessageText')
+            if int(c.chat_id or 0) == user['id']]
+
+
 async def test_start_sources_preserve_referral_chat_and_join_links(bench: Bench):
-    """only the allowlisted PH marker is a source; legacy deep links keep their own meaning"""
+    """src_<tag> is read as a tag of the allowed form; legacy deep links keep their own meaning"""
     from pkg.service.user import User
 
     assert User.analyze_initial_data('/start src_ph2') == {'referral': None, 'src': 'ph2'}
@@ -16,7 +23,17 @@ async def test_start_sources_preserve_referral_chat_and_join_links(bench: Bench)
     assert User.analyze_initial_data('/start referral_123') == {'referral': '123'}
     assert User.analyze_initial_data('/start chat_123') == {'referral': None, 'chat': '123'}
     assert User.analyze_initial_data('/start j_123') == {'referral': None, 'j': '123'}
-    assert User.analyze_initial_data('/start src_untrusted') == {'referral': None}
+    assert User.analyze_initial_data('/start src_reddit') == {'referral': None, 'src': 'reddit'}
+    assert User.analyze_initial_data('/start src_Reddit') == {'referral': None}
+
+
+async def test_a_made_up_tag_is_no_source(bench: Bench):
+    """a /start with a tag the owner did not add: no first source, no touch"""
+    from pkg.service.user import User
+
+    registered = await User.register(OWNER['id'], 'ru', {'referral': None, 'src': 'untrusted'}, 'start:99101:9')
+    assert registered['user']['first_source'] == 'direct_unknown'
+    assert not await bench.sql("SELECT id FROM attribution_events WHERE event_type = 'bot_start'")
 
 
 async def test_ph_first_touch_existing_user_and_start_redelivery(bench: Bench):
@@ -135,7 +152,7 @@ async def test_autorenew_is_charged_and_trial_is_not(bench: Bench):
 
 async def test_report_keeps_subscription_currencies_separate(bench: Bench):
     """the PH funnel groups money by currency instead of summing unlike units"""
-    from pkg.repository import stats_repository
+    from pkg.repository import attribution_repository
     from pkg.service.tariff import Tariff
     from pkg.service.user import User
 
@@ -151,14 +168,14 @@ async def test_report_keeps_subscription_currencies_separate(bench: Bench):
     await bench.sql("UPDATE attribution_events e SET occurred_at = u.created_at + interval '15 days' "
                     "FROM users u WHERE u.id = e.user_id AND e.event_type = 'owner_subscription_charged'")
 
-    report = await stats_repository.product_hunt_attribution()
+    report = await attribution_repository.funnel('ph2')
     assert {row['currency_code'] for row in report['mature']['paid_by_currency']} == {'rub', 'usd'}, report
 
 
 async def test_current_and_mature_funnels_use_their_own_30_day_windows(bench: Bench):
     """today's paid owner appears in the preview now; an older user's in-window events count as mature"""
-    from pkg.controller.routers.stats_router import format_product_hunt_attribution
-    from pkg.repository import stats_repository
+    from pkg.controller.admin_controllers.sources_controller import format_funnel
+    from pkg.repository import attribution_repository
     from pkg.service.chat import Chat
     from pkg.service.tariff import Tariff
     from pkg.service.user import User
@@ -183,7 +200,7 @@ async def test_current_and_mature_funnels_use_their_own_30_day_windows(bench: Be
     await bench.sql("UPDATE attribution_events e SET occurred_at = u.created_at + interval '15 days' "
                     "FROM users u WHERE u.id = e.user_id AND u.id = $1", historical['id'])
 
-    report = await stats_repository.product_hunt_attribution()
+    report = await attribution_repository.funnel('ph2')
     assert report['current']['registrations'] == 2
     assert report['current']['owners_connected'] == 2
     assert report['current']['groups_connected'] == 2
@@ -192,25 +209,25 @@ async def test_current_and_mature_funnels_use_their_own_30_day_windows(bench: Be
     assert report['mature']['owners_connected'] == 1
     assert report['mature']['groups_connected'] == 1
     assert report['mature']['owners_paid'] == 1
-    rendered = format_product_hunt_attribution(report)
+    rendered = format_funnel('ph2', report)
     assert 'На сегодня' in rendered and 'Полные 30 дней' in rendered
 
 
 async def test_no_mature_cohort_keeps_current_results_visible(bench: Bench):
     """a missing closed cohort is explained and does not hide today's registrations or sales"""
-    from pkg.controller.routers.stats_router import format_product_hunt_attribution
-    from pkg.repository import stats_repository
+    from pkg.controller.admin_controllers.sources_controller import format_funnel
+    from pkg.repository import attribution_repository
     from pkg.service.tariff import Tariff
     from pkg.service.user import User
 
     owner = (await User.register(99107, 'ru', {'referral': None, 'src': 'ph2'}))['user']
     await Tariff.add_amount(owner['id'], 30000, 'rub')
     await Tariff.change(owner['id'], 1, charge_event_key='current-only-charge')
-    report = await stats_repository.product_hunt_attribution()
+    report = await attribution_repository.funnel('ph2')
     assert report['current']['owners_paid'] == 1
     assert report['current']['paid_by_currency'][0]['currency_code'] == 'rub'
     assert report['mature']['registrations'] == 0
-    assert 'Пока нет пользователей с полным 30-дневным окном' in format_product_hunt_attribution(report)
+    assert 'Пока нет пользователей с полным 30-дневным окном' in format_funnel('ph2', report)
 
 
 async def test_funding_duplicate_and_refund_are_separate_from_subscription(bench: Bench):
@@ -233,29 +250,71 @@ async def test_funding_duplicate_and_refund_are_separate_from_subscription(bench
     assert rows == [{'amount_minor': 12000, 'currency_code': 'rub'}]
 
 
-async def test_admin_stats_include_ph_report_only_for_admin(bench: Bench):
-    """the funnel appears in the existing stats command only for bot administrators"""
-    owner = person(99102, 'admin', 'ru')
-    await bench.owner(owner)
-    await bench.sql('UPDATE users SET is_admin = TRUE WHERE service_id = $1', str(owner['id']))
-    await bench.private_message(owner, '/stats')
-    assert any('Product Hunt' in text for text in bench.telegram.texts_to(owner['id']))
+async def test_admin_adds_a_source_and_reads_its_funnel(bench: Bench):
+    """the admin pages: a tag sent to "➕ Добавить источник" makes a link, a start by it counts, its page has the
+    funnel; the bot's owners only"""
+    import json
+
+    admin = person(99102, 'admin', 'ru')
+    await bench.owner(admin)
+    await bench.sql('UPDATE users SET is_admin = TRUE WHERE service_id = $1', str(admin['id']))
+
+    def buttons() -> list[dict]:
+        page = [c for c in bench.telegram.calls_of('sendMessage', 'editMessageText')
+                if int(c.chat_id or 0) == admin['id']][-1]
+        return [json.loads(b.callback_data) for row in page.reply_markup.inline_keyboard for b in row
+                if b.callback_data]
+
+    await bench.private_message(admin, '/menu')
+    assert {'tp': 'admin'} in buttons()
+    for page in ('admin', 'admin_sources', 'admin_add_source'):
+        await bench.tap(admin, json.dumps({'tp': page}))
+    assert 'Пришлите метку источника' in _pages(bench, admin)[-1]
+
+    # Not a tag: said so, and the bot still waits; then the whole link, in capitals
+    await bench.private_message(admin, 'метка')
+    assert 'Не подходит' in _pages(bench, admin)[-1]
+    await bench.private_message(admin, 'https://t.me/ascenditbot?start=src_Reddit')
+    assert [row['tag'] for row in await bench.sql('SELECT tag FROM attribution_sources ORDER BY tag')] == [
+        'ph2', 'reddit']
+    assert 'https://t.me/ascenditbot?start=src_reddit' in _pages(bench, admin)[-1]
+
+    newcomer = person(99108, 'newcomer', 'en')
+    await bench.private_message(newcomer, '/start src_reddit')
+    [user] = await bench.sql('SELECT first_source FROM users WHERE service_id = $1', str(newcomer['id']))
+    assert user['first_source'] == 'reddit'
+
+    await bench.tap(admin, json.dumps({'tp': 'back'}))
+    assert '2. reddit: стартов 1, новых пользователей 1' in _pages(bench, admin)[-1], _pages(bench, admin)[-1]
+    assert {'tp': 'admin_source', 't': 'reddit'} in buttons()
+    await bench.tap(admin, json.dumps({'tp': 'admin_source', 't': 'reddit'}))
+    funnel = _pages(bench, admin)[-1]
+    assert 'Стартов по ссылке: 1; новых пользователей при старте: 1' in funnel, funnel
+    assert 'Новые регистрации за период: 1' in funnel, funnel
+
+    await bench.tap(admin, json.dumps({'tp': 'admin_delete_source'}))
+    assert [row['tag'] for row in await bench.sql('SELECT tag FROM attribution_sources')] == ['ph2']
+    assert 'reddit' not in _pages(bench, admin)[-1]
 
     regular = person(99103, 'regular', 'ru')
     await bench.owner(regular)
-    await bench.private_message(regular, '/stats')
-    assert not any('Product Hunt' in text for text in bench.telegram.texts_to(regular['id']))
+    await bench.private_message(regular, '/menu')
+    for page in ('admin', 'admin_sources', 'admin_add_source'):
+        await bench.tap(regular, json.dumps({'tp': page}))
+    await bench.private_message(regular, 'spam')
+    assert len(await bench.sql('SELECT tag FROM attribution_sources')) == 1
+    assert not any('Источники' in text or 'метку' in text or 'Админка' in text for text in _pages(bench, regular))
 
 
 async def test_event_retention_removes_only_details_past_twelve_months(bench: Bench):
     """the hourly cleanup purges old detail but keeps recent attribution"""
-    from pkg.repository import stats_repository
+    from pkg.repository import attribution_repository
     from pkg.service.user import User
 
     owner = (await User.register(OWNER['id'], 'ru', {'referral': None, 'src': 'ph2'}, 'start:99101:4'))['user']
     await bench.sql("UPDATE attribution_events SET occurred_at = CURRENT_TIMESTAMP - interval '13 months'")
     await bench.sql("INSERT INTO attribution_events (event_key, event_type, user_id, touch_source) "
                     "VALUES ('recent-start', 'bot_start', $1, 'ph2')", owner['id'])
-    assert await stats_repository.delete_expired_attribution_events() == 1
+    assert await attribution_repository.delete_expired_events() == 1
     [event] = await bench.sql('SELECT event_key FROM attribution_events')
     assert event['event_key'] == 'recent-start'

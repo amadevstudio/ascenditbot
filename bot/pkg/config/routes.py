@@ -1,8 +1,10 @@
 from typing import Any, TypedDict, Callable, Dict, Literal
 
 from pkg.config.routes_dict import AvailableCommands, AvailableRoutes
+from pkg.controller.admin_controllers import admin_controller, channels_controller, sources_controller
 from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller, \
     subscription_controller, settings_controller, access_controller, post_limit_controller, channel_bonus_controller
+from pkg.controller.user_controllers.validators.admin_validator import admin_validator
 from pkg.controller.user_controllers.validators.chat_access_validator import chat_access_validator
 from pkg.controller.user_controllers.validators.user_validator import email_presence_validator
 
@@ -44,6 +46,13 @@ class RoutesInterface(TypedDict):
     settings_email: RouteInterface
     settings_currency: RouteInterface
     bonus: RouteInterface
+    admin: RouteInterface
+    admin_bot: RouteInterface
+    admin_sources: RouteInterface
+    admin_source: RouteInterface
+    admin_add_source: RouteInterface
+    admin_channels: RouteInterface
+    admin_add_channel: RouteInterface
     nowhere: RouteInterface
 
 
@@ -70,7 +79,8 @@ class RouteMap:
                 'help',
                 'subscription',
                 'settings',
-                'bonus'
+                'bonus',
+                'admin'
             ],
         },
         'bonus': {
@@ -248,6 +258,54 @@ class RouteMap:
                     'method': settings_controller.change_currency
                 }
             }
+        },
+
+        # The bot's owners only (users.is_admin): "🛠 Админка" in the menu, no commands
+        'admin': {
+            'method': admin_controller.menu,
+            'available_from': ['call'],
+            'routes': ['admin_bot', 'admin_sources', 'admin_channels'],
+            'validator': admin_validator
+        },
+        'admin_bot': {
+            'method': admin_controller.page,
+            'available_from': ['call'],
+            'validator': admin_validator
+        },
+        'admin_sources': {
+            'method': sources_controller.list_page,
+            'available_from': ['call'],
+            'routes': ['admin_source', 'admin_add_source'],
+            'validator': admin_validator
+        },
+        'admin_source': {
+            'method': sources_controller.source_page,
+            'available_from': ['call'],
+            'actions': {
+                'admin_delete_source': {'method': sources_controller.delete_source},
+            },
+            'validator': admin_validator
+        },
+        'admin_add_source': {
+            'method': sources_controller.add_source,
+            'available_from': ['message', 'call'],
+            'wait_for_input': True,
+            'validator': admin_validator
+        },
+        'admin_channels': {
+            'method': channels_controller.page,
+            'available_from': ['call'],
+            'routes': ['admin_add_channel'],
+            'actions': {
+                'admin_delete_channel': {'method': channels_controller.delete_channel},
+            },
+            'validator': admin_validator
+        },
+        'admin_add_channel': {
+            'method': channels_controller.add_channel,
+            'available_from': ['message', 'call'],
+            'wait_for_input': True,
+            'validator': admin_validator
         },
 
         'nowhere': {}

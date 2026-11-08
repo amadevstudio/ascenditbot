@@ -14,9 +14,10 @@ class NewUserRegisterResultInterface(TypedDict):
 
 async def register_or_update_by_service_id(
         user_data: UserInterface, referral_service_id: str | None,
-        first_source: str | None = None, start_event_key: str | None = None,
+        source: str | None = None, start_event_key: str | None = None,
 ) \
         -> NewUserRegisterResultInterface:
+    """`source`, the tag of the link (pkg/service/attribution.py): a new user's first source, a touch for anyone."""
     async with db.get_connection() as connection:
         async with connection.transaction():
             # Serialise simultaneous first updates for this Telegram account, including when no row exists yet.
@@ -30,7 +31,7 @@ async def register_or_update_by_service_id(
                     referrer = await connection.fetchrow(
                         "SELECT id FROM users WHERE service_id = $1", str(referral_service_id))
                     insert_data['ref_id'] = referrer['id'] if referrer else None
-                insert_data['first_source'] = first_source or 'direct_unknown'
+                insert_data['first_source'] = source or 'direct_unknown'
                 user = await databaseExecutor.run(db.insert_model, 'users', insert_data, connection=connection)
                 is_new = True
             else:
@@ -38,13 +39,13 @@ async def register_or_update_by_service_id(
                 user = await databaseExecutor.run(db.update_model, 'users', update_data, connection=connection)
                 is_new = False
 
-            if start_event_key is not None and first_source == 'ph2':
+            if start_event_key is not None and source is not None:
                 await connection.execute("""
                     INSERT INTO attribution_events
                         (event_key, event_type, user_id, touch_source, is_new_user)
                     VALUES ($1, 'bot_start', $2, $3, $4)
                     ON CONFLICT (event_key) DO NOTHING
-                """, start_event_key, user['id'], first_source, is_new)
+                """, start_event_key, user['id'], source, is_new)
 
     return {'user': user, 'is_new': is_new}
 

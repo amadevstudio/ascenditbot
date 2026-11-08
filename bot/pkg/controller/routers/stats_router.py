@@ -1,5 +1,5 @@
-"""/usersCount (also /stats) in private, in two modes: a group owner sees their groups (members, whitelist, removed
-messages, paid entries), the bot's owner (users.is_admin) sees the whole bot and then their own groups."""
+"""/usersCount (also /stats) in private: a group owner sees their groups (members, whitelist, removed messages, paid
+entries). The numbers of the whole bot are in the admin pages (pkg/controller/admin_controllers)."""
 import asyncio
 import html
 from decimal import Decimal
@@ -12,79 +12,11 @@ from lib.language import localization
 from pkg.repository import access_repository, stats_repository
 from pkg.service import access
 from pkg.service.chat import Chat
-from pkg.service.tariff import Tariff
 from pkg.service.user import User
 from pkg.system.logger import logger
 
 # A message holds 4096 characters: the groups past this many are only counted
 GROUPS_SHOWN = 20
-
-
-def format_stats(stats: dict) -> str:
-    users, groups, money = stats['users'], stats['groups'], stats['money']
-    lines = [
-        "<b>Пользователи</b>",
-        f"Всего: {users['total']} (ru {users['ru']}, en {users['en']}, другие {users['other']})",
-        f"Новых: сутки {users['day']}, неделя {users['week']}, месяц {users['month']}",
-        f"С группами: {users['with_groups']}",
-        f"Тариф: бесплатный {users['free']}, платный {users['paid']} (из них на триале {users['trial']})",
-        "",
-        "<b>Группы</b>",
-        f"Всего: {groups['total']}",
-        f"Модерируются: {groups['on']}, на паузе: {groups['paused']}, отключены тарифом: {groups['disabled']}",
-        f"Пишут все (с лимитом): {groups['everyone']}, с лимитом постов: {groups['limited']}",
-        f"В белых списках: {groups['whitelisted']} (на срок: {groups['timed']})",
-        f"Удалено сообщений: сутки {groups['removed_day']}, неделя {groups['removed_week']}",
-        "",
-        "<b>Деньги</b>",
-    ]
-    if money['month']:
-        lines.append("Платежи за 30 дней: " + ", ".join(
-            f"{row['count']} на {Tariff.format_amount(row['amount'], row['minor_units'])} {row['currency_code']}"
-            for row in money['month']))
-    else:
-        lines.append("Платежей за 30 дней нет")
-    if money['balances']:
-        lines.append("На балансах: " + ", ".join(
-            f"{Tariff.format_amount(row['balance'], row['minor_units'])} {row['currency_code']}"
-            for row in money['balances']))
-    return "\n".join(lines)
-
-
-def format_product_hunt_attribution(stats: dict) -> str:
-    def amounts(values: list[dict]) -> str:
-        return ", ".join(
-            f"{row['count']} на {Tariff.format_amount(row['amount'], row['minor_units'])} {row['currency_code']}"
-            for row in values)
-
-    def funnel_lines(label: str, window: dict) -> list[str]:
-        paid = window['paid_by_currency'] or []
-        refunds = window['refunds_by_currency'] or []
-        return [
-            f"<b>{label}</b>",
-            f"Новые PH-регистрации за период: {window['registrations']}",
-            f"Уникальные владельцы с группой: {window['owners_connected']}; "
-            f"групп подключено: {window['groups_connected']}",
-            f"Уникальные владельцы с реальным списанием за тариф: {window['owners_paid']}",
-            "Списания за тариф: " + (amounts(paid) if paid else "нет"),
-            "Возвраты пополнений баланса (отдельно): " + (amounts(refunds) if refunds else "нет"),
-        ]
-
-    current, mature = stats['current'], stats['mature']
-    lines = [
-        "<b>Product Hunt · последние 12 месяцев</b>",
-        f"Стартов по src_ph2: {stats['starts']}; новых пользователей при старте: {stats['new_starters']}; "
-        f"существовавших ранее: {stats['returning_starters']} (это касания, не новые регистрации).",
-        "",
-        *funnel_lines("На сегодня · предварительный результат, окно конверсии ещё не закрыто", current),
-        "",
-    ]
-    if mature['registrations'] == 0:
-        lines.append("<b>Полные 30 дней</b>")
-        lines.append("Пока нет пользователей с полным 30-дневным окном.")
-    else:
-        lines.extend(funnel_lines("Полные 30 дней", mature))
-    return "\n".join(lines)
 
 
 async def _member_count(bot, service_id: str) -> int | None:
@@ -105,9 +37,8 @@ def _collapsed(lines: list[str]) -> str:
     return "<blockquote expandable>" + "\n".join(lines) + "</blockquote>"
 
 
-async def format_owner_stats(bot, user_id: int | None, language_code: str, collapse_all: bool = False) -> str:
-    """The summary of the user's groups, then each group in a collapsed quote; with `collapse_all` (under the
-    bot's numbers for its owner) the summary goes into the quote too."""
+async def format_owner_stats(bot, user_id: int | None, language_code: str) -> str:
+    """The summary of the user's groups, then each group in a collapsed quote."""
     def text(key: str, **kwargs) -> str:
         return localization.get_message(['stats', key], language_code, **kwargs)
 
@@ -150,8 +81,6 @@ async def format_owner_stats(bot, user_id: int | None, language_code: str, colla
         ]
     if len(groups) > GROUPS_SHOWN:
         details += ["", text('more', count=len(groups) - GROUPS_SHOWN)]
-    if collapse_all:
-        return _collapsed(summary + [""] + details)
     return "\n".join(summary) + "\n" + _collapsed(details)
 
 
@@ -164,16 +93,7 @@ def stats_router() -> Router:
         user = await User.find_by_service_id(message.from_user.id) if message.from_user else None
         language_code = (user or {}).get('language_code') or (
             message.from_user.language_code if message.from_user else None) or 'en'
-        is_owner = user is not None and user['is_admin']
-        owner_text = await format_owner_stats(
-            message.bot, user['id'] if user else None, language_code, collapse_all=is_owner)
-        if is_owner:
-            # The extended mode: the whole bot first, then the owner's own groups, collapsed
-            attribution = await stats_repository.product_hunt_attribution()
-            text = format_stats(await stats_repository.collect()) + "\n\n" \
-                   + format_product_hunt_attribution(attribution) + "\n\n" + owner_text
-        else:
-            text = owner_text
+        text = await format_owner_stats(message.bot, user['id'] if user else None, language_code)
         await message.answer(text, parse_mode='HTML', disable_web_page_preview=True)
 
     return router

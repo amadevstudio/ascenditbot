@@ -1,11 +1,11 @@
-"""Bonus days for subscribing to the bot owner's channels (/admin lists them).
+"""Bonus days for subscribing to the bot owner's channels (the admin pages list them).
 
 Subscribed to all of them, a user gets 15 days of the paid tariff once: on top of the term they have, or from
 today on the free tariff. The bonus comes with a condition, said up front: unsubscribe later and the free group
 waits (tariff_repository.update_user_moderated_chats) until they subscribe again, and while the bonus days run each
 channel left takes its share of what is left of them, once (subscribing again gives the free group back, not the
 days). Once the bonus days are over leaving only pauses the free group: days paid for are never taken. The bot
-hears of a leave at once (chat_member, admin_router) and checks each taker once a day for what it missed;
+hears of a leave at once (chat_member, bonus_channel_router) and checks each taker once a day for what it missed;
 Telegram tells whether someone is in a channel only to the channel's admins, so the bot is one."""
 import asyncio
 import datetime
@@ -25,7 +25,7 @@ CHECKS_PER_ROUND = 30
 class ChannelBonus:
     @classmethod
     async def channels(cls) -> list[dict]:
-        """The listed channels, title and link fresh from Telegram: a renamed channel needs no new /addchannel."""
+        """The listed channels, title and link fresh from Telegram: a renamed channel needs no adding again."""
         channels = [dict(channel) for channel in await channel_bonus_repository.channels()]
         await asyncio.gather(*(cls._refresh(channel) for channel in channels))
         return channels

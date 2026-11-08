@@ -6,7 +6,7 @@ from lib.language import localization
 from pkg.service.channel_bonus import ChannelBonus
 from pkg.service.member_alerts import MemberAlerts
 from pkg.service.tariff import Tariff
-from pkg.repository import stats_repository
+from pkg.repository import attribution_repository
 from pkg.service.user_storage import UserStorage
 from pkg.system.logger import logger
 from pkg.template.tariff import auto_update
@@ -44,7 +44,7 @@ async def subscription_handler_round():
         await ChannelBonus.recheck_round(notify_bonus_lost)
 
         # Keep attribution detail for 12 months; first_source on users is retained as the immutable cohort label.
-        await stats_repository.delete_expired_attribution_events()
+        await attribution_repository.delete_expired_events()
     except Exception as e:
         logger.error(e, "Subscription Handler: the round failed, the next one is in an hour")
 

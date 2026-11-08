@@ -588,16 +588,21 @@ async def test_users_count_for_a_group_owner(bench: Bench):
     assert stats.index('за 30 дней 112') < stats.index('<blockquote expandable><b>'), stats
 
 
-async def test_users_count_extended_for_the_bot_owner(bench: Bench):
-    """/usersCount for the bot's owner: the whole bot (users, groups, money), then their own groups"""
+async def test_bot_numbers_in_admin_not_in_users_count(bench: Bench):
+    """the bot's owner: /usersCount shows their own groups as for anyone, the whole bot is in Menu, 🛠 Админка, Бот"""
     owner, _ = await _scene(bench)
     bench.telegram.answers['getChatMemberCount'] = 10
     await bench.sql('UPDATE users SET is_admin = TRUE')
     await bench.private_message(OWNER, '/usersCount')
     [stats] = bench.telegram.texts_to(OWNER['id'])
-    assert 'Всего: 1' in stats and 'Модерируются: 1' in stats and 'Деньги' in stats, stats
-    assert stats.index('Деньги') < stats.index('<blockquote expandable>📊 <b>Ваши группы: 1'), stats
-    assert stats.endswith('</blockquote>') and stats.count('<blockquote') == 1, stats
+    assert stats.startswith('📊 <b>Ваши группы: 1') and 'Деньги' not in stats, stats
+
+    await bench.private_message(OWNER, '/menu')
+    await bench.tap(OWNER, json.dumps({'tp': 'admin'}))
+    await bench.tap(OWNER, json.dumps({'tp': 'admin_bot'}))
+    page = [c.text for c in bench.telegram.calls_of('sendMessage', 'editMessageText')
+            if int(c.chat_id) == OWNER['id']][-1]
+    assert 'Всего: 1' in page and 'Модерируются: 1' in page and 'Деньги' in page, page
 
 
 async def test_command_menus(bench: Bench):
@@ -618,6 +623,7 @@ async def test_command_menus(bench: Bench):
     assert menus[('all_private_chats', None, None)]['my_chats'] == 'My groups'
     assert set(menus[('all_chat_administrators', None, 'ru')]) == {'allow', 'deny', 'settings'}
     assert not any(scope == 'chat' or 'userscount' in menu for (scope, _, _), menu in menus.items())
+    assert not any('admin' in menu for menu in menus.values())
     for menu in menus.values():
         for command, description in menu.items():
             assert re.fullmatch(r'[a-z0-9_]{1,32}', command) and 0 < len(description) <= 256, (command, description)
