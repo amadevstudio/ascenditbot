@@ -1,5 +1,7 @@
 """The numbers of the bot (/usersCount): for its owner, users, groups, removed messages, money; for a group owner,
 their groups."""
+import json
+
 from framework.repository.database_executor import databaseExecutor
 from pkg.repository.database_connection import Database
 
@@ -161,12 +163,16 @@ async def product_hunt_attribution() -> dict:
                 GROUP BY e.currency_code, cur.minor_units
             ) refunds) AS refunds_by_currency
     """)
-    return dict(result)
+    report = dict(result)
+    for field in ('paid_by_currency', 'refunds_by_currency'):
+        if isinstance(report[field], str):
+            report[field] = json.loads(report[field])
+    return report
 
 
 async def delete_expired_attribution_events() -> int:
     """Enforce the documented 12-month detail retention from the existing hourly task."""
-    result = await databaseExecutor.run(db.execute_single_model, """
+    result = await databaseExecutor.run(db.fetchone, """
         WITH deleted AS (
             DELETE FROM attribution_events
             WHERE occurred_at < CURRENT_TIMESTAMP - interval '12 months'

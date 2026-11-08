@@ -66,7 +66,7 @@ async def test_group_connection_and_reconnection_are_distinct_successes(bench: B
     from pkg.service.user import User
 
     owner = (await User.register(OWNER['id'], 'ru', {'referral': None, 'src': 'ph2'}))['user']
-    bench.group_in_telegram(GROUP, OWNER)
+    bench.group_in_telegram(GROUP, owner)
     first = await Chat.add(GROUP, OWNER['id'])
     assert 'error' not in first
     duplicate = await Chat.add(GROUP, OWNER['id'])
