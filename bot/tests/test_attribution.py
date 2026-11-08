@@ -1,5 +1,4 @@
 """Product Hunt attribution stays separate from referrals, participant payments and trial access."""
-import datetime
 import json
 
 from tests.bench import Bench, person
@@ -143,11 +142,11 @@ async def test_report_keeps_subscription_currencies_separate(bench: Bench):
     await Tariff.change(rub_owner['id'], 1, charge_event_key='tariff-rub')
     await Tariff.add_amount(usd_owner['id'], 450, 'usd')
     await Tariff.change(usd_owner['id'], 1, charge_event_key='tariff-usd')
+    await bench.sql("UPDATE attribution_events e SET occurred_at = u.created_at + interval '15 days' "
+                    "FROM users u WHERE u.id = e.user_id AND e.event_type = 'owner_subscription_charged'")
 
     report = await stats_repository.product_hunt_attribution()
-    assert {row['currency_code'] for row in report['paid_by_currency']} == {'rub', 'usd'}, (
-        report, await bench.sql("SELECT e.user_id, e.event_type, e.amount_minor, e.currency_code, e.occurred_at, "
-                                "u.created_at FROM attribution_events e JOIN users u ON u.id=e.user_id"))
+    assert {row['currency_code'] for row in report['paid_by_currency']} == {'rub', 'usd'}, report
 
 
 async def test_funding_duplicate_and_refund_are_separate_from_subscription(bench: Bench):
