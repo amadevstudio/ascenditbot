@@ -44,6 +44,11 @@ def user_router():
     async def add_to_whitelist_result(message: telegram_types.Message):
         await event_wrapper('add_to_chat_whitelist', message)
 
+    # Hidden shortcut to the same admin page, validator and navigation used by the menu.
+    router.message.register(
+        partial(event_wrapper, 'admin_bot'), Command('usersCount', ignore_case=True),
+        F.text, ChatTypeFilter(PRIVATE_CHAT))
+
     route: AvailableRoutes
     for route in RouteMap.ROUTES:
         if route == 'nowhere':

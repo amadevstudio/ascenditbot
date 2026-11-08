@@ -1,5 +1,5 @@
-"""/usersCount (also /stats) in private: a group owner sees their groups (members, whitelist, removed messages, paid
-entries). The numbers of the whole bot are in the admin pages (pkg/controller/admin_controllers)."""
+"""/stats in private shows the user their groups. The hidden /usersCount command opens the same admin-only
+bot statistics page as Menu → Admin → Bot, through its existing route and access validator."""
 import asyncio
 import html
 from decimal import Decimal
@@ -88,8 +88,8 @@ def stats_router() -> Router:
     router = Router()
     router.message.filter(F.chat.type == 'private')
 
-    @router.message(Command('usersCount', 'userscount', 'stats', ignore_case=True))
-    async def users_count(message: Message):
+    @router.message(Command('stats', ignore_case=True))
+    async def stats(message: Message):
         user = await User.find_by_service_id(message.from_user.id) if message.from_user else None
         language_code = (user or {}).get('language_code') or (
             message.from_user.language_code if message.from_user else None) or 'en'
