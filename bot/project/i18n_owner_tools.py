@@ -29,12 +29,14 @@ owner_tools_messages = {
         'offer': {
             'en': "🎁 <b>+{days} days of everything, free</b>\n\nSubscribe to {channels} and tap "
                   "<b>✅ I subscribed</b>. The days go on top of your current term, or start today on the free "
-                  "tariff.\n\nThe condition: if you unsubscribe later, each channel left takes {penalty} days off "
-                  "your term, and your free group pauses until you subscribe again.",
+                  "tariff.\n\nThe condition: stay subscribed. Unsubscribe within these {days} days and each channel left "
+                  "takes {penalty} of them back; unsubscribe at any time and your free group pauses until you "
+                  "subscribe again.",
             'ru': "🎁 <b>+{days} дней всех функций бесплатно</b>\n\nПодпишитесь на {channels} и нажмите "
                   "<b>✅ Я подписался</b>. Дни добавятся к текущему сроку, а на бесплатном тарифе начнутся "
-                  "сегодня.\n\nУсловие: если потом отпишетесь, за каждый канал из срока снимется дней: "
-                  "{penalty}, а бесплатная группа встанет на паузу, пока не подпишетесь снова."
+                  "сегодня.\n\nУсловие: оставаться подписанным. Если отпишетесь в эти {days} дней, за каждый "
+                  "канал из них снимется дней: {penalty}. А если отпишетесь когда угодно, бесплатная группа "
+                  "встанет на паузу, пока не подпишетесь снова."
         },
         'check_button': {'en': "✅ I subscribed", 'ru': "✅ Я подписался"},
         'granted': {

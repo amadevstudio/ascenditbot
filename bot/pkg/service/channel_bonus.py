@@ -2,8 +2,9 @@
 
 Subscribed to all of them, a user gets 15 days of the paid tariff once: on top of the term they have, or from
 today on the free tariff. The bonus comes with a condition, said up front: unsubscribe later and the free group
-waits (tariff_repository.update_user_moderated_chats) until they subscribe again, and each channel left takes its
-share of the days off a running term, once (subscribing again gives the free group back, not the days). The bot
+waits (tariff_repository.update_user_moderated_chats) until they subscribe again, and while the bonus days run each
+channel left takes its share of what is left of them, once (subscribing again gives the free group back, not the
+days). Once the bonus days are over leaving only pauses the free group: days paid for are never taken. The bot
 hears of a leave at once (chat_member, admin_router) and checks each taker once a day for what it missed;
 Telegram tells whether someone is in a channel only to the channel's admins, so the bot is one."""
 import asyncio
@@ -138,18 +139,25 @@ class ChannelBonus:
 
     @classmethod
     async def _penalize(cls, claim: dict, left: list[dict]) -> tuple[int, datetime.datetime | None]:
-        """Days off the running term for the channels left that took none yet, the whole never above the bonus.
-        (days taken, the new end date); (0, None) when nothing was taken."""
+        """Days off the running term for the channels left that took none yet, only while the bonus days run (the
+        BONUS_DAYS after the claim) and never more than is left of them: after that the bonus is spent, the free
+        group pausing is all, and days paid for later are never touched. (days taken, the new end date); (0, None)
+        when nothing was taken."""
+        now = datetime.datetime.now()
+        bonus_until = claim['claimed_at'] + datetime.timedelta(days=BONUS_DAYS)
+        if now >= bonus_until:
+            return 0, None
         info = await Tariff.user_tariff_info(claim['user_id'])
         if info['tariff_id'] == Tariff.FREE_TARIFF_ID or info['end_date'] is None \
-                or info['end_date'] <= datetime.datetime.now():
-            return 0, None  # no term to take from: the free group waits instead, and the channel is not used up
+                or info['end_date'] <= now:
+            return 0, None  # no term to take from: the free group waits instead
         share = cls.penalty_days(len(claim['channel_ids']))
         days = 0
         for channel in left:
             penalized = await channel_bonus_repository.mark_penalized(claim['user_id'], channel['service_id'])
             if penalized is not None:
                 days += max(min(share, BONUS_DAYS - share * (penalized - 1)), 0)
+        days = min(days, math.ceil((bonus_until - now) / datetime.timedelta(days=1)))
         if days <= 0:
             return 0, None
         end_date = await tariff_repository.take_days(claim['user_id'], days)

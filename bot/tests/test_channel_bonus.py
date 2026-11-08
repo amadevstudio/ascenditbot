@@ -98,7 +98,7 @@ async def test_subscribe_for_days_then_unsubscribe_pauses_the_free_group(bench: 
     assert '🎁 +15 дней за подписку' in [b['text'] for b in _buttons(_last(bench, OWNER))]
     await bench.tap(OWNER, json.dumps({'tp': 'bonus'}))
     offer = _last(bench, OWNER)
-    assert 'Ascendit News' in offer.text and 'Условие: если потом отпишетесь' in offer.text, offer.text
+    assert 'Ascendit News' in offer.text and 'Условие: оставаться подписанным' in offer.text, offer.text
     assert 'https://t.me/ascendit_news' in [b['url'] for b in _buttons(offer)]
 
     await bench.tap(OWNER, json.dumps({'tp': 'bonus_check'}))
@@ -160,7 +160,7 @@ async def _took_bonus_for_two_channels(bench: Bench) -> dict:
     for channel in (CHANNEL, CHANNEL_2):
         bench.telegram.members[(channel, OWNER['id'])] = member(OWNER)
     await bench.tap(OWNER, json.dumps({'tp': 'bonus'}))
-    assert 'за каждый канал из срока снимется дней: 8' in _last(bench, OWNER).text, _last(bench, OWNER).text
+    assert 'за каждый канал из них снимется дней: 8' in _last(bench, OWNER).text, _last(bench, OWNER).text
     await bench.tap(OWNER, json.dumps({'tp': 'bonus_check'}))
     assert 'Готово: +15 дней' in _last(bench, OWNER).text, _last(bench, OWNER).text
     return owner
@@ -218,19 +218,40 @@ async def test_days_taken_never_go_below_now(bench: Bench):
 
 
 async def test_free_tariff_leave_takes_no_days_and_keeps_the_channel_share(bench: Bench):
-    """on the free tariff a leave only pauses the free group: no term to take from, so the channel's days are
-    still there to take once a term runs"""
+    """on the free tariff a leave only pauses the free group: no term to take from"""
     owner = await _took_bonus_for_two_channels(bench)
     await bench.sql('UPDATE user_tariff_connections SET tariff_id = 0, end_date = NULL')
-    left = {'status': 'left', 'user': OWNER}
-    await _membership(bench, CHANNEL, member(OWNER), left)
+    await _membership(bench, CHANNEL, member(OWNER), {'status': 'left', 'user': OWNER})
     [claim] = await bench.sql('SELECT penalized_channel_ids, lost_at FROM channel_bonus_claims')
     assert claim['penalized_channel_ids'] == [] and claim['lost_at'] is not None, claim
+    assert await _end_date(bench, owner) is None
 
-    # A term runs again (paid), still not subscribed: the daily check takes the channel's 8 days now
-    await bench.sql("UPDATE user_tariff_connections SET tariff_id = 1, end_date = LOCALTIMESTAMP + interval '20 days'")
+
+async def test_after_the_bonus_days_a_leave_takes_no_paid_days(bench: Bench):
+    """the bonus days are over, the user is on the free tariff and leaves: the free group pauses; later they pay
+    and are still not subscribed: the daily check takes nothing from the days they paid for"""
+    owner = await _took_bonus_for_two_channels(bench)
+    await bench.sql("UPDATE channel_bonus_claims SET claimed_at = LOCALTIMESTAMP - interval '20 days'")
+    await bench.sql('UPDATE user_tariff_connections SET tariff_id = 0, end_date = NULL')
+    bench.telegram.calls.clear()
+    await _membership(bench, CHANNEL, member(OWNER), {'status': 'left', 'user': OWNER})
+    [notice] = _texts(bench, OWNER)
+    assert 'снято' not in notice and 'Бесплатная группа теперь на паузе' in notice, notice
+
+    await bench.sql("UPDATE user_tariff_connections SET tariff_id = 1, end_date = LOCALTIMESTAMP + interval '30 days'")
     paid_until = await _end_date(bench, owner)
     await bench.sql("UPDATE channel_bonus_claims SET checked_at = LOCALTIMESTAMP - interval '2 days'")
+    bench.telegram.calls.clear()
     from pkg.background.async_tasks.subscription_handler import subscription_handler_round
     await subscription_handler_round()
-    assert _days(paid_until - await _end_date(bench, owner)) == 8
+    assert await _end_date(bench, owner) == paid_until
+    assert not any('снято' in t for t in _texts(bench, OWNER)), _texts(bench, OWNER)
+
+
+async def test_days_taken_never_exceed_what_is_left_of_the_bonus(bench: Bench):
+    """12 of the 15 bonus days are gone and a channel is left: 3 days off, not 8"""
+    owner = await _took_bonus_for_two_channels(bench)
+    await bench.sql("UPDATE channel_bonus_claims SET claimed_at = LOCALTIMESTAMP - interval '12 days'")
+    before = await _end_date(bench, owner)
+    await _membership(bench, CHANNEL, member(OWNER), {'status': 'left', 'user': OWNER})
+    assert _days(before - await _end_date(bench, owner)) == 3
