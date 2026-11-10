@@ -104,9 +104,9 @@ class MemberAlerts:
         return sent_today <= GROUP_ALERTS_PER_DAY
 
     @staticmethod
-    async def removed(chat_data: dict, message) -> None:
+    async def removed(chat_data: dict, message, topic_name: str | None = None) -> None:
         """A member off the whitelist wrote and the message went: tell the group's managers, with the text, so
-        that letting them in is one tap."""
+        that letting them in is one tap. In a group with topics the group's name has the topic's after it."""
         if not chat_data.get('owner_alerts', True):
             return
         # The group lets people in through the bot: they ask themselves, the managers get their requests
@@ -120,6 +120,8 @@ class MemberAlerts:
             'c': chat_data['id'], 'u': str(sender.id), 'n': sender.username, 'name': full_name(sender)})
         member = member_label(sender.username, full_name(sender), sender.id)
         chat_name = html.escape(chat_data.get('name') or message.chat.title or '')
+        if topic_name:
+            chat_name += f" › {html.escape(topic_name)}"
         preview = (message.text or message.caption or '').strip()
         if len(preview) > PREVIEW_LENGTH:
             preview = preview[:PREVIEW_LENGTH] + '…'
