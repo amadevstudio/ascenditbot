@@ -600,7 +600,7 @@ async def test_users_count_opens_the_same_admin_bot_page(bench: Bench):
     await bench.tap(OWNER, json.dumps({'tp': 'admin_bot'}))
     page = [c for c in bench.telegram.calls_of('sendMessage', 'editMessageText')
             if int(c.chat_id) == OWNER['id']][-1]
-    assert 'Пользователи: 1' in page.text and '(модерируются 1)' in page.text and 'За 30 дней' in page.text, page.text
+    assert 'Пользователи: 1' in page.text and '(работают 1)' in page.text and 'За 30 дней' in page.text, page.text
 
     for command in ('/usersCount', '/userscount', '/USERSCOUNT', '/usersCount@ascenditbot'):
         bench.telegram.calls.clear()
@@ -888,9 +888,9 @@ async def test_admin_bot_page_splits_users_by_tariff(bench: Bench):
     bench.telegram.calls.clear()
     await bench.private_message(OWNER, '/usersCount')
     page = bench.telegram.texts_to(OWNER['id'])[-1]
-    assert 'Бесплатный: 2\n' in page, page
-    assert 'Тариф 1 (3 группы): 2 – 🧪 1, 📢 1\n' in page, page
-    assert 'Тариф 2 (10 групп): 1 – 💳 1\n' in page, page
-    assert 'Тариф 3' not in page, page
+    assert 'Бесплатный · 1 группа: 2\n' in page, page
+    assert '300 ₽ · 3 группы: 2 (🧪 1, 📢 1)\n' in page, page
+    assert '1 000 ₽ · 10 групп: 1 (💳 1)\n' in page, page
+    assert '25 групп' not in page, page
     assert '📢 Бонус за каналы взяли 2, отписались 1\n' in page, page
-    assert 'За 30 дней</b>: 1 платёж на 750 rub' in page, page
+    assert 'За 30 дней</b>: 1 платёж на 750 ₽' in page, page
