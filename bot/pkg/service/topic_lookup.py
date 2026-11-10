@@ -18,7 +18,8 @@ _client = None
 _client_lock = asyncio.Lock()
 _peers: dict[int, object] = {}
 
-# Tests put a fake here: async (chat_service_id, ids) -> list of topics as `by_ids` returns them, or None
+# Tests put a fake here: an object with async `by_ids(chat_service_id, ids)` and `newest(chat_service_id)`,
+# answering as those below do
 backend = None
 
 
@@ -46,7 +47,8 @@ async def _get_client():
 
 
 async def _peer(client, chat_service_id: int):
-    """The group as MTProto wants it: a channel id without -100 and its access hash, which a bot may ask with 0."""
+    """The group as MTProto wants it: a channel id without -100 and its access hash, which a bot may ask with 0
+    (checked live)."""
     if chat_service_id in _peers:
         return _peers[chat_service_id]
     from telethon.tl.functions.channels import GetChannelsRequest
@@ -59,14 +61,36 @@ async def _peer(client, chat_service_id: int):
     return _peers[chat_service_id]
 
 
+async def newest(chat_service_id: int) -> int | None:
+    """No smaller than the id of the group's newest message: the channel's pts (every new message adds one to both,
+    edits and deletions add to pts only; a bot is not given the newest message itself, and top_message of a topic
+    comes to a bot as 0). None when MTProto is off or fails (logged)."""
+    if not available():
+        return None
+    if backend is not None:
+        return await backend.newest(chat_service_id)
+    try:
+        from telethon.tl.functions.channels import GetFullChannelRequest
+        from telethon.tl.types import InputChannel
+
+        client = await _get_client()
+        peer = await _peer(client, chat_service_id)
+        result = await client(GetFullChannelRequest(InputChannel(peer.channel_id, peer.access_hash)))
+    except Exception as e:
+        logger.warning('MTProto full channel failed', chat_service_id, type(e).__name__, e)
+        return None
+    return result.full_chat.pts
+
+
 async def by_ids(chat_service_id: int, ids: list[int]) -> list[dict] | None:
-    """The topics among `ids` (at most BATCH): {'id', 'deleted'} and, unless deleted, 'title', 'closed',
-    'top_message' (the newest message in it). Ids that are not topics are left out. None when MTProto is off or
-    fails (logged): the caller goes on without it."""
+    """Telegram's answer about `ids` (at most BATCH): {'id', 'deleted'} and, unless deleted, 'title', 'closed'.
+    Telegram answers about every id it is asked: an id that is not a topic (any other message, or no message yet)
+    comes back deleted, as a deleted topic does. None when MTProto is off or fails (logged): the caller goes on
+    without it."""
     if not ids or not available():
         return None
     if backend is not None:
-        return await backend(chat_service_id, ids)
+        return await backend.by_ids(chat_service_id, ids)
     try:
         from telethon.tl.functions.messages import GetForumTopicsByIDRequest
         from telethon.tl.types import ForumTopicDeleted
@@ -81,6 +105,5 @@ async def by_ids(chat_service_id: int, ids: list[int]) -> list[dict] | None:
         if isinstance(topic, ForumTopicDeleted):
             topics.append({'id': topic.id, 'deleted': True})
         else:
-            topics.append({'id': topic.id, 'deleted': False, 'title': topic.title, 'closed': bool(topic.closed),
-                           'top_message': topic.top_message})
+            topics.append({'id': topic.id, 'deleted': False, 'title': topic.title, 'closed': bool(topic.closed)})
     return topics
