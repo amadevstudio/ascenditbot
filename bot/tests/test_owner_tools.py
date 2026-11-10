@@ -861,3 +861,35 @@ async def test_lost_rights_say_how_to_fix_in_list_page_and_menu(bench: Bench):
     assert not any('нет прав' in b['text'] for b in _buttons(_shown(bench)))
     await bench.tap(OWNER, json.dumps({'tp': 'menu'}))
     assert not any('не может удалять' in text for text in _private_texts(bench, OWNER))
+
+
+async def test_admin_bot_page_splits_users_by_tariff(bench: Bench):
+    """the bot's page says how many are on each tariff and how they got there: paid, the trial, the bonus for
+    subscribing to the channels; and how many took the bonus and left a channel since"""
+    from pkg.service.tariff import Tariff
+
+    await _scene(bench)
+    await bench.sql('UPDATE users SET is_admin = TRUE')
+    payer, trial, bonus, lost = (person(i, f'user{i}') for i in (811, 812, 813, 814))
+    for user in (payer, trial, bonus, lost):
+        await bench.private_message(user, '/start')
+    ids = {user['id']: row['id'] for user in (payer, trial, bonus, lost)
+           for row in await bench.sql(f"SELECT id FROM users WHERE service_id = '{user['id']}'")}
+    for user in (payer, trial, bonus):
+        await Tariff.change(ids[user['id']], 1, force=True)
+    await Tariff.change(ids[payer['id']], 2, force=True)
+    await bench.sql(f"INSERT INTO payments_history (user_id, payment_service, amount, currency_code, created_at, "
+                    f"updated_at) VALUES ({ids[payer['id']]}, 'yoomoney', 75000, 'rub', LOCALTIMESTAMP, LOCALTIMESTAMP)")
+    await bench.sql(f"INSERT INTO channel_bonus_claims (user_id, channel_ids) "
+                    f"VALUES ({ids[bonus['id']]}, '{{1}}')")
+    await bench.sql(f"INSERT INTO channel_bonus_claims (user_id, channel_ids, lost_at) "
+                    f"VALUES ({ids[lost['id']]}, '{{1}}', LOCALTIMESTAMP)")
+
+    bench.telegram.calls.clear()
+    await bench.private_message(OWNER, '/usersCount')
+    page = bench.telegram.texts_to(OWNER['id'])[-1]
+    assert 'Бесплатный (1 группа): 2\n' in page, page
+    assert 'Тариф 1 (3 группы): 2 – триал 1, бонус за каналы 1\n' in page, page
+    assert 'Тариф 2 (10 групп): 1 – оплатили 1\n' in page, page
+    assert 'Тариф 3 (25 групп): 0\n' in page, page
+    assert 'Бонус за подписку на каналы взяли: 2, сейчас отписаны: 1' in page, page

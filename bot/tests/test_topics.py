@@ -1,5 +1,6 @@
 """Groups with topics: the bot learns the topics from messages, the group's rules apply in the protected ones, the
 free ones are left alone, and the owner switches them on the topics page."""
+import asyncio
 import json
 
 from tests.bench import Bench, person
@@ -221,9 +222,11 @@ async def test_topics_page_pages(bench: Bench):
 
 # Names and states from Telegram itself (MTProto, faked here)
 
-def _telegram_topics(bench: Bench, topics: dict[int, dict], newest: int | None = None) -> list[list[int]]:
+def _telegram_topics(bench: Bench, topics: dict[int, dict], newest: int | None = None,
+                     gate: asyncio.Event | None = None) -> list[list[int]]:
     """MTProto answering as Telegram does (checked live): about every id asked, the ones that are not topics
-    deleted; `newest` is the channel's pts. The asked batches."""
+    deleted; `newest` is the channel's pts; the look through the history (batches without the general topic)
+    waits for `gate`. The asked batches."""
     from pkg.service import topic_lookup
 
     asked: list[list[int]] = []
@@ -232,6 +235,8 @@ def _telegram_topics(bench: Bench, topics: dict[int, dict], newest: int | None =
         async def by_ids(self, chat_service_id: int, ids: list[int]):
             assert chat_service_id == GROUP and len(ids) <= topic_lookup.BATCH
             asked.append(list(ids))
+            if gate is not None and 1 not in ids:
+                await gate.wait()
             return [{'id': i, 'deleted': False, 'closed': False, **topics[i]}
                     if i in topics and 'deleted' not in topics[i] else {'id': i, 'deleted': True} for i in ids]
 
@@ -279,10 +284,11 @@ async def test_history_looked_through_for_topics(bench: Bench):
         40: {'title': 'Rent'},
         180: {'title': 'Jobs', 'closed': True},
         330: {'title': 'Late'},
-    }, newest=340)
+    }, newest=340, gate=(gate := asyncio.Event()))
     await _open_group_page(bench, chat)
     await bench.tap(OWNER, json.dumps({'tp': 'chat_topics'}))
     assert 'Ищу разделы в истории группы' in _shown(bench).text, _shown(bench).text
+    gate.set()
     await _scan_done(chat)
 
     assert await _topics(bench) == {

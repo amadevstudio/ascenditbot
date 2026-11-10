@@ -15,13 +15,30 @@ async def collect() -> dict:
             COUNT(*) FILTER (WHERE u.created_at > LOCALTIMESTAMP - interval '7 days') AS week,
             COUNT(*) FILTER (WHERE u.created_at > LOCALTIMESTAMP - interval '30 days') AS month,
             COUNT(*) FILTER (WHERE EXISTS (
-                SELECT 1 FROM user_moderated_chat_connections AS umcc WHERE umcc.user_id = u.id)) AS with_groups,
-            COUNT(*) FILTER (WHERE COALESCE(utc.tariff_id, 0) = 0) AS free,
-            COUNT(*) FILTER (WHERE utc.tariff_id > 0) AS paid,
-            COUNT(*) FILTER (WHERE utc.tariff_id > 0 AND NOT EXISTS (
-                SELECT 1 FROM payments_history AS ph WHERE ph.user_id = u.id)) AS trial
+                SELECT 1 FROM user_moderated_chat_connections AS umcc WHERE umcc.user_id = u.id)) AS with_groups
         FROM users AS u
-        LEFT JOIN user_tariff_connections AS utc ON utc.user_id = u.id
+    """)
+    # Who is on each tariff now and how they got there: paid once at least, the bonus for subscribing to the
+    # channels (taken, never paid), the trial (neither)
+    tariffs = await databaseExecutor.run(db.fetchall, """
+        WITH people AS (
+            SELECT COALESCE(utc.tariff_id, 0) AS tariff_id,
+                EXISTS (SELECT 1 FROM payments_history AS ph WHERE ph.user_id = u.id AND ph.amount > 0) AS paid,
+                EXISTS (SELECT 1 FROM channel_bonus_claims AS cbc WHERE cbc.user_id = u.id) AS bonus
+            FROM users AS u
+            LEFT JOIN user_tariff_connections AS utc ON utc.user_id = u.id
+        )
+        SELECT t.id, t.channels_count, COUNT(p.tariff_id) AS total,
+            COUNT(p.tariff_id) FILTER (WHERE p.paid) AS paid,
+            COUNT(p.tariff_id) FILTER (WHERE NOT p.paid AND p.bonus) AS bonus,
+            COUNT(p.tariff_id) FILTER (WHERE NOT p.paid AND NOT p.bonus) AS trial
+        FROM tariffs AS t
+        LEFT JOIN people AS p ON p.tariff_id = t.id
+        GROUP BY t.id, t.channels_count
+        ORDER BY t.id
+    """)
+    bonus = await databaseExecutor.run(db.fetchone, """
+        SELECT COUNT(*) AS taken, COUNT(*) FILTER (WHERE lost_at IS NOT NULL) AS lost FROM channel_bonus_claims
     """)
     groups = await databaseExecutor.run(db.fetchone, """
         SELECT
@@ -62,6 +79,8 @@ async def collect() -> dict:
     users['other'] = users['total'] - users['ru'] - users['en']
     return {
         'users': users,
+        'tariffs': [dict(row) for row in tariffs],
+        'bonus': dict(bonus),
         'groups': dict(groups),
         'money': {
             'month': [{**dict(row), 'minor_units': row['minor_units'] if row['minor_units'] is not None else 2}
