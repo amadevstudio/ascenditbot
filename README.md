@@ -6,6 +6,9 @@ Telegram whitelist bot for a chats
 - `touch env/.env.local` and set variables:
   - *TELEGRAM_BOT_TOKEN*
   - *TELEGRAM_ADMIN_GROUP_ID*
+  - optional: *TELEGRAM_API_ID* and *TELEGRAM_API_HASH* from https://my.telegram.org (API development tools):
+    the bot then asks Telegram (MTProto) about groups' topics by id, finds topics in a group's history and keeps
+    their names current. Without them topics are learned from messages only.
 - `docker compose build`
 - `docker compose up`
 - `docker compose run migrator -e POSTGRES_URL up`

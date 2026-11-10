@@ -2,6 +2,9 @@ aiogram==3.31.0
 
 redis==5.0.1
 
+# MTProto for what the Bot API lacks: the topics of a group by id (pkg/service/topic_lookup.py)
+telethon==1.45.0
+
 # psycopg2-binary # Postgres connection
 # psycopg2
 asyncpg==0.29.0

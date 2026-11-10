@@ -453,6 +453,18 @@ owner_tools_messages = {
                       "угодно в каждом разделе и нажмите \"🔄 Обновить\": они появятся здесь.\n\n"
                       "Пока все разделы под защитой: правила группы действуют везде."
             },
+            'scanning': {
+                'en': "🔍 Looking through the group's history for topics: {progress}%. New ones show up here: tap "
+                      "\"🔄 Refresh\" in a while.",
+                'ru': "🔍 Ищу разделы в истории группы: {progress}%. Найденные появятся здесь: нажмите "
+                      "\"🔄 Обновить\" чуть позже."
+            },
+            'synced': {
+                'en': "The list is checked with Telegram: names and closed topics as they are now. New topics show "
+                      "up by themselves.",
+                'ru': "Список сверен с Telegram: названия и закрытые разделы такие, как сейчас. Новые разделы "
+                      "появятся сами."
+            },
             'general': {
                 'en': "General",
                 'ru': "Общий"

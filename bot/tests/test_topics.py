@@ -217,3 +217,105 @@ async def test_topics_page_pages(bench: Bench):
     await bench.tap(OWNER, json.dumps({'tp': 'tpc_page', 'p': 2}))
     texts = [b['text'] for b in _buttons(_shown(bench))]
     assert '2/2' in texts and '🛡 T14' in texts, texts
+
+
+# Names and states from Telegram itself (MTProto, faked here)
+
+def _telegram_topics(bench: Bench, topics: dict[int, dict]) -> list[list[int]]:
+    """MTProto answering about topics by id as Telegram would: the asked ids that are topics. The asked batches."""
+    from pkg.service import topic_lookup
+
+    asked: list[list[int]] = []
+
+    async def backend(chat_service_id: int, ids: list[int]):
+        assert chat_service_id == GROUP and len(ids) <= topic_lookup.BATCH
+        asked.append(list(ids))
+        return [{'id': i, 'deleted': False, 'closed': False, **topics[i]} for i in ids if i in topics]
+
+    topic_lookup.backend = backend
+    bench.cleanups.append(lambda: setattr(topic_lookup, 'backend', None))
+    return asked
+
+
+async def _scan_done(chat: dict):
+    from pkg.service import topics
+    task = topics._scans.get(chat['id'])
+    if task is not None:
+        await task
+
+
+async def test_name_hint_does_not_undo_a_rename(bench: Bench):
+    """messages in a topic carry the name it was created with: after a rename the new name stays"""
+    await _scene(bench)
+    service = dict(text=None, forum=True, message_thread_id=12, is_topic_message=True)
+    await bench.group_message(GROUP, OWNER, forum_topic_created={'name': 'Jobs', 'icon_color': 1}, **service)
+    await bench.group_message(GROUP, OWNER, forum_topic_edited={'name': 'Work'}, **service)
+    await _in_topic(bench, ALICE, 12, 'Jobs')
+    assert (await _topics(bench))[12]['name'] == 'Work'
+
+
+async def test_history_looked_through_for_topics(bench: Bench):
+    """with MTProto the topics page asks Telegram about the group's history: topics nobody wrote in since the bot
+    came show up with their names, closed ones marked, up to the newest message and a batch past it"""
+    chat = await _scene(bench)
+    asked = _telegram_topics(bench, {
+        1: {'title': 'General', 'top_message': 250},
+        40: {'title': 'Rent', 'top_message': 90},
+        180: {'title': 'Jobs', 'closed': True, 'top_message': 200},
+        330: {'title': 'Late', 'top_message': 340},
+    })
+    await _open_group_page(bench, chat)
+    await bench.tap(OWNER, json.dumps({'tp': 'chat_topics'}))
+    assert 'Ищу разделы в истории группы' in _shown(bench).text, _shown(bench).text
+    await _scan_done(chat)
+
+    assert await _topics(bench) == {
+        1: {'thread_id': 1, 'name': None, 'protected': True, 'closed': False},
+        40: {'thread_id': 40, 'name': 'Rent', 'protected': True, 'closed': False},
+        180: {'thread_id': 180, 'name': 'Jobs', 'protected': True, 'closed': True},
+        330: {'thread_id': 330, 'name': 'Late', 'protected': True, 'closed': False},
+    }
+    looked = sorted(i for batch in asked[1:] for i in batch)
+    assert looked == list(range(2, 502)), (looked[0], looked[-1])  # batches of 100 past 340 + 100
+
+    await bench.tap(OWNER, json.dumps({'tp': 'tpc_page', 'p': 1}))
+    page = _shown(bench)
+    assert 'Список сверен с Telegram' in page.text, page.text
+    texts = [b['text'] for b in _buttons(page)]
+    assert texts[:4] == ['🛡 Общий', '🛡 Rent', '🛡 Late', '🛡 🔒 Jobs'], texts
+
+
+async def test_known_topics_renamed_and_deleted_from_telegram(bench: Bench):
+    """a rename the bot missed and a deleted topic: the topics page takes them from Telegram; a topic Telegram
+    leaves out keeps the owner's choice"""
+    chat = await _scene(bench)
+    await _in_topic(bench, ALICE, 4, 'Old')
+    await _in_topic(bench, ALICE, 9, 'Gone')
+    await _in_topic(bench, ALICE, 15, 'Quiet')
+    await bench.sql('UPDATE chat_topics SET protected = false WHERE thread_id = 15')
+    _telegram_topics(bench, {1: {'title': 'General', 'top_message': 20}, 4: {'title': 'New', 'top_message': 18},
+                             9: {'deleted': True}})
+    await _open_group_page(bench, chat)
+    await bench.tap(OWNER, json.dumps({'tp': 'chat_topics'}))
+    await _scan_done(chat)
+    rows = await _topics(bench)
+    assert rows[4]['name'] == 'New' and 9 not in rows and rows[15]['protected'] is False, rows
+
+
+async def test_without_telegram_s_answer_the_page_is_as_before(bench: Bench):
+    """MTProto on but failing: the page lists what the bot has seen and says how to add the rest"""
+    from pkg.service import topic_lookup
+
+    chat = await _scene(bench)
+    await _in_topic(bench, ALICE, 4, 'Services')
+
+    async def failing(chat_service_id: int, ids: list[int]):
+        return None
+
+    topic_lookup.backend = failing
+    bench.cleanups.append(lambda: setattr(topic_lookup, 'backend', None))
+    await _open_group_page(bench, chat)
+    await bench.tap(OWNER, json.dumps({'tp': 'chat_topics'}))
+    page = _shown(bench)
+    assert 'Нужного нет?' in page.text and 'Ищу разделы' not in page.text, page.text
+    assert '🛡 Services' in [b['text'] for b in _buttons(page)]

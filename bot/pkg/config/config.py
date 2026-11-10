@@ -28,6 +28,10 @@ class EnvironmentInterface(TypedDict):
     ROBOKASSA_PAYMENT_P1_TEST: str
     ROBOKASSA_PAYMENT_P2_TEST: str
 
+    # Optional (my.telegram.org): MTProto for topics by id; without them topics are learned from messages only
+    TELEGRAM_API_ID: str | None
+    TELEGRAM_API_HASH: str | None
+
 
 environment: EnvironmentInterface = {
     'ENVIRONMENT': os.environ['ENVIRONMENT'],
@@ -45,7 +49,10 @@ environment: EnvironmentInterface = {
     'ROBOKASSA_PAYMENT_P1': os.environ['ROBOKASSA_PAYMENT_P1'],
     'ROBOKASSA_PAYMENT_P2': os.environ['ROBOKASSA_PAYMENT_P2'],
     'ROBOKASSA_PAYMENT_P1_TEST': os.environ['ROBOKASSA_PAYMENT_P1_TEST'],
-    'ROBOKASSA_PAYMENT_P2_TEST': os.environ['ROBOKASSA_PAYMENT_P2_TEST']
+    'ROBOKASSA_PAYMENT_P2_TEST': os.environ['ROBOKASSA_PAYMENT_P2_TEST'],
+
+    'TELEGRAM_API_ID': os.environ.get('TELEGRAM_API_ID') or None,
+    'TELEGRAM_API_HASH': os.environ.get('TELEGRAM_API_HASH') or None,
 }
 
 empty_photo_link = "https://cdn3.iconfinder.com/data/icons/online-states/150/Photos-512.png"
