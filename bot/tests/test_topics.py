@@ -221,18 +221,24 @@ async def test_topics_page_pages(bench: Bench):
 
 # Names and states from Telegram itself (MTProto, faked here)
 
-def _telegram_topics(bench: Bench, topics: dict[int, dict]) -> list[list[int]]:
-    """MTProto answering about topics by id as Telegram would: the asked ids that are topics. The asked batches."""
+def _telegram_topics(bench: Bench, topics: dict[int, dict], newest: int | None = None) -> list[list[int]]:
+    """MTProto answering as Telegram does (checked live): about every id asked, the ones that are not topics
+    deleted; `newest` is the channel's pts. The asked batches."""
     from pkg.service import topic_lookup
 
     asked: list[list[int]] = []
 
-    async def backend(chat_service_id: int, ids: list[int]):
-        assert chat_service_id == GROUP and len(ids) <= topic_lookup.BATCH
-        asked.append(list(ids))
-        return [{'id': i, 'deleted': False, 'closed': False, **topics[i]} for i in ids if i in topics]
+    class Backend:
+        async def by_ids(self, chat_service_id: int, ids: list[int]):
+            assert chat_service_id == GROUP and len(ids) <= topic_lookup.BATCH
+            asked.append(list(ids))
+            return [{'id': i, 'deleted': False, 'closed': False, **topics[i]}
+                    if i in topics and 'deleted' not in topics[i] else {'id': i, 'deleted': True} for i in ids]
 
-    topic_lookup.backend = backend
+        async def newest(self, chat_service_id: int):
+            return newest
+
+    topic_lookup.backend = Backend()
     bench.cleanups.append(lambda: setattr(topic_lookup, 'backend', None))
     return asked
 
@@ -256,14 +262,15 @@ async def test_name_hint_does_not_undo_a_rename(bench: Bench):
 
 async def test_history_looked_through_for_topics(bench: Bench):
     """with MTProto the topics page asks Telegram about the group's history: topics nobody wrote in since the bot
-    came show up with their names, closed ones marked, up to the newest message and a batch past it"""
+    came show up with their names, closed ones marked, up to the newest message (the channel's pts) and a batch
+    past it"""
     chat = await _scene(bench)
     asked = _telegram_topics(bench, {
-        1: {'title': 'General', 'top_message': 250},
-        40: {'title': 'Rent', 'top_message': 90},
-        180: {'title': 'Jobs', 'closed': True, 'top_message': 200},
-        330: {'title': 'Late', 'top_message': 340},
-    })
+        1: {'title': 'General'},
+        40: {'title': 'Rent'},
+        180: {'title': 'Jobs', 'closed': True},
+        330: {'title': 'Late'},
+    }, newest=340)
     await _open_group_page(bench, chat)
     await bench.tap(OWNER, json.dumps({'tp': 'chat_topics'}))
     assert 'Ищу разделы в истории группы' in _shown(bench).text, _shown(bench).text
@@ -286,15 +293,15 @@ async def test_history_looked_through_for_topics(bench: Bench):
 
 
 async def test_known_topics_renamed_and_deleted_from_telegram(bench: Bench):
-    """a rename the bot missed and a deleted topic: the topics page takes them from Telegram; a topic Telegram
-    leaves out keeps the owner's choice"""
+    """a rename the bot missed and a deleted topic: the topics page takes them from Telegram; the owner's choice
+    for the others stays"""
     chat = await _scene(bench)
     await _in_topic(bench, ALICE, 4, 'Old')
     await _in_topic(bench, ALICE, 9, 'Gone')
     await _in_topic(bench, ALICE, 15, 'Quiet')
     await bench.sql('UPDATE chat_topics SET protected = false WHERE thread_id = 15')
-    _telegram_topics(bench, {1: {'title': 'General', 'top_message': 20}, 4: {'title': 'New', 'top_message': 18},
-                             9: {'deleted': True}})
+    _telegram_topics(bench, {1: {'title': 'General'}, 4: {'title': 'New'}, 9: {'deleted': True},
+                             15: {'title': 'Quiet'}}, newest=20)
     await _open_group_page(bench, chat)
     await bench.tap(OWNER, json.dumps({'tp': 'chat_topics'}))
     await _scan_done(chat)
@@ -309,10 +316,14 @@ async def test_without_telegram_s_answer_the_page_is_as_before(bench: Bench):
     chat = await _scene(bench)
     await _in_topic(bench, ALICE, 4, 'Services')
 
-    async def failing(chat_service_id: int, ids: list[int]):
-        return None
+    class Failing:
+        async def by_ids(self, chat_service_id: int, ids: list[int]):
+            return None
 
-    topic_lookup.backend = failing
+        async def newest(self, chat_service_id: int):
+            return None
+
+    topic_lookup.backend = Failing()
     bench.cleanups.append(lambda: setattr(topic_lookup, 'backend', None))
     await _open_group_page(bench, chat)
     await bench.tap(OWNER, json.dumps({'tp': 'chat_topics'}))

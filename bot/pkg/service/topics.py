@@ -9,7 +9,8 @@ Bot API. A member can be muted only in the whole group, so where some topic is f
 With MTProto keys (topic_lookup) the bot also asks Telegram about topics by id: the known ones get their name and
 state as they are now (a rename the bot missed, a topic deleted), and the group's history is looked through for
 topics nobody has written in since the bot came: a topic's id is the id of the message that created it, so the
-ids from 2 up to the newest message are asked, a batch at a time, in the background."""
+ids from 2 up to the newest message are asked, a batch at a time, in the background. Telegram answers about every
+id asked, calling the ones that are not topics deleted."""
 import asyncio
 
 from aiogram.types import Message
@@ -89,40 +90,36 @@ def scanning(chat_id: int) -> bool:
     return task is not None and not task.done()
 
 
-async def _apply(chat: dict, found: list[dict]) -> int:
-    """Telegram's answer about some topics: kept as it says. The newest message id among them."""
-    newest = 0
+async def _apply(chat: dict, found: list[dict]):
+    """Telegram's answer about some ids: the topics kept as it says, the deleted ones (and ids that are no
+    topics) gone."""
     for topic in found:
-        if topic['deleted']:
-            await topic_repository.delete(chat['id'], [topic['id']])
-            continue
-        # The general topic's name is the bot's own word for it, in the owner's language
-        await topic_repository.found(chat['id'], topic['id'], None if topic['id'] == GENERAL else topic['title'],
-                                     topic['closed'])
-        newest = max(newest, topic['top_message'] or 0)
-    return newest
+        if not topic['deleted']:
+            # The general topic's name is the bot's own word for it, in the owner's language
+            await topic_repository.found(
+                chat['id'], topic['id'], None if topic['id'] == GENERAL else topic['title'], topic['closed'])
+    await topic_repository.delete(chat['id'], [topic['id'] for topic in found if topic['deleted']])
 
 
 async def refresh(chat: dict) -> int | None:
-    """The general topic and the known ones as Telegram says they are now. The newest message id among them, the
-    upper end for the look through the history; None without MTProto or when it fails."""
+    """The general topic and the known ones as Telegram says they are now. The upper end for the look through the
+    history (no smaller than the newest message id); None without MTProto or when it fails."""
     if not topic_lookup.available():
         return None
+    service_id = int(chat['service_id'])
     ids = sorted({GENERAL, *await topic_repository.thread_ids(chat['id'])})
-    newest = 0
     for start in range(0, len(ids), topic_lookup.BATCH):
-        found = await topic_lookup.by_ids(int(chat['service_id']), ids[start:start + topic_lookup.BATCH])
+        found = await topic_lookup.by_ids(service_id, ids[start:start + topic_lookup.BATCH])
         if found is None:
             return None
         # Only a topic Telegram calls deleted goes: an id it leaves out keeps the owner's choice for it
-        newest = max(newest, await _apply(chat, found))
-    return newest
+        await _apply(chat, found)
+    return max(await topic_lookup.newest(service_id) or 0, ids[-1])
 
 
 async def _scan(chat: dict, newest: int):
-    """Asks the ids from where the last look stopped up to the newest message known and a batch past it (a topic
-    made after the newest message the bot knows of), raised by every topic found; saves where it got after each
-    batch."""
+    """Asks the ids from where the last look stopped up to `newest` and a batch past it (a topic made meanwhile);
+    saves where it got after each batch."""
     service_id = int(chat['service_id'])
     upper = max(chat.get('topics_scan_upper') or 0, newest)
     scanned_to = max(chat.get('topics_scanned_to') or 1, 1)
@@ -132,7 +129,7 @@ async def _scan(chat: dict, newest: int):
         if found is None:
             await topic_repository.save_scan(chat['id'], scanned_to, upper, False)
             return
-        upper = max(upper, await _apply(chat, found))
+        await _apply(chat, found)
         scanned_to = batch[-1]
         await topic_repository.save_scan(chat['id'], scanned_to, upper, False)
     await topic_repository.save_scan(chat['id'], scanned_to, upper, True)
