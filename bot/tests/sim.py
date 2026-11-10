@@ -16,6 +16,9 @@ Actions, one per -c or per line of a file (# starts a comment):
     admin                   the current user is a bot admin
     in ID TEXT              the current user writes TEXT in the group (/allow in reply: see reply)
     reply ID USER TEXT      the current user replies TEXT in the group to a message of user USER
+    forum ID                the group has topics now
+    topic ID THREAD NAME TEXT   the current user writes TEXT in topic THREAD named NAME of the group (NAME in quotes
+                            if it has spaces; THREAD 1: the general topic)
     promote ID              the current user makes the bot an admin of the group (my_chat_member)
     sql QUERY               runs a query on the test database and prints the rows
     round                   the hourly round (tariffs, expiring access)
@@ -119,7 +122,7 @@ class Sim:
         return rows[0] if rows else await self.bench.owner(self.user)
 
     async def run(self, line: str):
-        words = shlex.split(line, posix=True) if line.split()[0] in ('reply',) else line.split(maxsplit=1)
+        words = shlex.split(line, posix=True) if line.split()[0] in ('reply', 'topic') else line.split(maxsplit=1)
         action, rest = words[0], (words[1] if len(words) > 1 else '')
         print(f'>>> {line}')
         bench = self.bench
@@ -171,6 +174,18 @@ class Sim:
             await bench.group_message(chat_id, self.user, text, reply_to_message={
                 'message_id': 9999, 'date': int(datetime.datetime.now().timestamp()),
                 'chat': self._group_chat(chat_id), 'from': author, 'text': 'hello'})
+        elif action == 'forum':
+            bench.telegram.chats[int(rest)]['is_forum'] = True
+        elif action == 'topic':
+            chat_id, thread, name, text = int(words[1]), int(words[2]), words[3], words[4]
+            if thread == 1:
+                await bench.group_message(chat_id, self.user, text, forum=True)
+            else:
+                await bench.group_message(
+                    chat_id, self.user, text, forum=True, message_thread_id=thread, is_topic_message=True,
+                    reply_to_message={
+                        'message_id': thread, 'date': 0, 'chat': {**self._group_chat(chat_id), 'is_forum': True},
+                        'from': self.user, 'forum_topic_created': {'name': name, 'icon_color': 7322096}})
         elif action == 'promote':
             chat_id = int(rest)
             bench.telegram.members[(chat_id, BOT_USER['id'])] = administrator(BOT_USER)

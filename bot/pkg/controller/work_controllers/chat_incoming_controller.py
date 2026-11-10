@@ -11,7 +11,7 @@ from pkg.service import access
 from pkg.service.chat import Chat
 from pkg.service.allowed_user import full_name
 from pkg.service.member_alerts import MemberAlerts
-from pkg.service import post_limit
+from pkg.service import post_limit, topics
 from pkg.service.post_limit import PostLimit
 from pkg.service.tariff import Tariff
 from pkg.system.logger import logger
@@ -30,13 +30,18 @@ async def incoming_chat_message(message: telegram_types.Message, edited: bool = 
         logger.warning("Incoming chat message has no sender")
         return
 
+    # A topic created, renamed, closed or reopened: remembered for the topics page (by an anonymous admin too, who
+    # writes as a bot), never removed
+    if message.chat.is_forum and topics.is_service(message):
+        chat_data = await Chat.find_by({'service_id': str(message.chat.id)})
+        if chat_data is not None:
+            await topics.seen(chat_data['id'], message)
+        return
+
     # Messages of bots, of anonymous admins (GroupAnonymousBot), of members writing as a channel (Channel_Bot)
     # and the posts a linked channel forwards to its discussion group (sent by 777000, "Telegram") stay
     if message.from_user.is_bot or message.is_automatic_forward or message.from_user.id == _TELEGRAM_SERVICE_ID:
         return
-
-    if message.chat.is_forum:
-        _log_topic_probe(message)
 
     # Service messages (joins, pins, a new title, a topic created or renamed) are Telegram's, not the member's
     if message.new_chat_members or message.left_chat_member or message.pinned_message \
@@ -51,7 +56,14 @@ async def incoming_chat_message(message: telegram_types.Message, edited: bool = 
 
     # Validate chat: unknown, over the tariff limit, or paused by the owner
     chat_data = await Chat.find_by({'service_id': str(chat_service_id)})
-    if chat_data is None or chat_data['disabled'] or not chat_data['active']:
+    if chat_data is None:
+        return
+    # The topic is remembered even while the group is paused, so that the topics page lists it
+    topic = await topics.seen(chat_data['id'], message)
+    if chat_data['disabled'] or not chat_data['active']:
+        return
+    # A free topic: the bot leaves everyone alone there
+    if topic is not None and not topic['protected']:
         return
 
     privileges = await allowed_user_repository.get_privileges(
@@ -73,34 +85,21 @@ async def incoming_chat_message(message: telegram_types.Message, edited: bool = 
         if not await _remove(message):
             return
         await chat_repository.count_removed(chat_data['id'])
+        free_topics = topic is not None and topic['has_free']
         if edited:
-            await notify_removed(message, chat_data['id'])
+            await notify_removed(message, chat_data['id'], free_topics)
             return
-        await Chat.restrict_user(
-            chat_service_id, sender.id, chat_data.get('restriction_duration_minutes', 5), message.chat.type,
-            is_admin=is_admin)
-        await notify_removed(message, chat_data['id'])
-        await MemberAlerts.removed(chat_data, message)
+        # A mute is for the whole group: with a free topic it would keep the member out of it too
+        if not free_topics:
+            await Chat.restrict_user(
+                chat_service_id, sender.id, chat_data.get('restriction_duration_minutes', 5), message.chat.type,
+                is_admin=is_admin)
+        await notify_removed(message, chat_data['id'], free_topics)
+        await MemberAlerts.removed(chat_data, message, topic_name=topic['name'] if topic is not None else None)
         return
 
     if not edited:
         await _apply_post_limit(message, chat_data, is_admin)
-
-
-def _log_topic_probe(message: telegram_types.Message):
-    """Temporary: what Telegram tells about the topic of a message in a group with topics, to build topic support on
-    what really comes (the Bot API docs leave it open). No text and no sender, only the topic's fields."""
-    root = message.reply_to_message
-    root_topic = root.forum_topic_created if root is not None else None
-    edited = message.forum_topic_edited
-    logger.info(
-        'Topic probe:', f'chat={message.chat.id}', f'thread={message.message_thread_id}',
-        f'topic_message={message.is_topic_message}', f'edited={message.edit_date is not None}',
-        f'reply_to={root.message_id if root is not None else None}',
-        f'reply_to_topic={root_topic.name if root_topic is not None else None!r}',
-        f'created={message.forum_topic_created.name if message.forum_topic_created else None!r}',
-        f'renamed={edited.name if edited is not None else None!r}',
-        f'closed={message.forum_topic_closed is not None}', f'reopened={message.forum_topic_reopened is not None}')
 
 
 async def _apply_post_limit(message: telegram_types.Message, chat_data: dict, is_admin: bool | None):
@@ -165,19 +164,21 @@ async def _ephemeral(message: telegram_types.Message, text: str):
         logger.error('Cannot send an ephemeral notice', e)
 
 
-async def notify_removed(message: telegram_types.Message, chat_id: int):
+async def notify_removed(message: telegram_types.Message, chat_id: int, free_topics: bool = False):
     """Tell the member why the message disappeared, in a message only they can see (Bot API ephemeral messages).
-    On the free tariff the notice also points to the bot."""
+    On the free tariff the notice also points to the bot. `free_topics`: the group has topics open to everyone."""
     if not _notice_due(message, 'removed'):
         return
 
     language_code = message.from_user.language_code
+    free_line = "\n\n" + localization.get_message(
+        ['work', 'removed_notice', 'free_topics'], language_code) if free_topics else ''
     chat = await Chat.find(chat_id)
     if chat is not None and access.effective_mode(chat, await Chat.owner_tariff_id(chat_id)) != 'off':
         await _ephemeral(message, localization.get_message(['access', 'notice'], language_code,
-                                                           link=access.join_link(chat_id)))
+                                                           link=access.join_link(chat_id)) + free_line)
         return
-    text = localization.get_message(['work', 'removed_notice', 'text'], language_code)
+    text = localization.get_message(['work', 'removed_notice', 'text'], language_code) + free_line
     if await Chat.owner_tariff_id(chat_id) == Tariff.FREE_TARIFF_ID:
         text += "\n\n" + localization.get_message(['work', 'removed_notice', 'promo'], language_code)
     await _ephemeral(message, text)

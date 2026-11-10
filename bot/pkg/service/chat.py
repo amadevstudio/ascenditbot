@@ -239,7 +239,8 @@ class Chat(Service):
 
     @classmethod
     async def load_info(cls, chat_service_id: str) \
-            -> TypedDict('_', {'service_id': str, 'title': str, 'nickname': str | None}) | ErrorDictInterface:
+            -> TypedDict('_', {'service_id': str, 'title': str, 'nickname': str | None, 'is_forum': bool}) \
+            | ErrorDictInterface:
         try:
             chat_info: telegram_types.Chat = await cls.BOT.get_chat(chat_service_id)
         except telegram_exceptions.TelegramBadRequest:
@@ -251,7 +252,8 @@ class Chat(Service):
         return {
             'service_id': str(chat_info.id),
             'title': chat_title,
-            'nickname': chat_nickname
+            'nickname': chat_nickname,
+            'is_forum': bool(chat_info.is_forum),
         }
 
     @staticmethod

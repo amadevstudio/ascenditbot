@@ -270,6 +270,14 @@ owner_tools_messages = {
                 'en': "Posts per member: {limit}",
                 'ru': "Постов на участника: {limit}"
             },
+            'topics_line': {
+                'en': "Topics protected: {protected} of {total}",
+                'ru': "Разделы под защитой: {protected} из {total}"
+            },
+            'topics_button': {
+                'en': "🗂 Topics",
+                'ru': "🗂 Разделы"
+            },
             'removed_week': {
                 'en': "Deleted in 7 days: {count}",
                 'ru': "Удалено за 7 дней: {count}"
@@ -407,6 +415,67 @@ owner_tools_messages = {
             'off_button': {
                 'en': "No limit",
                 'ru': "Без лимита"
+            },
+        },
+        # 🗂 The topics page of a group with topics (topics_controller), HTML
+        'topics': {
+            'text': {
+                'en': "🗂 <b>Topics: {chat_name}</b>",
+                'ru': "🗂 <b>Разделы: {chat_name}</b>"
+            },
+            'legend': {
+                'en': "🛡 protected: the group's rules apply\n💬 free: the bot leaves it alone\n"
+                      "Tap a topic to switch it.",
+                'ru': "🛡 под защитой: действуют правила группы\n💬 свободный: бот его не трогает\n"
+                      "Нажмите на раздел, чтобы переключить."
+            },
+            'count': {
+                'en': "Protected: {protected} of {total}",
+                'ru': "Под защитой: {protected} из {total}"
+            },
+            'no_mute': {
+                'en': "🔇 With free topics the bot does not mute offenders, it only deletes their messages: Telegram "
+                      "mutes in the whole group, the free topics included.",
+                'ru': "🔇 Раз есть свободные разделы, бот не даёт мут нарушителям, а только удаляет сообщения: "
+                      "Telegram даёт мут на всю группу, в том числе на свободные разделы."
+            },
+            'missing': {
+                'en': "Here are the topics where the bot has seen messages. One is missing? Write anything in it "
+                      "and tap \"🔄 Refresh\".",
+                'ru': "Здесь разделы, где бот уже видел сообщения. Нужного нет? Напишите в нём что угодно и "
+                      "нажмите \"🔄 Обновить\"."
+            },
+            'empty': {
+                'en': "The bot has not seen messages in the topics yet: Telegram does not give bots the list of "
+                      "topics. Write anything in each topic and tap \"🔄 Refresh\": they show up here.\n\n"
+                      "Until then every topic is protected: the group's rules apply everywhere.",
+                'ru': "Бот ещё не видел сообщений в разделах: список разделов Telegram ботам не даёт. Напишите что "
+                      "угодно в каждом разделе и нажмите \"🔄 Обновить\": они появятся здесь.\n\n"
+                      "Пока все разделы под защитой: правила группы действуют везде."
+            },
+            'general': {
+                'en': "General",
+                'ru': "Общий"
+            },
+            'unnamed': {
+                'en': "Topic #{id}",
+                'ru': "Раздел #{id}"
+            },
+            'default_button': {
+                'protected': {'en': "New topics: 🛡 protected", 'ru': "Новые разделы: 🛡 под защитой"},
+                'free': {'en': "New topics: 💬 free", 'ru': "Новые разделы: 💬 свободные"},
+            },
+            'default_toast': {
+                'protected': {'en': "New topics will be protected", 'ru': "Новые разделы будут под защитой"},
+                'free': {'en': "New topics will be free", 'ru': "Новые разделы будут свободными"},
+            },
+            'toggled': {
+                'protected': {'en': "{topic}: 🛡 protected", 'ru': "{topic}: 🛡 под защитой"},
+                'free': {'en': "{topic}: 💬 free", 'ru': "{topic}: 💬 свободный"},
+            },
+            'refresh_button': {
+                'en': "🔄 Refresh",
+                'ru': "🔄 Обновить"
             },
         },
         'add_to_whitelist': {

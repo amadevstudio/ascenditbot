@@ -42,6 +42,7 @@ class ModeratedChatInterface(TypedDict, total=False):
     access_secret: str | None
     access_provider_label: str | None
     access_hook_key: str | None
+    topics_default_protected: bool
 
 
 class UserModeratedChatConnectionInterface(TypedDict, total=False):

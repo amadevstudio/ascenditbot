@@ -11,6 +11,7 @@ from framework.controller.message_tools import message_sender, go_back_inline_ma
 from lib.python.dict_interface import validate_typed_dict_interface
 from lib.telegram.aiogram.navigation_builder import NavigationBuilder
 from pkg.config import routes
+from pkg.repository import topic_repository
 from pkg.controller.user_controllers.common_controller import chat_access_denied, raise_error
 from pkg.service.user_storage import UserStorage
 from pkg.service.channel_bonus import ChannelBonus
@@ -259,6 +260,11 @@ async def show(params: ControllerParams):
             ['chat', 'show', 'limit_line'], language_code, limit=_limit_text(chat_data, language_code))
         if not paid:
             message_text += " " + localization.get_message(['chat', 'show', 'limit', 'paused_free'], language_code)
+    topic_counts = await topic_repository.counts(chat_data['id']) if chat_info.get('is_forum') else None
+    if topic_counts is not None and topic_counts['total']:
+        message_text += "\n" + localization.get_message(
+            ['chat', 'show', 'topics_line'], language_code, protected=topic_counts['protected'],
+            total=topic_counts['total'])
     message_text += "\n" + localization.get_message(
         ['chat', 'show', 'removed_week'], language_code, count=removed_week)
     if chat_data['disabled'] and await ChannelBonus.free_group_withheld(
@@ -285,6 +291,7 @@ async def show(params: ControllerParams):
         [button(['admins_button', 'free' if chat_data.get('allow_administrators', True) else 'checked'],
                 {'tp': 'switch_admins'})],
         [button(['access_button', outsiders_mode(chat_data)], {'tp': 'chat_access'})],
+        *([[button(['topics_button'], {'tp': 'chat_topics'})]] if chat_info.get('is_forum') else []),
         [{'text': ('' if paid else localization.get_message(['chat', 'show', 'locked'], language_code))
             + localization.get_message(['chat', 'show', 'limit_button'], language_code,
                                        limit=_limit_text(chat_data, language_code)),

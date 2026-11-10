@@ -737,6 +737,11 @@ routed_messages = {
                     "Ваше сообщение удалено: писать в этой группе могут только участники из белого списка."
                     " Если вам нужен доступ, обратитесь к администратору группы."
             },
+            # A group with topics where some are free: said after the notice, in the topic the message was in
+            'free_topics': {
+                'en': "Some topics of this group are open to everyone: you can write there.",
+                'ru': "Часть разделов этой группы открыта для всех: там писать можно."
+            },
             'promo': {
                 'en': f"Want the same for your group? Free for one group: @{constants.bot_nickname}",
                 'ru': f"Хотите так же в своей группе? Одна группа бесплатно: @{constants.bot_nickname}"

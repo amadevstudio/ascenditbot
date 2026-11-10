@@ -3,7 +3,8 @@ from typing import Any, TypedDict, Callable, Dict, Literal
 from pkg.config.routes_dict import AvailableCommands, AvailableRoutes
 from pkg.controller.admin_controllers import admin_controller, channels_controller, sources_controller
 from pkg.controller.user_controllers import allowed_users_controller, chats_controller, welcome_controller, \
-    subscription_controller, settings_controller, access_controller, post_limit_controller, channel_bonus_controller
+    subscription_controller, settings_controller, access_controller, post_limit_controller, channel_bonus_controller, \
+    topics_controller
 from pkg.controller.user_controllers.validators.admin_validator import admin_validator
 from pkg.controller.user_controllers.validators.chat_access_validator import chat_access_validator
 from pkg.controller.user_controllers.validators.user_validator import email_presence_validator
@@ -36,6 +37,7 @@ class RoutesInterface(TypedDict):
     chat_restriction_duration: RouteInterface
     chat_access: RouteInterface
     chat_post_limit: RouteInterface
+    chat_topics: RouteInterface
     allowed_user: RouteInterface
     subscription: RouteInterface
     tariffs: RouteInterface
@@ -115,7 +117,8 @@ class RouteMap:
                 'chat_whitelist',
                 'chat_restriction_duration',
                 'chat_access',
-                'chat_post_limit'
+                'chat_post_limit',
+                'chat_topics'
             ],
             'actions': {
                 'switch_active': {
@@ -165,6 +168,16 @@ class RouteMap:
             'wait_for_input': True,
             'actions': {
                 'lim_set': {'method': post_limit_controller.set_limit},
+            },
+            'validator': chat_access_validator
+        },
+        'chat_topics': {
+            'method': topics_controller.page,
+            'available_from': ['call'],
+            'actions': {
+                'tpc_set': {'method': topics_controller.toggle},
+                'tpc_def': {'method': topics_controller.toggle_default},
+                'tpc_page': {'method': topics_controller.turn_page},
             },
             'validator': chat_access_validator
         },
