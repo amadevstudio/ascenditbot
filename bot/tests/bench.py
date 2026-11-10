@@ -170,6 +170,8 @@ class Bench:
         self.bot.session = self.telegram
         self._update_ids = itertools.count(1)
         self._message_ids = itertools.count(1)
+        # Undone before the next case: what a case swapped in for a fake (topic_lookup.backend)
+        self.cleanups: list = []
 
     @classmethod
     async def start(cls) -> 'Bench':
@@ -206,6 +208,8 @@ class Bench:
         """)
         Storage().connection.flushdb()
         chat_incoming_controller._last_notice.clear()
+        while self.cleanups:
+            self.cleanups.pop()()
         self.telegram.reset()
 
     async def sql(self, query: str, *args) -> list[dict]:

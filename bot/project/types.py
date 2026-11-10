@@ -43,6 +43,9 @@ class ModeratedChatInterface(TypedDict, total=False):
     access_provider_label: str | None
     access_hook_key: str | None
     topics_default_protected: bool
+    topics_scanned_to: int
+    topics_scan_upper: int | None
+    topics_scanned_at: datetime.datetime | None
 
 
 class UserModeratedChatConnectionInterface(TypedDict, total=False):
