@@ -84,6 +84,8 @@ class User(Service):
         params: BeginParamsInterface = {
             'referral': None
         }
+        if params_string.startswith(Attribution.AFFILIATE_PREFIX):
+            return {**params, 'src': Attribution.AFFILIATE}
         try:
             string_params = params_string.split('/')
             for param_pair in string_params:
