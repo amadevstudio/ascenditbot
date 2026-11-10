@@ -29,6 +29,7 @@ async def collect() -> dict:
             LEFT JOIN user_tariff_connections AS utc ON utc.user_id = u.id
         )
         SELECT t.id, t.channels_count, COUNT(p.tariff_id) AS total,
+            (SELECT tp.price FROM tariff_prices AS tp WHERE tp.tariff_id = t.id AND tp.currency_code = 'rub') AS price,
             COUNT(p.tariff_id) FILTER (WHERE p.paid) AS paid,
             COUNT(p.tariff_id) FILTER (WHERE NOT p.paid AND p.bonus) AS bonus,
             COUNT(p.tariff_id) FILTER (WHERE NOT p.paid AND NOT p.bonus) AS trial
