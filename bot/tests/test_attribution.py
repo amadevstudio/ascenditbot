@@ -1,5 +1,5 @@
 """Link sources (src_<tag>, made in /admin) stay separate from referrals, participant payments and trial access.
-ph2, the Product Hunt link, is the one the migration adds."""
+ph2, the Product Hunt link, and affiliate, Telegram's affiliate program, are the ones the migrations add."""
 import json
 
 from tests.bench import Bench, person
@@ -25,6 +25,19 @@ async def test_start_sources_preserve_referral_chat_and_join_links(bench: Bench)
     assert User.analyze_initial_data('/start j_123') == {'referral': None, 'j': '123'}
     assert User.analyze_initial_data('/start src_reddit') == {'referral': None, 'src': 'reddit'}
     assert User.analyze_initial_data('/start src_Reddit') == {'referral': None}
+
+
+async def test_telegram_affiliate_links_are_the_affiliate_source(bench: Bench):
+    """t.me/<bot>?start=_tgr_<code>, a link of Telegram's affiliate program: the affiliate source, which the
+    migration adds, so its users are not counted with those who came without a link"""
+    from pkg.service.user import User
+
+    initial = User.analyze_initial_data('/start _tgr_AbC123-x')
+    assert initial == {'referral': None, 'src': 'affiliate'}
+    registered = await User.register(OWNER['id'], 'ru', initial, 'start:99101:7')
+    assert registered['user']['first_source'] == 'affiliate'
+    [touch] = await bench.sql("SELECT touch_source, is_new_user FROM attribution_events WHERE event_type = 'bot_start'")
+    assert touch == {'touch_source': 'affiliate', 'is_new_user': True}
 
 
 async def test_a_made_up_tag_is_no_source(bench: Bench):
@@ -276,7 +289,7 @@ async def test_admin_adds_a_source_and_reads_its_funnel(bench: Bench):
     assert 'Не подходит' in _pages(bench, admin)[-1]
     await bench.private_message(admin, 'https://t.me/ascenditbot?start=src_Reddit')
     assert [row['tag'] for row in await bench.sql('SELECT tag FROM attribution_sources ORDER BY tag')] == [
-        'ph2', 'reddit']
+        'affiliate', 'ph2', 'reddit']
     assert 'https://t.me/ascenditbot?start=src_reddit' in _pages(bench, admin)[-1]
 
     newcomer = person(99108, 'newcomer', 'en')
@@ -285,7 +298,7 @@ async def test_admin_adds_a_source_and_reads_its_funnel(bench: Bench):
     assert user['first_source'] == 'reddit'
 
     await bench.tap(admin, json.dumps({'tp': 'back'}))
-    assert '2. reddit: стартов 1, новых пользователей 1' in _pages(bench, admin)[-1], _pages(bench, admin)[-1]
+    assert '3. reddit: стартов 1, новых пользователей 1' in _pages(bench, admin)[-1], _pages(bench, admin)[-1]
     assert {'tp': 'admin_source', 't': 'reddit'} in buttons()
     await bench.tap(admin, json.dumps({'tp': 'admin_source', 't': 'reddit'}))
     funnel = _pages(bench, admin)[-1]
@@ -293,7 +306,8 @@ async def test_admin_adds_a_source_and_reads_its_funnel(bench: Bench):
     assert 'Новые регистрации за период: 1' in funnel, funnel
 
     await bench.tap(admin, json.dumps({'tp': 'admin_delete_source'}))
-    assert [row['tag'] for row in await bench.sql('SELECT tag FROM attribution_sources')] == ['ph2']
+    assert [row['tag'] for row in await bench.sql('SELECT tag FROM attribution_sources ORDER BY tag')] == [
+        'affiliate', 'ph2']
     assert 'reddit' not in _pages(bench, admin)[-1]
 
     regular = person(99103, 'regular', 'ru')
@@ -302,7 +316,7 @@ async def test_admin_adds_a_source_and_reads_its_funnel(bench: Bench):
     for page in ('admin', 'admin_sources', 'admin_add_source'):
         await bench.tap(regular, json.dumps({'tp': page}))
     await bench.private_message(regular, 'spam')
-    assert len(await bench.sql('SELECT tag FROM attribution_sources')) == 1
+    assert len(await bench.sql('SELECT tag FROM attribution_sources')) == 2
     assert not any('Источники' in text or 'метку' in text or 'Админка' in text for text in _pages(bench, regular))
 
 

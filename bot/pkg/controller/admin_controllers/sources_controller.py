@@ -39,7 +39,8 @@ def format_funnel(tag: str, stats: dict) -> str:
     else:
         lines = [
             f"<b>{html.escape(tag)} · последние 12 месяцев</b>",
-            f"Ссылка: <code>{html.escape(Attribution.link(tag))}</code>",
+            "Ссылки партнёров Telegram: <code>t.me/…?start=_tgr_…</code>, у каждого партнёра своя"
+            if tag == Attribution.AFFILIATE else f"Ссылка: <code>{html.escape(Attribution.link(tag))}</code>",
             f"Стартов по ссылке: {stats['starts']}; новых пользователей при старте: {stats['new_starters']}; "
             f"существовавших ранее: {stats['returning_starters']} (это касания, не новые регистрации).",
             "",

@@ -1,6 +1,7 @@
 """Where people come from: links t.me/<bot>?start=src_<tag> that the bot's owner makes in the admin pages. A /start
 by such a link is a touch, and the first source of a new user (users.first_source); the reports follow those users
-for 30 days (pkg/repository/attribution_repository.py). A /start with a tag nobody made is no source."""
+for 30 days (pkg/repository/attribution_repository.py). A /start with a tag nobody made is no source. The links of
+Telegram's affiliate program are one source, affiliate."""
 import re
 
 from pkg.repository import attribution_repository
@@ -11,6 +12,11 @@ TAG = re.compile(r'[a-z0-9-]{1,32}')
 
 
 class Attribution:
+    # Telegram's affiliate program makes each affiliate a link t.me/<bot>?start=_tgr_<code> and pays them its share
+    # of Stars itself; the bot counts them all as one source (migrator 20261118120000_affiliate_source)
+    AFFILIATE = 'affiliate'
+    AFFILIATE_PREFIX = '_tgr_'
+
     @staticmethod
     def link(tag: str) -> str:
         return f"https://t.me/{constants.bot_nickname}?start=src_{tag}"
