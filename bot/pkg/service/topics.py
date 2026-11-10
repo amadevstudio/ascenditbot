@@ -12,6 +12,7 @@ topics nobody has written in since the bot came: a topic's id is the id of the m
 ids from 2 up to the newest message are asked, a batch at a time, in the background. Telegram answers about every
 id asked, calling the ones that are not topics deleted."""
 import asyncio
+import time
 
 from aiogram.types import Message
 
@@ -133,6 +134,73 @@ async def _scan(chat: dict, newest: int):
         scanned_to = batch[-1]
         await topic_repository.save_scan(chat['id'], scanned_to, upper, False)
     await topic_repository.save_scan(chat['id'], scanned_to, upper, True)
+
+
+# The list is shown as it is kept; Telegram is asked again in the background, at most once in this while unless
+# the owner taps "Refresh"
+FRESH_SECONDS = 60
+# How long the topics page waits for an ask running (started by the group's page a moment before) to be done
+WAIT_SECONDS = 3
+
+# Asks running now, by group id; when each group was last asked and whether Telegram answered
+_syncs: dict[int, asyncio.Task] = {}
+_synced: dict[int, tuple[float, bool]] = {}
+
+
+def sync_soon(chat: dict, force: bool = False) -> asyncio.Task | None:
+    """Asks Telegram about the group's topics in the background (refresh, then the look through the history),
+    unless an ask runs already or the last one is fresh. The ask running or started; None when nothing is asked."""
+    if not topic_lookup.available():
+        return None
+    chat_id = chat['id']
+    task = _syncs.get(chat_id)
+    if task is not None and not task.done():
+        return task
+    last = _synced.get(chat_id)
+    if not force and last is not None and last[1] and time.monotonic() - last[0] < FRESH_SECONDS:
+        return None
+
+    async def run():
+        from pkg.service.chat import Chat
+
+        try:
+            newest = await refresh(chat)
+        except Exception as e:
+            logger.error('Topic refresh failed', chat_id, e)
+            newest = None
+        _synced[chat_id] = (time.monotonic(), newest is not None)
+        if newest is not None:
+            # The scan goes on from where the group says the last one stopped
+            start_scan(await Chat.find(chat_id) or chat, newest)
+
+    _syncs[chat_id] = asyncio.create_task(run())
+    return _syncs[chat_id]
+
+
+async def synced(chat: dict, force: bool = False, wait: float = WAIT_SECONDS) -> bool:
+    """Asks Telegram (as `sync_soon`) and waits for the answer a little: whether the kept list is checked with
+    Telegram. Without an answer yet it is what the last ask said; before any since the start, whether the group
+    was ever looked through."""
+    task = sync_soon(chat, force)
+    if task is not None:
+        await asyncio.wait({task}, timeout=wait)
+    return checked(chat)
+
+
+def checked(chat: dict) -> bool:
+    """Whether the kept list is checked with Telegram, asking nothing."""
+    if not topic_lookup.available():
+        return False
+    last = _synced.get(chat['id'])
+    if last is not None:
+        return last[1]
+    return chat.get('topics_scan_upper') is not None
+
+
+def forget():
+    """Drops what is known of asks (tests)."""
+    _syncs.clear()
+    _synced.clear()
 
 
 def start_scan(chat: dict, newest: int) -> bool:

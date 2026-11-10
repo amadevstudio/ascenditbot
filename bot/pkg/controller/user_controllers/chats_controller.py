@@ -17,7 +17,7 @@ from pkg.service.user_storage import UserStorage
 from pkg.service.channel_bonus import ChannelBonus
 from pkg.service.chat import Chat
 from pkg.service.user import User
-from pkg.service import group_connect, post_limit
+from pkg.service import group_connect, post_limit, topics
 from pkg.service.access import outsiders_mode
 from pkg.service.tariff import Tariff
 from project.i18n_owner_tools import ADD_TO_GROUP_URL
@@ -260,7 +260,11 @@ async def show(params: ControllerParams):
             ['chat', 'show', 'limit_line'], language_code, limit=_limit_text(chat_data, language_code))
         if not paid:
             message_text += " " + localization.get_message(['chat', 'show', 'limit', 'paused_free'], language_code)
-    topic_counts = await topic_repository.counts(chat_data['id']) if chat_info.get('is_forum') else None
+    topic_counts = None
+    if chat_info.get('is_forum'):
+        # The topics page is likely next: Telegram is asked about the topics meanwhile, in the background
+        topics.sync_soon(chat_data)
+        topic_counts = await topic_repository.counts(chat_data['id'])
     if topic_counts is not None and topic_counts['total']:
         message_text += "\n" + localization.get_message(
             ['chat', 'show', 'topics_line'], language_code, protected=topic_counts['protected'],

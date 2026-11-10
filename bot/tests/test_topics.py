@@ -238,16 +238,25 @@ def _telegram_topics(bench: Bench, topics: dict[int, dict], newest: int | None =
         async def newest(self, chat_service_id: int):
             return newest
 
-    topic_lookup.backend = Backend()
-    bench.cleanups.append(lambda: setattr(topic_lookup, 'backend', None))
+    _use_backend(bench, Backend())
     return asked
 
 
+def _use_backend(bench: Bench, backend):
+    from pkg.service import topic_lookup, topics
+
+    topic_lookup.backend = backend
+    bench.cleanups.append(lambda: setattr(topic_lookup, 'backend', None))
+    bench.cleanups.append(topics.forget)
+
+
 async def _scan_done(chat: dict):
+    """Waits for Telegram's answer about the group's topics and the look through the history after it."""
     from pkg.service import topics
-    task = topics._scans.get(chat['id'])
-    if task is not None:
-        await task
+    for tasks in (topics._syncs, topics._scans):
+        task = tasks.get(chat['id'])
+        if task is not None:
+            await task
 
 
 async def test_name_hint_does_not_undo_a_rename(bench: Bench):
@@ -311,8 +320,6 @@ async def test_known_topics_renamed_and_deleted_from_telegram(bench: Bench):
 
 async def test_without_telegram_s_answer_the_page_is_as_before(bench: Bench):
     """MTProto on but failing: the page lists what the bot has seen and says how to add the rest"""
-    from pkg.service import topic_lookup
-
     chat = await _scene(bench)
     await _in_topic(bench, ALICE, 4, 'Services')
 
@@ -323,10 +330,35 @@ async def test_without_telegram_s_answer_the_page_is_as_before(bench: Bench):
         async def newest(self, chat_service_id: int):
             return None
 
-    topic_lookup.backend = Failing()
-    bench.cleanups.append(lambda: setattr(topic_lookup, 'backend', None))
+    _use_backend(bench, Failing())
     await _open_group_page(bench, chat)
     await bench.tap(OWNER, json.dumps({'tp': 'chat_topics'}))
     page = _shown(bench)
     assert 'Нужного нет?' in page.text and 'Ищу разделы' not in page.text, page.text
     assert '🛡 Services' in [b['text'] for b in _buttons(page)]
+
+
+async def test_telegram_asked_when_the_group_page_opens(bench: Bench):
+    """the group's page asks Telegram about the topics in the background: the topics page opened next shows the
+    answer without asking again; opened again within a minute it asks nothing, "Refresh" asks always"""
+    chat = await _scene(bench)
+    await _in_topic(bench, ALICE, 4, 'Old')
+    await _in_topic(bench, ALICE, 16, 'Kekes')
+    asked = _telegram_topics(bench, {1: {'title': 'General'}, 4: {'title': 'New'}}, newest=20)
+    await _open_group_page(bench, chat)
+    assert asked and asked[0] == [1, 4, 16], asked
+    await _scan_done(chat)
+    count = len(asked)
+
+    await bench.tap(OWNER, json.dumps({'tp': 'chat_topics'}))
+    page = _shown(bench)
+    assert len(asked) == count, 'the answer got by the group page is used'
+    texts = [b['text'] for b in _buttons(page)]
+    assert '🛡 New' in texts and not any('Kekes' in text for text in texts), texts
+    assert 'Список сверен с Telegram' in page.text, page.text
+
+    await bench.tap(OWNER, json.dumps({'tp': 'tpc_page', 'p': 1}))
+    assert len(asked) == count, 'a page turned within a minute asks nothing'
+    await bench.tap(OWNER, json.dumps({'tp': 'tpc_page', 'p': 1, 'r': 1}))
+    await _scan_done(chat)
+    assert len(asked) > count and asked[count] == [1, 4], asked
