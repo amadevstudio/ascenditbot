@@ -16,6 +16,30 @@ async def menu(params: ControllerParams):
             *go_back_inline_markup(params['language_code'])]}])
 
 
+def _groups(count: int) -> str:
+    if count % 10 == 1 and count % 100 != 11:
+        return f"{count} группа"
+    if 2 <= count % 10 <= 4 and not 12 <= count % 100 <= 14:
+        return f"{count} группы"
+    return f"{count} групп"
+
+
+def format_tariffs(tariffs: list[dict], bonus: dict) -> list[str]:
+    """Who is on each tariff now: on the free one all who do not pay, on a paid one split by how they got it."""
+    lines = ["<b>Тарифы</b>"]
+    for tariff in tariffs:
+        name = "Бесплатный" if tariff['id'] == Tariff.FREE_TARIFF_ID else f"Тариф {tariff['id']}"
+        line = f"{name} ({_groups(tariff['channels_count'] or 0)}): {tariff['total']}"
+        if tariff['id'] != Tariff.FREE_TARIFF_ID and tariff['total']:
+            parts = [f"{label} {tariff[key]}" for key, label in
+                     (('paid', "оплатили"), ('trial', "триал"), ('bonus', "бонус за каналы")) if tariff[key]]
+            line += " – " + ", ".join(parts)
+        lines.append(line)
+    lines.append(f"Бонус за подписку на каналы взяли: {bonus['taken']}"
+                 + (f", сейчас отписаны: {bonus['lost']}" if bonus['lost'] else ""))
+    return lines
+
+
 def format_stats(stats: dict) -> str:
     users, groups, money = stats['users'], stats['groups'], stats['money']
     lines = [
@@ -23,7 +47,8 @@ def format_stats(stats: dict) -> str:
         f"Всего: {users['total']} (ru {users['ru']}, en {users['en']}, другие {users['other']})",
         f"Новых: сутки {users['day']}, неделя {users['week']}, месяц {users['month']}",
         f"С группами: {users['with_groups']}",
-        f"Тариф: бесплатный {users['free']}, платный {users['paid']} (из них на триале {users['trial']})",
+        "",
+        *format_tariffs(stats['tariffs'], stats['bonus']),
         "",
         "<b>Группы</b>",
         f"Всего: {groups['total']}",
