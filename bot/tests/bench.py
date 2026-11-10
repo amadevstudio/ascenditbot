@@ -266,9 +266,10 @@ class Bench:
                     {'type': 'bot_command', 'offset': 0, 'length': len(text.split()[0])}]
         return message
 
-    async def group_message(self, chat_id: int, user: dict, text: str = 'hello', chat_type: str = 'supergroup',
-                            **extra) -> dict:
-        message = self._message({'id': chat_id, 'type': chat_type, 'title': f'Group {chat_id}'}, user, text, **extra)
+    async def group_message(self, chat_id: int, user: dict, text: str | None = 'hello', chat_type: str = 'supergroup',
+                            forum: bool = False, **extra) -> dict:
+        chat = {'id': chat_id, 'type': chat_type, 'title': f'Group {chat_id}', **({'is_forum': True} if forum else {})}
+        message = self._message(chat, user, text, **extra)
         await self.feed({'message': message})
         return message
 
