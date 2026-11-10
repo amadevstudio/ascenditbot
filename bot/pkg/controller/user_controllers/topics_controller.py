@@ -9,7 +9,7 @@ from framework.controller.types import ControllerParams
 from lib.language import localization
 from pkg.controller.user_controllers.common_controller import raise_error
 from pkg.repository import topic_repository
-from pkg.service import topic_lookup, topics
+from pkg.service import topics
 from pkg.service.chat import Chat
 
 
@@ -33,14 +33,12 @@ def mark(protected: bool) -> str:
     return '🛡' if protected else '💬'
 
 
-async def _sync(chat: dict) -> tuple[dict, bool]:
-    """With MTProto: the known topics as Telegram says they are now, and the look through the group's history for
-    the others goes on in the background. The group as it is after, and whether Telegram answered."""
-    newest = await topics.refresh(chat)
-    if newest is None:
-        return chat, False
-    topics.start_scan(chat, newest)
-    return await Chat.find(chat['id']) or chat, True
+async def _sync(chat: dict, force: bool) -> tuple[dict, bool]:
+    """With MTProto: the known topics as Telegram says they are now (asked when the group's page opened, or now
+    unless asked a moment ago; "Refresh" asks always), the look through the history going on in the background.
+    The group as it is after, and whether the list is checked with Telegram."""
+    synced = await topics.synced(chat, force)
+    return await Chat.find(chat['id']) or chat, synced
 
 
 async def _render(params: ControllerParams, chat: dict, page: int = 1, synced: bool = False):
@@ -73,7 +71,7 @@ async def _render(params: ControllerParams, chat: dict, page: int = 1, synced: b
     reply_markup.append([{'text': _text(['default_button', 'protected' if default else 'free'], language_code),
                           'callback_data': {'tp': 'tpc_def', 'p': page}}])
     reply_markup.append([{'text': _text(['refresh_button'], language_code),
-                          'callback_data': {'tp': 'tpc_page', 'p': page}}])
+                          'callback_data': {'tp': 'tpc_page', 'p': page, 'r': 1}}])
     reply_markup.append([go_back_inline_button(language_code)])
     await message_sender(params['message'].chat.id, message_structures=[{
         'type': 'text', 'text': "\n\n".join(lines), 'reply_markup': reply_markup, 'parse_mode': 'HTML'}])
@@ -90,10 +88,6 @@ def _found_line(chat: dict, total: int, synced: bool, language_code: str | None)
     return _text(['synced'], language_code)
 
 
-def _checked_before(chat: dict) -> bool:
-    return topic_lookup.available() and chat.get('topics_scan_upper') is not None
-
-
 def _page_of(params: ControllerParams) -> int:
     try:
         return int((params['state_data'] or {}).get('p') or 1)
@@ -105,18 +99,18 @@ async def page(params: ControllerParams):
     chat = await _chat(params)
     if chat is None:
         return False
-    chat, synced = await _sync(chat)
+    chat, synced = await _sync(chat, force=False)
     await _render(params, chat, _page_of(params), synced)
 
 
 async def turn_page(params: ControllerParams):
-    """Another page of topics, or the same one again to see topics the bot has seen since."""
+    """Another page of topics, or the same one again ("Refresh", r) with Telegram asked again."""
     chat = await _chat(params)
     if chat is None:
         return
     if params['call'] is not None:
         await params['call'].answer()
-    chat, synced = await _sync(chat)
+    chat, synced = await _sync(chat, force=bool((params['state_data'] or {}).get('r')))
     await _render(params, chat, _page_of(params), synced)
 
 
@@ -135,7 +129,7 @@ async def toggle(params: ControllerParams):
             ['toggled', 'protected' if topic['protected'] else 'free'], language_code,
             topic=topics.title(topic, language_code)))
     # A switch asks Telegram nothing: the page says what the last check said
-    await _render(params, chat, _page_of(params), _checked_before(chat))
+    await _render(params, chat, _page_of(params), topics.checked(chat))
 
 
 async def toggle_default(params: ControllerParams):
@@ -148,4 +142,4 @@ async def toggle_default(params: ControllerParams):
     await notify(params['call'], params['message'], _text(
         ['default_toast', 'protected' if protected else 'free'], params['language_code']))
     # A switch asks Telegram nothing: the page says what the last check said
-    await _render(params, chat, _page_of(params), _checked_before(chat))
+    await _render(params, chat, _page_of(params), topics.checked(chat))
