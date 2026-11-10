@@ -116,6 +116,44 @@ async def test_notice_not_repeated(bench: Bench):
     assert len(bench.telegram.sent_to(GROUP)) == 1
 
 
+async def test_notice_in_the_topic_of_the_message(bench: Bench):
+    """in a group with topics the notice goes to the topic the stranger wrote in, not to the general one"""
+    await _scene(bench)
+    await bench.group_message(GROUP, STRANGER, forum=True, message_thread_id=12, is_topic_message=True)
+    assert len(bench.telegram.calls_of('deleteMessage')) == 1
+    [notice] = bench.telegram.sent_to(GROUP)
+    assert notice.message_thread_id == 12
+    assert notice.ephemeral_message_parameters.receiver_user_id == STRANGER['id']
+
+
+async def test_notice_in_the_general_topic(bench: Bench):
+    """a message in the general topic has no topic of its own: the notice goes to the chat as it is"""
+    await _scene(bench)
+    await bench.group_message(GROUP, STRANGER, forum=True)
+    [notice] = bench.telegram.sent_to(GROUP)
+    assert notice.message_thread_id is None
+
+
+async def test_reply_thread_without_topics_is_not_a_topic(bench: Bench):
+    """a reply in a group without topics carries a thread too: the notice still goes to the chat as it is"""
+    await _scene(bench)
+    await bench.group_message(GROUP, STRANGER, message_thread_id=5)
+    [notice] = bench.telegram.sent_to(GROUP)
+    assert notice.message_thread_id is None
+
+
+async def test_topic_service_messages_stay(bench: Bench):
+    """a topic created, renamed, closed or reopened by someone off the whitelist is Telegram's message: it stays"""
+    await _scene(bench)
+    for service in ({'forum_topic_created': {'name': 'Services', 'icon_color': 7322096}},
+                    {'forum_topic_edited': {'name': 'Ads'}},
+                    {'forum_topic_closed': {}},
+                    {'forum_topic_reopened': {}}):
+        await bench.group_message(GROUP, STRANGER, text=None, forum=True, message_thread_id=12,
+                                  is_topic_message=True, **service)
+    assert _untouched(bench), bench.telegram.calls
+
+
 async def test_paused_group_ignored(bench: Bench):
     """a group the owner paused is not moderated"""
     await _scene(bench, active=False)

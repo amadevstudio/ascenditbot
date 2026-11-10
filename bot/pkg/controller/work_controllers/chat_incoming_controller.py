@@ -35,9 +35,15 @@ async def incoming_chat_message(message: telegram_types.Message, edited: bool = 
     if message.from_user.is_bot or message.is_automatic_forward or message.from_user.id == _TELEGRAM_SERVICE_ID:
         return
 
-    # Service messages (joins, pins, a new title) are Telegram's, not the member's
+    if message.chat.is_forum:
+        _log_topic_probe(message)
+
+    # Service messages (joins, pins, a new title, a topic created or renamed) are Telegram's, not the member's
     if message.new_chat_members or message.left_chat_member or message.pinned_message \
-            or message.new_chat_title or message.new_chat_photo or message.delete_chat_photo:
+            or message.new_chat_title or message.new_chat_photo or message.delete_chat_photo \
+            or message.forum_topic_created or message.forum_topic_edited or message.forum_topic_closed \
+            or message.forum_topic_reopened or message.general_forum_topic_hidden \
+            or message.general_forum_topic_unhidden:
         return
 
     chat_service_id: int = message.chat.id
@@ -79,6 +85,22 @@ async def incoming_chat_message(message: telegram_types.Message, edited: bool = 
 
     if not edited:
         await _apply_post_limit(message, chat_data, is_admin)
+
+
+def _log_topic_probe(message: telegram_types.Message):
+    """Temporary: what Telegram tells about the topic of a message in a group with topics, to build topic support on
+    what really comes (the Bot API docs leave it open). No text and no sender, only the topic's fields."""
+    root = message.reply_to_message
+    root_topic = root.forum_topic_created if root is not None else None
+    edited = message.forum_topic_edited
+    logger.info(
+        'Topic probe:', f'chat={message.chat.id}', f'thread={message.message_thread_id}',
+        f'topic_message={message.is_topic_message}', f'edited={message.edit_date is not None}',
+        f'reply_to={root.message_id if root is not None else None}',
+        f'reply_to_topic={root_topic.name if root_topic is not None else None!r}',
+        f'created={message.forum_topic_created.name if message.forum_topic_created else None!r}',
+        f'renamed={edited.name if edited is not None else None!r}',
+        f'closed={message.forum_topic_closed is not None}', f'reopened={message.forum_topic_reopened is not None}')
 
 
 async def _apply_post_limit(message: telegram_types.Message, chat_data: dict, is_admin: bool | None):
@@ -130,9 +152,12 @@ def _notice_due(message: telegram_types.Message, kind: str) -> bool:
 
 
 async def _ephemeral(message: telegram_types.Message, text: str):
+    """In a group with topics the notice goes to the topic of the message, not to the general one. A reply in a
+    group without topics has a thread too (is_topic_message unset): the notice goes to the chat as it is."""
     try:
         await bot.send_message(
             message.chat.id, text,
+            message_thread_id=message.message_thread_id if message.is_topic_message else None,
             ephemeral_message_parameters=EphemeralMessageParameters(receiver_user_id=message.from_user.id))
     except (telegram_exceptions.TelegramBadRequest, telegram_exceptions.TelegramForbiddenError) as e:
         logger.warning('Cannot send an ephemeral notice', e)
