@@ -600,7 +600,7 @@ async def test_users_count_opens_the_same_admin_bot_page(bench: Bench):
     await bench.tap(OWNER, json.dumps({'tp': 'admin_bot'}))
     page = [c for c in bench.telegram.calls_of('sendMessage', 'editMessageText')
             if int(c.chat_id) == OWNER['id']][-1]
-    assert 'Пользователи: 1' in page.text and '(работают 1)' in page.text and 'За 30 дней' in page.text, page.text
+    assert 'Пользователи: 1' in page.text and 'Работают 1' in page.text and 'Деньги за 30 дней' in page.text, page.text
 
     for command in ('/usersCount', '/userscount', '/USERSCOUNT', '/usersCount@ascenditbot'):
         bench.telegram.calls.clear()
@@ -864,22 +864,41 @@ async def test_lost_rights_say_how_to_fix_in_list_page_and_menu(bench: Bench):
 
 
 async def test_admin_bot_page_splits_users_by_tariff(bench: Bench):
-    """the bot's page says how many are on each tariff and how they got there: paid, the trial, the bonus for
-    subscribing to the channels; and how many took the bonus and left a channel since"""
+    """the bot's page says how many are on each tariff and how they got there: pay now, paid before (a term given
+    by hand), the trial, the bonus for subscribing to the channels; the bot's admins are not counted; a tariff
+    without a group limit says so; and how many took the bonus and left a channel since"""
     from pkg.service.tariff import Tariff
 
     await _scene(bench)
     await bench.sql('UPDATE users SET is_admin = TRUE')
-    payer, trial, bonus, lost = (person(i, f'user{i}') for i in (811, 812, 813, 814))
-    for user in (payer, trial, bonus, lost):
+    payer, trial, bonus, lost, before = (person(i, f'user{i}') for i in (811, 812, 813, 814, 815))
+    for user in (payer, trial, bonus, lost, before):
         await bench.private_message(user, '/start')
-    ids = {user['id']: row['id'] for user in (payer, trial, bonus, lost)
+    ids = {user['id']: row['id'] for user in (payer, trial, bonus, lost, before)
            for row in await bench.sql(f"SELECT id FROM users WHERE service_id = '{user['id']}'")}
-    for user in (payer, trial, bonus):
+    for user in (payer, trial, bonus, before):
         await Tariff.change(ids[user['id']], 1, force=True)
     await Tariff.change(ids[payer['id']], 2, force=True)
-    await bench.sql(f"INSERT INTO payments_history (user_id, payment_service, amount, currency_code, created_at, "
-                    f"updated_at) VALUES ({ids[payer['id']]}, 'yoomoney', 75000, 'rub', LOCALTIMESTAMP, LOCALTIMESTAMP)")
+    # The admin on the top tariff, which has no group limit: not counted
+    [admin] = await bench.sql("SELECT id FROM users WHERE is_admin")
+    await Tariff.change(admin['id'], 3, force=True)
+    [tariff] = await bench.sql("SELECT channels_count FROM tariffs WHERE id = 3")
+    await bench.sql("UPDATE tariffs SET channels_count = NULL WHERE id = 3")
+    try:
+        await _tariff_lines(bench, ids, payer, trial, bonus, lost, before)
+    finally:
+        # The tariffs are seeded once for all the cases
+        await bench.sql("UPDATE tariffs SET channels_count = $1 WHERE id = 3", tariff['channels_count'])
+
+
+async def _tariff_lines(bench: Bench, ids: dict, payer: dict, trial: dict, bonus: dict, lost: dict, before: dict):
+    from pkg.service.tariff import Tariff
+
+    payment = ("INSERT INTO payments_history (user_id, payment_service, amount, currency_code, created_at, "
+               "updated_at) VALUES ({}, 'yoomoney', {}, 'rub', {}, {})")
+    await bench.sql(payment.format(ids[payer['id']], 75000, 'LOCALTIMESTAMP', 'LOCALTIMESTAMP'))
+    old = "LOCALTIMESTAMP - interval '60 days'"
+    await bench.sql(payment.format(ids[before['id']], 30000, old, old))
     await bench.sql(f"INSERT INTO channel_bonus_claims (user_id, channel_ids) "
                     f"VALUES ({ids[bonus['id']]}, '{{1}}')")
     await bench.sql(f"INSERT INTO channel_bonus_claims (user_id, channel_ids, lost_at) "
@@ -888,9 +907,72 @@ async def test_admin_bot_page_splits_users_by_tariff(bench: Bench):
     bench.telegram.calls.clear()
     await bench.private_message(OWNER, '/usersCount')
     page = bench.telegram.texts_to(OWNER['id'])[-1]
-    assert 'Бесплатный · 1 группа: 2\n' in page, page
-    assert '300 ₽ · 3 группы: 2 (🧪 1, 📢 1)\n' in page, page
-    assert '1 000 ₽ · 10 групп: 1 (💳 1)\n' in page, page
-    assert '25 групп' not in page, page
-    assert '📢 Бонус за каналы взяли 2, отписались 1\n' in page, page
-    assert 'За 30 дней</b>: 1 платёж на 750 ₽' in page, page
+    indent = '\u00a0' * 4
+    assert f'🎫 <b>Тарифы</b>\n{indent}Бесплатный, 1 группа: 1\n' in page, page
+    assert f'{indent}300 ₽, 3 группы: 3 (↩️ 1, 🧪 1, 📢 1)\n' in page, page
+    assert f'{indent}1 000 ₽, 10 групп: 1 (💳 1)\n' in page, page
+    assert 'без лимита' not in page and '25 групп' not in page, page
+    assert f'{indent}Бонус за каналы: взяли 2, отписались 1\n<i>💳 платят сейчас' in page, page
+    assert f'💰 <b>Деньги за 30 дней</b>\n{indent}1 платёж на 750 ₽' in page, page
+
+    # Someone else on the tariff without a limit: shown as such
+    await Tariff.change(ids[trial['id']], 3, force=True)
+    bench.telegram.calls.clear()
+    await bench.private_message(OWNER, '/usersCount')
+    page = bench.telegram.texts_to(OWNER['id'])[-1]
+    assert f'{indent}3 000 ₽, без лимита: 1 (🧪 1)\n' in page, page
+
+
+async def test_blocking_the_bot_is_counted(bench: Bench):
+    """a user blocks the bot (my_chat_member in private, kicked): the bot's page counts them; unblocking takes
+    them off the count"""
+    await _scene(bench)
+    await bench.sql('UPDATE users SET is_admin = TRUE')
+    user = person(821, 'user821')
+    await bench.private_message(user, '/start')
+    chat = {'id': user['id'], 'type': 'private', 'first_name': 'Test'}
+    now = int(datetime.datetime.now().timestamp())
+
+    def state(status: str) -> dict:
+        return {'status': status, 'user': BOT_USER, **({'until_date': 0} if status == 'kicked' else {})}
+
+    async def status(old: str, new: str):
+        await bench.feed({'my_chat_member': {
+            'chat': chat, 'from': user, 'date': now,
+            'old_chat_member': state(old), 'new_chat_member': state(new)}})
+
+    async def page() -> str:
+        bench.telegram.calls.clear()
+        await bench.private_message(OWNER, '/usersCount')
+        return bench.telegram.texts_to(OWNER['id'])[-1]
+
+    assert 'Заблокировали' not in await page()
+    await status('member', 'kicked')
+    [row] = await bench.sql(f"SELECT blocked_at FROM users WHERE service_id = '{user['id']}'")
+    assert row['blocked_at'] is not None
+    assert 'Заблокировали бота: 1, могут получать сообщения 1' in await page()
+    await status('kicked', 'member')
+    [row] = await bench.sql(f"SELECT blocked_at FROM users WHERE service_id = '{user['id']}'")
+    assert row['blocked_at'] is None
+    assert 'Заблокировали' not in await page()
+
+
+async def test_admin_bot_page_counts_access_sales(bench: Bench):
+    """groups that sell the right to write and the sales in 30 days, the bot's admins' own groups left out"""
+    owner, chat = await _scene(bench, access_mode='paid')
+    await bench.sql('UPDATE users SET is_admin = TRUE')
+    seller = person(831, 'user831')
+    await bench.private_message(seller, '/start')
+    other = await bench.group(GROUP - 1, await bench.owner(seller), access_mode='paid')
+    sale = ("INSERT INTO access_requests (moderated_chat_id, user_service_id, kind, status, decided_at, created_at, "
+            "updated_at) VALUES ({}, '{}', '{}', '{}', LOCALTIMESTAMP, LOCALTIMESTAMP, LOCALTIMESTAMP)")
+    await bench.sql(sale.format(chat['id'], 1, 'paid_auto', 'approved'))     # the admin's group: not counted
+    await bench.sql(sale.format(other['id'], 2, 'paid_auto', 'approved'))
+    await bench.sql(sale.format(other['id'], 3, 'paid_manual', 'revoked'))   # sold, then taken back: a sale
+    await bench.sql(sale.format(other['id'], 4, 'paid_manual', 'rejected'))
+    await bench.sql(sale.format(other['id'], 5, 'request', 'approved'))      # free request: no sale
+
+    bench.telegram.calls.clear()
+    await bench.private_message(OWNER, '/usersCount')
+    page = bench.telegram.texts_to(OWNER['id'])[-1]
+    assert 'Продают доступ: 1 группа, продаж за 30 дней: 2\n' in page, page

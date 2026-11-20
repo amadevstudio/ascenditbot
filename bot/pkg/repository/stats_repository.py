@@ -15,24 +15,33 @@ async def collect() -> dict:
             COUNT(*) FILTER (WHERE u.created_at > LOCALTIMESTAMP - interval '7 days') AS week,
             COUNT(*) FILTER (WHERE u.created_at > LOCALTIMESTAMP - interval '30 days') AS month,
             COUNT(*) FILTER (WHERE EXISTS (
-                SELECT 1 FROM user_moderated_chat_connections AS umcc WHERE umcc.user_id = u.id)) AS with_groups
+                SELECT 1 FROM user_moderated_chat_connections AS umcc WHERE umcc.user_id = u.id)) AS with_groups,
+            COUNT(*) FILTER (WHERE u.blocked_at IS NOT NULL) AS blocked
         FROM users AS u
     """)
-    # Who is on each tariff now and how they got there: paid once at least, the bonus for subscribing to the
-    # channels (taken, never paid), the trial (neither)
+    # Who is on each tariff now and how they got there, the bot's admins left out: pay now (a payment or a charge
+    # of the tariff in the last 35 days, a monthly term), paid before (a payment once, not lately: a term given by
+    # hand looks like this), the bonus for subscribing to the channels (never paid), the trial (none of these)
     tariffs = await databaseExecutor.run(db.fetchall, """
         WITH people AS (
             SELECT COALESCE(utc.tariff_id, 0) AS tariff_id,
                 EXISTS (SELECT 1 FROM payments_history AS ph WHERE ph.user_id = u.id AND ph.amount > 0) AS paid,
+                (EXISTS (SELECT 1 FROM payments_history AS ph WHERE ph.user_id = u.id AND ph.amount > 0
+                        AND ph.created_at > LOCALTIMESTAMP - interval '35 days')
+                    OR EXISTS (SELECT 1 FROM attribution_events AS ae WHERE ae.user_id = u.id
+                        AND ae.event_type = 'owner_subscription_charged'
+                        AND ae.occurred_at > CURRENT_TIMESTAMP - interval '35 days')) AS paid_lately,
                 EXISTS (SELECT 1 FROM channel_bonus_claims AS cbc WHERE cbc.user_id = u.id) AS bonus
             FROM users AS u
             LEFT JOIN user_tariff_connections AS utc ON utc.user_id = u.id
+            WHERE u.is_admin IS FALSE
         )
         SELECT t.id, t.channels_count, COUNT(p.tariff_id) AS total,
             (SELECT tp.price FROM tariff_prices AS tp WHERE tp.tariff_id = t.id AND tp.currency_code = 'rub') AS price,
-            COUNT(p.tariff_id) FILTER (WHERE p.paid) AS paid,
-            COUNT(p.tariff_id) FILTER (WHERE NOT p.paid AND p.bonus) AS bonus,
-            COUNT(p.tariff_id) FILTER (WHERE NOT p.paid AND NOT p.bonus) AS trial
+            COUNT(p.tariff_id) FILTER (WHERE p.paid_lately) AS paid,
+            COUNT(p.tariff_id) FILTER (WHERE p.paid AND NOT p.paid_lately) AS paid_before,
+            COUNT(p.tariff_id) FILTER (WHERE NOT p.paid AND NOT p.paid_lately AND p.bonus) AS bonus,
+            COUNT(p.tariff_id) FILTER (WHERE NOT p.paid AND NOT p.paid_lately AND NOT p.bonus) AS trial
         FROM tariffs AS t
         LEFT JOIN people AS p ON p.tariff_id = t.id
         GROUP BY t.id, t.channels_count
@@ -42,6 +51,11 @@ async def collect() -> dict:
         SELECT COUNT(*) AS taken, COUNT(*) FILTER (WHERE lost_at IS NOT NULL) AS lost FROM channel_bonus_claims
     """)
     groups = await databaseExecutor.run(db.fetchone, """
+        WITH admin_owned AS (
+            SELECT mc.*, COALESCE((SELECT bool_and(u.is_admin) FROM user_moderated_chat_connections AS umcc
+                INNER JOIN users AS u ON u.id = umcc.user_id WHERE umcc.moderated_chat_id = mc.id), FALSE) AS admins_only
+            FROM moderated_chats AS mc
+        )
         SELECT
             COUNT(*) AS total,
             COUNT(*) FILTER (WHERE mc.active AND NOT mc.disabled) AS on,
@@ -54,8 +68,14 @@ async def collect() -> dict:
             (SELECT COALESCE(SUM(deleted_messages_count), 0) FROM moderated_chat_statistics
                 WHERE day = CURRENT_DATE) AS removed_day,
             (SELECT COALESCE(SUM(deleted_messages_count), 0) FROM moderated_chat_statistics
-                WHERE day > CURRENT_DATE - 7) AS removed_week
-        FROM moderated_chats AS mc
+                WHERE day > CURRENT_DATE - 7) AS removed_week,
+            -- Selling the right to write, the bot's admins' own groups left out: groups and sales in 30 days
+            COUNT(*) FILTER (WHERE mc.access_mode = 'paid' AND NOT mc.admins_only) AS selling,
+            (SELECT COUNT(*) FROM access_requests AS ar
+                INNER JOIN admin_owned AS ao ON ao.id = ar.moderated_chat_id AND NOT ao.admins_only
+                WHERE ar.kind IN ('paid_manual', 'paid_auto') AND ar.status IN ('approved', 'revoked')
+                    AND ar.decided_at > LOCALTIMESTAMP - interval '30 days') AS sales_month
+        FROM admin_owned AS mc
     """)
     month = await databaseExecutor.run(db.fetchall, """
         -- Refunds are negative rows: not counted as payments, taken off the sum
