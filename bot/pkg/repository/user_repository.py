@@ -75,3 +75,11 @@ async def update_by_service_id(service_id: str, data: UserInterface) -> UserInte
         return None
 
     return await update({**data, 'id': user_id})
+
+
+async def set_blocked(service_id: str, blocked: bool) -> None:
+    """Blocked the bot (now) or unblocked it (null); the first block's time is kept until an unblock."""
+    await databaseExecutor.run(db.execute_single_model, """
+        UPDATE users SET blocked_at = CASE WHEN %s THEN COALESCE(blocked_at, LOCALTIMESTAMP) END
+        WHERE service_id = %s
+    """, (blocked, service_id))

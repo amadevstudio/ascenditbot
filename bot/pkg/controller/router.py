@@ -4,6 +4,7 @@ from pkg.controller.routers.bonus_channel_router import bonus_channel_router
 from pkg.controller.routers.direct_messages_router import direct_messages_router
 from pkg.controller.routers.group_router import group_router
 from pkg.controller.routers.payment_router import payment_router
+from pkg.controller.routers.private_status_router import private_status_router
 from pkg.controller.routers.quick_actions_router import quick_actions_router
 from pkg.controller.routers.user_router import user_router
 from pkg.controller.routers.work_router import work_router
@@ -17,6 +18,8 @@ def init_routes(dispatcher):
 
     # Admins' commands in groups and the bot's own membership, before the moderation of group messages
     dispatcher.include_router(group_router())
+    # The user blocks or unblocks the bot
+    dispatcher.include_router(private_status_router())
 
     # Buttons under alerts work from any message, outside the menu's navigation
     dispatcher.include_router(quick_actions_router())
