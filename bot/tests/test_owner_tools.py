@@ -908,11 +908,10 @@ async def _tariff_lines(bench: Bench, ids: dict, payer: dict, trial: dict, bonus
     await bench.private_message(OWNER, '/usersCount')
     page = bench.telegram.texts_to(OWNER['id'])[-1]
     indent = '\u00a0' * 4
-    assert f'🎫 <b>Тарифы</b>\n{indent}Бесплатный, 1 группа: 1\n' in page, page
-    assert f'{indent}300 ₽, 3 группы: 3 (↩️ 1, 🧪 1, 📢 1)\n' in page, page
-    assert f'{indent}1 000 ₽, 10 групп: 1 (💳 1)\n' in page, page
+    assert f'🎫 <b>Тарифы: бесплатный 1</b>\n{indent}300 ₽, 3 группы: 3 (платили раньше 1, триал 1, бонус 1)\n' in page, page
+    assert f'{indent}1 000 ₽, 10 групп: 1 (платят 1)\n' in page, page
     assert 'без лимита' not in page and '25 групп' not in page, page
-    assert f'{indent}Бонус за каналы: взяли 2, отписались 1\n<i>💳 платят сейчас' in page, page
+    assert f'{indent}Бонус за каналы: взяли 2, отписались 1\n\n' in page, page
     assert f'💰 <b>Деньги за 30 дней</b>\n{indent}1 платёж на 750 ₽' in page, page
 
     # Someone else on the tariff without a limit: shown as such
@@ -920,7 +919,7 @@ async def _tariff_lines(bench: Bench, ids: dict, payer: dict, trial: dict, bonus
     bench.telegram.calls.clear()
     await bench.private_message(OWNER, '/usersCount')
     page = bench.telegram.texts_to(OWNER['id'])[-1]
-    assert f'{indent}3 000 ₽, без лимита: 1 (🧪 1)\n' in page, page
+    assert f'{indent}3 000 ₽, без лимита: 1 (триал 1)\n' in page, page
 
 
 async def test_blocking_the_bot_is_counted(bench: Bench):
@@ -946,15 +945,15 @@ async def test_blocking_the_bot_is_counted(bench: Bench):
         await bench.private_message(OWNER, '/usersCount')
         return bench.telegram.texts_to(OWNER['id'])[-1]
 
-    assert 'Заблокировали' not in await page()
+    assert 'заблокировали' not in await page()
     await status('member', 'kicked')
     [row] = await bench.sql(f"SELECT blocked_at FROM users WHERE service_id = '{user['id']}'")
     assert row['blocked_at'] is not None
-    assert 'Заблокировали бота: 1, могут получать сообщения 1' in await page()
+    assert ' · заблокировали бота 1\n' in await page()
     await status('kicked', 'member')
     [row] = await bench.sql(f"SELECT blocked_at FROM users WHERE service_id = '{user['id']}'")
     assert row['blocked_at'] is None
-    assert 'Заблокировали' not in await page()
+    assert 'заблокировали' not in await page()
 
 
 async def test_admin_bot_page_counts_access_sales(bench: Bench):
@@ -975,4 +974,4 @@ async def test_admin_bot_page_counts_access_sales(bench: Bench):
     bench.telegram.calls.clear()
     await bench.private_message(OWNER, '/usersCount')
     page = bench.telegram.texts_to(OWNER['id'])[-1]
-    assert 'Продают доступ: 1 группа, продаж за 30 дней: 2\n' in page, page
+    assert 'Продают доступ 1, продаж за месяц 2\n' in page, page
