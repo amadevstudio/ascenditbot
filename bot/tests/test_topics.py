@@ -352,8 +352,8 @@ async def test_telegram_asked_when_the_group_page_opens(bench: Bench):
     await _in_topic(bench, ALICE, 16, 'Kekes')
     asked = _telegram_topics(bench, {1: {'title': 'General'}, 4: {'title': 'New'}}, newest=20)
     await _open_group_page(bench, chat)
-    assert asked and asked[0] == [1, 4, 16], asked
     await _scan_done(chat)
+    assert asked and asked[0] == [1, 4, 16], asked
     count = len(asked)
 
     await bench.tap(OWNER, json.dumps({'tp': 'chat_topics'}))

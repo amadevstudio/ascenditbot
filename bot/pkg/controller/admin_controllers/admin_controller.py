@@ -58,65 +58,66 @@ def _section(header: str, rows: list[str]) -> list[str]:
 
 def format_tariffs(tariffs: list[dict], bonus: dict) -> list[str]:
     """Who is on each tariff now (the bot's admins left out), the tariff named by its price in rubles and its groups:
-    on the free one all who do not pay, on a paid one split by how they got it (a paid tariff nobody is on is left
-    out); the bonus for subscribing to the channels; the legend last, when a paid tariff is there."""
-    rows, paid_shown = [], False
+    the free one in the header with all who do not pay, a paid one on a line split by how they got it (a paid tariff
+    nobody is on is left out); the bonus for subscribing to the channels last."""
+    header, rows = "🎫 <b>Тарифы</b>", []
     for tariff in tariffs:
-        groups = _groups_limit(tariff['channels_count'])
         if tariff['id'] == Tariff.FREE_TARIFF_ID:
-            rows.append(f"Бесплатный, {groups}: {tariff['total']}")
+            header = f"🎫 <b>Тарифы: бесплатный {tariff['total']}</b>"
         elif tariff['total']:
             name = _money(tariff['price'], 2, 'rub') if tariff['price'] is not None else f"Тариф {tariff['id']}"
-            parts = _parts(tariff, (('paid', "💳"), ('paid_before', "↩️"), ('trial', "🧪"), ('bonus', "📢")))
-            rows.append(f"{name}, {groups}: {tariff['total']}" + (f" ({parts})" if parts else ""))
-            paid_shown = True
+            parts = _parts(tariff, (('paid', "платят"), ('paid_before', "платили раньше"), ('trial', "триал"),
+                                    ('bonus', "бонус")))
+            rows.append(f"{name}, {_groups_limit(tariff['channels_count'])}: {tariff['total']}"
+                        + (f" ({parts})" if parts else ""))
     if bonus['taken']:
         rows.append(f"Бонус за каналы: взяли {bonus['taken']}"
                     + (f", отписались {bonus['lost']}" if bonus['lost'] else ""))
-    lines = _section("🎫 <b>Тарифы</b>", rows)
-    if paid_shown:
-        lines.append("<i>💳 платят сейчас · ↩️ платили раньше · 🧪 триал · 📢 бонус</i>")
-    return lines
+    return _section(header, rows)
+
+
+def _capitalized(text: str) -> str:
+    return text[:1].upper() + text[1:]
 
 
 def format_stats(stats: dict) -> str:
-    """The bot's numbers: a section a header and its lines indented under it, a blank line between sections; zeros
-    left out where they say nothing."""
+    """The bot's numbers, short: a section a header and a few lines indented under it, a blank line between sections;
+    zeros left out where they say nothing."""
     users, groups, money = stats['users'], stats['groups'], stats['money']
     languages = _parts(users, (('ru', "ru"), ('en', "en"), ('other', "другие"))).replace(", ", " · ")
-    states = _parts(groups, (('on', "работают"), ('paused', "на паузе"), ('disabled', "отключены тарифом")))
-    blocked = (f"Заблокировали бота: {users['blocked']}, могут получать сообщения {users['total'] - users['blocked']}"
-               if users['blocked'] else "")
-    whitelist = (f"В белых списках: {groups['whitelisted']}"
-                 + (f", из них на срок {groups['timed']}" if groups['timed'] else "")) if groups['whitelisted'] else ""
+    states = _parts(groups, (('on', "работают"), ('paused', "пауза"), ('disabled', "вне тарифа")))
+    reach = " · ".join(filter(None, [
+        f"С группами {users['with_groups']}",
+        f"заблокировали бота {users['blocked']}" if users['blocked'] else ""]))
+    modes = " · ".join(filter(None, [
+        (f"белые списки {groups['whitelisted']}" + (f", на срок {groups['timed']}" if groups['timed'] else ""))
+        if groups['whitelisted'] else "",
+        f"лимит постов {groups['limited']}" if groups['limited'] else "",
+        f"пишут все {groups['everyone']}" if groups['everyone'] else ""]))
     payments = ", ".join(
         f"{_plural(row['count'], 'платёж', 'платежа', 'платежей')} на "
         f"{_money(row['amount'], row['minor_units'], row['currency_code'])}"
-        for row in money['month']) or "Платежей нет"
+        for row in money['month']) or "платежей нет"
     balances = ", ".join(_money(row['balance'], row['minor_units'], row['currency_code'])
                          for row in money['balances'])
     lines = [
         *_section(f"👥 <b>Пользователи: {users['total']}</b>", [
             languages,
-            blocked,
-            f"С группами: {users['with_groups']}",
-            f"Новые: +{users['day']} за сутки, +{users['week']} за неделю, +{users['month']} за месяц",
+            reach,
+            f"Новые за сутки +{users['day']}, неделю +{users['week']}, месяц +{users['month']}",
         ]),
         "",
         *format_tariffs(stats['tariffs'], stats['bonus']),
         "",
         *_section(f"💬 <b>Группы: {groups['total']}</b>", [
-            states.replace(", ", " · ").capitalize(),
-            f"Пишут все: {groups['everyone']}" if groups['everyone'] else "",
-            f"С лимитом постов: {groups['limited']}" if groups['limited'] else "",
-            whitelist,
-            f"Продают доступ: {_groups(groups['selling'])}, продаж за 30 дней: {groups['sales_month']}",
-            f"Удалено сообщений: {groups['removed_day']} за сутки, {groups['removed_week']} за неделю",
+            _capitalized(states.replace(", ", " · ")),
+            _capitalized(modes),
+            f"Продают доступ {groups['selling']}, продаж за месяц {groups['sales_month']}",
+            f"Удалено за сутки {groups['removed_day']}, неделю {groups['removed_week']}",
         ]),
         "",
         *_section("💰 <b>Деньги за 30 дней</b>", [
-            payments[0].upper() + payments[1:],
-            f"На балансах: {balances}" if balances else "",
+            _capitalized(payments) + (f" · на балансах {balances}" if balances else ""),
         ]),
     ]
     return "\n".join(lines)
